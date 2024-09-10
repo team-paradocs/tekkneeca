@@ -1,5 +1,5 @@
-# Use NVIDIA's official CUDA base image (Ubuntu 22.04, CUDA 11.x)
-FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04
+#cuda verison for SAM
+FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04
 
 # Set environment variables for non-interactive installations
 ENV DEBIAN_FRONTEND=noninteractive
