@@ -51,13 +51,13 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt install -y ament-cmake-nose ros-humble-gazebo-ros-pkgs vim-gtk3
 RUN curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp | tee /etc/apt/keyrings/librealsense.pgp > /dev/null
-RUN apt-get install apt-transport-https
+RUN apt-get install -y apt-transport-https
 RUN echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo `lsb_release -cs` main" | tee /etc/apt/sources.list.d/librealsense.list
 RUN apt-get update
-RUN apt-get install librealsense2-dkms
-RUN apt-get install librealsense2-utils
+RUN apt-get install -y librealsense2-dkms
+RUN apt-get install -y librealsense2-utils
 
-RUN apt install ros-humble-librealsense2* ros-humble-realsense2-camera
+RUN apt install -y ros-humble-librealsense2* ros-humble-realsense2-camera
 RUN chmod 666 /dev/video*
 
 
