@@ -1,1 +1,10 @@
-sudo docker run -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" -v $(pwd)/../src:/ros_ws/src --network host -v /dev:/dev paradockerimage 
+sudo docker run -it --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" -v $(pwd)/../src:/ros_ws/src --network host -v /dev:/dev \
+--device /dev/video7:/dev/video0 \
+--device /dev/video7:/dev/video1 \
+--device /dev/video7:/dev/video2 \
+--device /dev/video7:/dev/video3 \
+--device /dev/video7:/dev/video4 \
+--device /dev/video7:/dev/video5 \
+--device /dev/video7:/dev/video6 \
+--device /dev/video7:/dev/video7 \
+\ paradockerimage 
