@@ -1,0 +1,13 @@
+version: '3'
+services:
+  paradockerimage:
+    image: paradockerimage
+    container_name: paradockercontainer
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /home/shivangi/dockermount:/app/data
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    command: /bin/bash
+
