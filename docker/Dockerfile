@@ -58,8 +58,6 @@ RUN apt-get install -y librealsense2-dkms
 RUN apt-get install -y librealsense2-utils
 
 RUN apt install -y ros-humble-librealsense2* ros-humble-realsense2-camera
-RUN chmod 666 /dev/video*
-
 
 # Initialize rosdep
 # RUN rosdep init
