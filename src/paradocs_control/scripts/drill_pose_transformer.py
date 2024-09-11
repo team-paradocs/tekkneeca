@@ -5,14 +5,15 @@ from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
 import tf2_ros
 import tf2_geometry_msgs
+from geometry_msgs.msg import PoseArray
 
 class PoseTransformer(Node):
 
     def __init__(self):
         super().__init__('pose_transformer')
-        self.publisher_ = self.create_publisher(Pose, 'lbr/moveit_goal', 10)
+        self.publisher_ = self.create_publisher(PoseArray, 'lbr/moveit_goal', 10)
         self.subscription = self.create_subscription(
-            PoseStamped,
+            PoseArray,
             'surgical_drill_pose',
             self.listener_callback,
             10)
@@ -20,21 +21,25 @@ class PoseTransformer(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
     def listener_callback(self, msg):
-        pose = Pose()
-        pose.position = msg.pose.position
-        pose.orientation = msg.pose.orientation
-        # self.publisher_.publish(pose)
-        # try:
-        # frames = self.tf_buffer.all_frames_as_string()
-        # print(frames)
-        # transform = self.tf_buffer.lookup_transform('lbr/link_0', 'camera_depth_optical_frame', rclpy.time.Time())
-        transform = self.tf_buffer.lookup_transform('lbr/link_0', msg.header.frame_id, rclpy.time.Time())
-        print("transofmr", transform)
-        transformed_pose = tf2_geometry_msgs.do_transform_pose(pose, transform)
-        print("after", transformed_pose)
-        # Convert PoseStamped to Pose before publishing
-
-        self.publisher_.publish(transformed_pose)
+        transformed_poses = PoseArray()
+        # poses = PoseArray()
+        for pose in msg.poses:
+            # pose.position = msg.pose.position
+            # pose.orientation = msg.pose.orientation
+            # self.publisher_.publish(pose)
+            # try:
+            # frames = self.tf_buffer.all_frames_as_string()
+            # print(frames)
+            # transform = self.tf_buffer.lookup_transform('lbr/link_0', 'camera_depth_optical_frame', rclpy.time.Time())
+            transform = self.tf_buffer.lookup_transform('lbr/link_0', msg.header.frame_id, rclpy.time.Time())
+            # print("transform", transform)
+            transformed_pose = tf2_geometry_msgs.do_transform_pose(pose, transform)
+            # print("after", transformed_pose)
+            # Convert PoseStamped to Pose before publishing
+            transformed_poses.poses.append(transformed_pose)
+        transformed_poses.header = msg.header
+        print("transformed_poses", transformed_poses)
+        self.publisher_.publish(transformed_poses)
         # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         #     self.get_logger().info('Transform error')
 
