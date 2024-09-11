@@ -59,6 +59,12 @@ RUN apt-get install -y librealsense2-utils
 
 RUN apt install -y ros-humble-librealsense2* ros-humble-realsense2-camera
 
+RUN pip install open3d==0.18.0
+RUN pip install opencv-python==4.9.0.80
+RUN pip install transforms3d==0.4.2
+RUN apt install -y ros-humble-tf-transformations
+RUN pip install numpy==1.24.2
+
 # Initialize rosdep
 # RUN rosdep init
 RUN rosdep update
