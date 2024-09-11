@@ -36,6 +36,7 @@ class PCDRegPipe(Node):
         self.subscriber_ = self.create_subscription(PointCloud2, self.topic, self.callback, 10)
         self._publisher_ = self.create_publisher(PointCloud2, 'processed_point_cloud', 10)
         self.pose_publisher = self.create_publisher(PoseArray, 'surgical_drill_pose', 10)
+        self.pose_viz_publisher = self.create_publisher(PoseArray, 'surgical_drill_pose_viz', 10)
         self.marker_array_publisher = self.create_publisher(MarkerArray, 'bounding_box_marker_array', 10)
 
         self.x_thresh = 0.25
@@ -121,11 +122,12 @@ class PCDRegPipe(Node):
             self.source_cloud.paint_uniform_color([1, 0, 0])
 
             self.publish_point_cloud(self.source_cloud)
+            surgical_drill_pose = self.compute_plan(transform)
+            self.pose_viz_publisher.publish(surgical_drill_pose)
 
             if_publish = input("Do you want to publish (y/n)?")
 
             if if_publish == "y":
-                surgical_drill_pose = self.compute_plan(transform)
                 self.pose_publisher.publish(surgical_drill_pose)
                 print("Published Pose!")
             else:
