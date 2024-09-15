@@ -1,0 +1,78 @@
+name: Build hpp-fcl for Mac OS X/Linux via Conda
+
+on: [push,pull_request]
+
+jobs:
+  hpp-fcl-conda:
+    name: CI on ${{ matrix.os }} with Conda
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest"]
+        python-version: ["3.8", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: hpp-fcl
+        auto-update-conda: true
+        environment-file: .github/workflows/conda/conda-env.yml
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install compilers on OSX
+      if: contains(matrix.os, 'macos')
+      shell: bash -l {0}
+      run: |
+        conda activate hpp-fcl
+        conda install compilers=1.4.2 -c conda-forge
+
+    - name: Install cmake and update conda
+      shell: bash -l {0}
+      run: |
+        conda activate hpp-fcl
+        conda install cmake -c main
+        conda install llvm-openmp -c conda-forge
+
+    - name: Build hpp-fcl
+      shell: bash -l {0}
+      run: |
+        conda activate hpp-fcl
+        conda list
+        echo $CONDA_PREFIX
+
+        mkdir build
+        cd build
+
+        cmake .. -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=$(which python3) -DGENERATE_PYTHON_STUBS=ON -DHPP_FCL_HAS_QHULL=ON
+        make -j2
+        make build_tests
+        export CTEST_OUTPUT_ON_FAILURE=1
+        make test
+        make install
+
+    - name: Uninstall hpp-fcl
+      shell: bash -l {0}
+      run: |
+        cd build
+        make uninstall
+
+  check:
+    if: always()
+    name: check-macos-linux-conda
+
+    needs:
+    - hpp-fcl-conda
+
+    runs-on: Ubuntu-latest
+
+    steps:
+    - name: Decide whether the needed jobs succeeded or failed
+      uses: re-actors/alls-green@release/v1
+      with:
+        jobs: ${{ toJSON(needs) }}
