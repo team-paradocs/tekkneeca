@@ -70,6 +70,7 @@ RUN pip install numpy==1.24.2
 RUN rosdep update
 
 RUN pip install serial
+RUN pip install pyserial
 
 # Source ROS 2 setup file
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
