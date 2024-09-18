@@ -34,6 +34,8 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ld = LaunchDescription()
 
     robot_description = LBRDescriptionMixin.param_robot_description(sim=False)
+    # need to specify the ros2_control node, load lbr_controllers.yaml, which specify the param for controllers
+    # ctrl_cfg
     ros2_control_node = LBRROS2ControlMixin.node_ros2_control(
         robot_description=robot_description
     )
@@ -43,12 +45,16 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     joint_state_broadcaster = LBRROS2ControlMixin.node_controller_spawner(
         controller="joint_state_broadcaster"
     )
+    # not sure about the force_torque sensor is on every joint or just ee
     force_torque_broadcaster = LBRROS2ControlMixin.node_controller_spawner(
         controller="force_torque_broadcaster"
     )
+    # aside from robot_state_publisher, we also need lbr_state_broadcaster
     lbr_state_broadcaster = LBRROS2ControlMixin.node_controller_spawner(
         controller="lbr_state_broadcaster"
     )
+    # spawn controllers according to lbr_controllers.yaml through controller manager
+    # ctrl
     controller = LBRROS2ControlMixin.node_controller_spawner(
         controller=LaunchConfiguration("ctrl")
     )
@@ -99,6 +105,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     "world",
                 ]  # results in robot_name/world
             ),
+            # don't use sim time
         )
     )
 
@@ -126,12 +133,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         "med7_moveit_config", "config/ompl_planning.yaml"
     )
     ompl_planning_pipeline_config["ompl_2"].update(ompl_planning_yaml)
-
-
-
-
-
-
 
     model = LaunchConfiguration("model").perform(context)
     moveit_configs_builder = LBRMoveGroupMixin.moveit_configs_builder(

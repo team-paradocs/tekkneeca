@@ -34,7 +34,8 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ld = LaunchDescription()
 
     robot_description = LBRDescriptionMixin.param_robot_description(sim=True)
-    ld.add_action(GazeboMixin.include_gazebo())  # Gazebo has its own controller manager
+    # Gazebo has its own controller manager
+    ld.add_action(GazeboMixin.include_gazebo())
     spawn_entity = GazeboMixin.node_spawn_entity()
     ld.add_action(spawn_entity)
     joint_state_broadcaster = LBRROS2ControlMixin.node_controller_spawner(
@@ -44,9 +45,11 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     robot_state_publisher = LBRROS2ControlMixin.node_robot_state_publisher(
         robot_description=robot_description, use_sim_time=True
     )
+    # Do not condition robot state publisher on joint state broadcaster 
+    # as Gazebo uses robot state publisher to retrieve robot description
     ld.add_action(
         robot_state_publisher
-    )  # Do not condition robot state publisher on joint state broadcaster as Gazebo uses robot state publisher to retrieve robot description
+    )
     ld.add_action(
         LBRROS2ControlMixin.node_controller_spawner(
             controller=LaunchConfiguration("ctrl")
@@ -164,25 +167,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
     ld.add_action(rviz_event_handler)
 
-    # Define joint angles for arm configuration
-    joint_angles = {
-        'A1': 0.0,
-        'A2': 0.0,
-        'A3': 0.0,
-        'A4': 1.5708,
-        'A5': 0.0,
-        'A6': -1.5708,
-        'A7': 0.0,
-        # Add more joint angles as needed
-    }
-
-    set_joint_positions = ExecuteProcess(
-        cmd=['ros2', 'control', 'set_joint_positions', '--controller', 'joint_trajectory_controller'] +
-            [f'{joint_name}={joint_angle}' for joint_name, joint_angle in joint_angles.items()],
-        output='screen'
-    )
-    
-    ld.add_action(set_joint_positions)
+    # TODO: Define start-up joint angles through Gazebo
 
     return ld.entities
 
@@ -209,8 +194,12 @@ def generate_launch_description() -> LaunchDescription:
             name="rviz", default_value="true", description="Whether to launch RViz."
         )
     )
+    # Gazebo loads controller configuration through lbr_description/gazebo/*.xacro 
+    # from lbr_ros2_control/config/lbr_controllers.yaml
+    # Thus no need to specify ctrl_cfg_pkg and ctrl_cfg
     ld.add_action(
         LBRROS2ControlMixin.arg_ctrl()
-    )  # Gazebo loads controller configuration through lbr_description/gazebo/*.xacro from lbr_ros2_control/config/lbr_controllers.yaml
+    )
+    
     ld.add_action(OpaqueFunction(function=launch_setup))
     return ld
