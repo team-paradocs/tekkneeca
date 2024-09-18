@@ -11,23 +11,111 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(moveit_ros_planning_interface)
+find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_msgs REQUIRED)
+find_package(moveit_core REQUIRED)
+find_package(moveit_ros_planning REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(trajectory_msgs REQUIRED)
+
+set(LIBRARIES
+  # Components
+  moveit_global_planner_component
+  moveit_hybrid_planning_manager
+  moveit_local_planner_component
+  # Plugins
+  forward_trajectory_plugin
+  motion_planning_pipeline_plugin
+  replan_invalidated_trajectory_plugin
+  simple_sampler_plugin
+  single_plan_execution_plugin
+)
+
+set(THIS_PACKAGE_INCLUDE_DEPENDS
+  moveit_core
+  moveit_msgs
+  moveit_ros_planning
+  moveit_ros_planning_interface
+  pluginlib
+  rclcpp
+  rclcpp_action
+  rclcpp_components
+  std_msgs
+  std_srvs
+  tf2_ros
+  trajectory_msgs
+)
+
+set(THIS_PACKAGE_INCLUDE_DIRS
+  src/global_planner/global_planner_component/include/
+  src/global_planner/global_planner_plugins/include/
+  src/hybrid_planning_manager/hybrid_planning_manager_component/include/
+  src/hybrid_planning_manager/planner_logic_plugins/include/
+  src/local_planner/local_planner_component/include/
+  src/local_planner/trajectory_operator_plugins/include/
+  src/local_planner/local_constraint_solver_plugins/include/
+)
 
 # Include Cpp "include" directory
+include_directories(${THIS_PACKAGE_INCLUDE_DIRS})
 include_directories(include)
+
+add_subdirectory(src/hybrid_planning_manager)
+add_subdirectory(src/global_planner)
+add_subdirectory(src/local_planner)
+add_subdirectory(src/test)
+
+rclcpp_components_register_nodes(moveit_hybrid_planning_manager "moveit::hybrid_planning::HybridPlanningManager")
+rclcpp_components_register_nodes(moveit_global_planner_component "moveit::hybrid_planning::GlobalPlannerComponent")
+rclcpp_components_register_nodes(moveit_local_planner_component "moveit::hybrid_planning::LocalPlannerComponent")
+
+install(TARGETS ${LIBRARIES}
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include)
+
+# install(TARGETS cancel_action hybrid_planning_demo_node
+#   ARCHIVE DESTINATION lib
+#   LIBRARY DESTINATION lib
+#   RUNTIME DESTINATION lib/${PROJECT_NAME}
+#   INCLUDES DESTINATION include)
+
+install(DIRECTORY ${THIS_PACKAGE_INCLUDE_DIRS} DESTINATION include)
+
+# install(DIRECTORY test/launch DESTINATION share/${PROJECT_NAME})
+# install(DIRECTORY test/config DESTINATION share/${PROJECT_NAME})
+
+pluginlib_export_plugin_description_file(paradocs_planning plugins/single_plan_execution_plugin.xml)
+pluginlib_export_plugin_description_file(paradocs_planning plugins/moveit_planning_pipeline_plugin.xml)
+pluginlib_export_plugin_description_file(paradocs_planning plugins/simple_sampler_plugin.xml)
+pluginlib_export_plugin_description_file(paradocs_planning plugins/replan_invalidated_trajectory_plugin.xml)
+pluginlib_export_plugin_description_file(paradocs_planning plugins/forward_trajectory_plugin.xml)
+
+ament_export_include_directories(include)
+ament_export_libraries(${LIBRARIES})
+ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
 # Create Cpp executable
 add_executable(talker src/publisher_member_function.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 add_executable(listener src/subscriber_member_function.cpp)
 ament_target_dependencies(listener rclcpp std_msgs)
+add_executable(hybrid_planning_demo src/test/hybrid_planning_demo_node.cpp)
+ament_target_dependencies(hybrid_planning_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
 
 # Install Cpp executables
 install(TARGETS
-  # point_cloud_saver
   talker
   listener
+  hybrid_planning_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -48,6 +136,7 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+# For testing purpose, not important
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
