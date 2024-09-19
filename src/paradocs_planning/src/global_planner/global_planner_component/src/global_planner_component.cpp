@@ -128,7 +128,7 @@ bool GlobalPlannerComponent::initializeGlobalPlanner()
   try
   {
     global_planner_plugin_loader_ = std::make_unique<pluginlib::ClassLoader<GlobalPlannerInterface>>(
-        "moveit_hybrid_planning", "moveit::hybrid_planning::GlobalPlannerInterface");
+        "paradocs_planning", "moveit::hybrid_planning::GlobalPlannerInterface");
   }
   catch (pluginlib::PluginlibException& ex)
   {

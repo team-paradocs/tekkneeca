@@ -41,7 +41,7 @@ namespace
 {
 const rclcpp::Logger LOGGER = rclcpp::get_logger("local_planner_component");
 // If stuck for this many iterations or more, abort the local planning action
-constexpr size_t STUCK_ITERATIONS_THRESHOLD = 5;
+constexpr size_t STUCK_ITERATIONS_THRESHOLD = 10000;
 constexpr double STUCK_THRESHOLD_RAD = 1e-4;  // L1-norm sum across all joints
 }  // namespace
 
@@ -88,6 +88,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
   // If this flag is set, ignore collisions
   if (!stop_before_collision_)
   {
+    RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False stop_before_collision_");
     robot_command.addSuffixWayPoint(local_trajectory.getWayPoint(0), 0.0);
   }
   else
@@ -107,8 +108,11 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     // Check if path is valid
     if (is_path_valid)
     {
+      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "True is_path_valid");
       if (path_invalidation_event_send_)
       {
+        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Reset path_invalidation_event_send_");
+
         path_invalidation_event_send_ = false;  // Reset flag
       }
       // Forward next waypoint to the robot controller
@@ -116,8 +120,10 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     }
     else
     {
+      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False is_path_valid");
       if (!path_invalidation_event_send_)
-      {  // Send feedback only once
+      { // Send feedback only once
+        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "True path_invalidation_event_send_");
         feedback_result.feedback = toString(LocalFeedbackEnum::COLLISION_AHEAD);
         path_invalidation_event_send_ = true;  // Set feedback flag
       }
@@ -139,6 +145,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     // Detect if the local solver is stuck
     if (!prev_waypoint_target_)
     {
+      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False prev_waypoint_target_");
       // Just initialize if this is the first iteration
       prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
     }
@@ -146,9 +153,11 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     {
       if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
       {
+        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Smaller than STUCK_THRESHOLD_RAD");
         ++num_iterations_stuck_;
         if (num_iterations_stuck_ > STUCK_ITERATIONS_THRESHOLD)
         {
+          RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Exceed STUCK_ITERATIONS_THRESHOLD");
           num_iterations_stuck_ = 0;
           prev_waypoint_target_ = nullptr;
           feedback_result.feedback = toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK);

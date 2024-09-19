@@ -73,7 +73,7 @@ bool HybridPlanningManager::initialize()
   try
   {
     planner_logic_plugin_loader_ = std::make_unique<pluginlib::ClassLoader<PlannerLogicInterface>>(
-        "moveit_hybrid_planning", "moveit::hybrid_planning::PlannerLogicInterface");
+        "paradocs_planning", "moveit::hybrid_planning::PlannerLogicInterface");
   }
   catch (pluginlib::PluginlibException& ex)
   {

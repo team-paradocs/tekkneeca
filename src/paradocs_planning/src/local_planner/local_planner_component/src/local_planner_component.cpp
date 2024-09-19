@@ -101,7 +101,7 @@ bool LocalPlannerComponent::initialize()
   try
   {
     trajectory_operator_loader_ = std::make_unique<pluginlib::ClassLoader<TrajectoryOperatorInterface>>(
-        "moveit_hybrid_planning", "moveit::hybrid_planning::TrajectoryOperatorInterface");
+        "paradocs_planning", "moveit::hybrid_planning::TrajectoryOperatorInterface");
   }
   catch (pluginlib::PluginlibException& ex)
   {
@@ -128,7 +128,7 @@ bool LocalPlannerComponent::initialize()
   try
   {
     local_constraint_solver_plugin_loader_ = std::make_unique<pluginlib::ClassLoader<LocalConstraintSolverInterface>>(
-        "moveit_hybrid_planning", "moveit::hybrid_planning::LocalConstraintSolverInterface");
+        "paradocs_planning", "moveit::hybrid_planning::LocalConstraintSolverInterface");
   }
   catch (pluginlib::PluginlibException& ex)
   {

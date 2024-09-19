@@ -104,7 +104,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     # Load additional OMPL pipeline
     ompl_planning_pipeline_config = {
-        "ompl_2": {
+        "ompl": {
             "planning_plugins": [
                 "ompl_interface/OMPLPlanner",
             ],
@@ -124,7 +124,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ompl_planning_yaml = load_yaml(
         "med7_moveit_config", "config/ompl_planning.yaml"
     )
-    ompl_planning_pipeline_config["ompl_2"].update(ompl_planning_yaml)
+    ompl_planning_pipeline_config["ompl"].update(ompl_planning_yaml)
 
     model = LaunchConfiguration("model").perform(context)
     moveit_configs_builder = LBRMoveGroupMixin.moveit_configs_builder(
@@ -230,7 +230,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         executable="component_container_mt",
         composable_node_descriptions=[
             ComposableNode(
-                package="moveit_hybrid_planning",
+                package="paradocs_planning",
                 plugin="moveit::hybrid_planning::GlobalPlannerComponent",
                 name="global_planner",
                 parameters=[
@@ -247,10 +247,13 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     ("lbr/joint_states", "/joint_states"),
                     ("lbr/monitored_planning_scene", "/monitored_planning_scene"),
                     ("lbr/planning_scene", "/planning_scene"),
+                    ("/display_planned_path", "/lbr/display_planned_path"),
+                    ("/display_contacts", "/lbr/display_contacts"),
+                    ("/trajectory_execution_event", "/lbr/trajectory_execution_event"),
                 ],
             ),
             ComposableNode(
-                package="moveit_hybrid_planning",
+                package="paradocs_planning",
                 plugin="moveit::hybrid_planning::LocalPlannerComponent",
                 name="local_planner",
                 parameters=[
@@ -261,14 +264,14 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     kinematics_yaml,
                 ],
                 remappings=[
-                    ("lbr/joint_trajectory_controller/joint_trajectory", "/joint_trajectory_controller/joint_trajectory"),
+                    ("/joint_trajectory_controller/joint_trajectory", "/lbr/joint_trajectory_controller/joint_trajectory"),
                     ("lbr/joint_states", "/joint_states"),
                     ("lbr/collision_object", "/collision_object"),
                     ("lbr/planning_scene", "/planning_scene"),
                 ],
             ),
             ComposableNode(
-                package="moveit_hybrid_planning",
+                package="paradocs_planning",
                 plugin="moveit::hybrid_planning::HybridPlanningManager",
                 name="hybrid_planning_manager",
                 parameters=[
@@ -282,20 +285,26 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     ld.add_action(container)
 
-    # demo_node = Node(
-    #     package="paradocs_planning",
-    #     executable="hybrid_planning_demo",
-    #     name="hybrid_planning_demo_node",
-    #     namespace="/lbr",
-    #     output="screen",
-    #     parameters=[
-    #         robot_description,
-    #         robot_description_semantic,
-    #         common_hybrid_planning_param,
-    #     ],
-    # )
+    demo_node = Node(
+        package="paradocs_planning",
+        executable="hybrid_planning_demo",
+        name="hybrid_planning_demo_node",
+        namespace="/lbr",
+        output="screen",
+        parameters=[
+            # for gazebo
+            {'use_sim_time': True},
+            robot_description,
+            robot_description_semantic,
+            common_hybrid_planning_param,
+        ],
+        remappings=[
+            ("/joint_states", "/lbr/joint_states"),
+            ("/planning_scene", "/planning_scene"),
+        ],
+    )
 
-    # ld.add_action(demo_node)    
+    ld.add_action(demo_node)    
 
     # kuka_joint_group_position_controller_spawner = Node(
     #     package="controller_manager",

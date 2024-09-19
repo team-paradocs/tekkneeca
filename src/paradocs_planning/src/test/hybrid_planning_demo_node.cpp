@@ -158,7 +158,7 @@ public:
       planning_scene_monitor_->providePlanningSceneService();  // let RViz display query PlanningScene
       planning_scene_monitor_->setPlanningScenePublishingFrequency(100);
       planning_scene_monitor_->startPublishingPlanningScene(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE,
-                                                            "lbr/planning_scene");
+                                                            "/lbr/planning_scene");
       planning_scene_monitor_->startSceneMonitor();
     }
 
@@ -189,12 +189,12 @@ public:
       scene->processCollisionObjectMsg(collision_object_1_);
     }  // Unlock PlanningScene
 
-    RCLCPP_INFO(LOGGER, "Wait 2s for the collision object");
-    rclcpp::sleep_for(2s);
+    RCLCPP_INFO(LOGGER, "Wait 5s for the collision object");
+    rclcpp::sleep_for(5s);
 
     // Setup motion planning goal taken from motion_planning_api tutorial
     const std::string planning_group = "arm";
-    robot_model_loader::RobotModelLoader robot_model_loader(node_, "lbr/robot_description");
+    robot_model_loader::RobotModelLoader robot_model_loader(node_, "robot_description");
     const moveit::core::RobotModelPtr& robot_model = robot_model_loader.getModel();
 
     // Create a RobotState and JointModelGroup
@@ -223,7 +223,7 @@ public:
     goal_motion_request.pipeline_id = "ompl";
 
     moveit::core::RobotState goal_state(robot_model);
-    std::vector<double> joint_values = { 0.0, 0.0, 0.0, 0.0, 0.0, 1.571, 0.785 };
+    std::vector<double> joint_values = { 0.0, 0.0, 0.0, 1.57, 0.0, -1.57, 0.0};
     goal_state.setJointGroupPositions(joint_model_group, joint_values);
 
     goal_motion_request.goal_constraints.resize(1);
@@ -301,7 +301,7 @@ int main(int argc, char** argv)
   HybridPlanningDemo demo(node);
   std::thread run_demo([&demo]() {
     // This sleep isn't necessary but it gives humans time to process what's going on
-    rclcpp::sleep_for(5s);
+    rclcpp::sleep_for(20s);
     demo.run();
   });
 
