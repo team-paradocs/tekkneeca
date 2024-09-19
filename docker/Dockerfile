@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     build-essential \
     git \
+    gnome-terminal \
+    tmux \
     locales \
     && locale-gen en_US en_US.UTF-8 \
     && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
