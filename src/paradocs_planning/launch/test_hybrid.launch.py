@@ -289,7 +289,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         package="paradocs_planning",
         executable="hybrid_planning_demo",
         name="hybrid_planning_demo_node",
-        namespace="/lbr",
+        namespace="",
         output="screen",
         parameters=[
             # for gazebo
@@ -300,7 +300,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         ],
         remappings=[
             ("/joint_states", "/lbr/joint_states"),
-            ("/planning_scene", "/planning_scene"),
+            ("/planning_scene", "/lbr/planning_scene"),
         ],
     )
 

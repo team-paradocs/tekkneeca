@@ -223,7 +223,7 @@ bool LocalPlannerComponent::initialize()
 
   // Initialize local solution publisher
   RCLCPP_INFO(LOGGER, "Using '%s' as local solution topic type", config_.local_solution_topic_type.c_str());
-  if (config_.local_solution_topic_type == "trajectory_msgs/JointTrajectory")
+  if (config_.local_solution_topic_type == "trajectory_msgs/msg/JointTrajectory")
   {
     local_trajectory_publisher_ =
         node_->create_publisher<trajectory_msgs::msg::JointTrajectory>(config_.local_solution_topic, 1);
@@ -316,9 +316,12 @@ void LocalPlannerComponent::executeIteration()
       // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)
       // Format outgoing msg in the right format
       // (trajectory_msgs/JointTrajectory or joint positions/velocities in form of std_msgs/Float64MultiArray).
-      if (config_.local_solution_topic_type == "trajectory_msgs/JointTrajectory")
+
+      if (config_.local_solution_topic_type == "trajectory_msgs/msg/JointTrajectory")
       {
         local_trajectory_publisher_->publish(local_solution);
+        // RCLCPP_INFO(LOGGER, "JointTrajectory Published");
+
       }
       else if (config_.local_solution_topic_type == "std_msgs/Float64MultiArray")
       {
@@ -336,6 +339,7 @@ void LocalPlannerComponent::executeIteration()
           }
         }
         local_solution_publisher_->publish(std::move(joints));
+        // RCLCPP_INFO(LOGGER, "Float64MultiArray Published");
       }
       else if (config_.local_solution_topic_type == "CUSTOM")
       {

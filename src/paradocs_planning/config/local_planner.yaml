@@ -1,7 +1,8 @@
 robot_description: "robot_description"
 trajectory_operator_plugin_name: "moveit_hybrid_planning/SimpleSampler"
 local_constraint_solver_plugin_name: "moveit_hybrid_planning/ForwardTrajectory"
-local_planning_frequency: 100.0
+# local_planning_frequency: 100.0
+local_planning_frequency: 10.0
 global_solution_topic: "global_trajectory"
 # local_solution_topic: "/kuka_joint_group_position_controller/commands" # or panda_arm_controller/joint_trajectory
 # local_solution_topic: "/kuka_joint_group_position_controller/joint_trajectory" # or panda_arm_controller/joint_trajectory

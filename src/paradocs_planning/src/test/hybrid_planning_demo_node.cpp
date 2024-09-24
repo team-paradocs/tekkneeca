@@ -108,27 +108,20 @@ public:
     global_solution_subscriber_ = node_->create_subscription<moveit_msgs::msg::MotionPlanResponse>(
         "global_trajectory", rclcpp::SystemDefaultsQoS(),
         [this](const moveit_msgs::msg::MotionPlanResponse::ConstSharedPtr& /* unused */) {
+
           // Remove old collision objects
-          collision_object_1_.operation = collision_object_1_.REMOVE;
+          collision_object_2_.operation = collision_object_2_.REMOVE;
+          collision_object_3_.operation = collision_object_3_.REMOVE;
 
-          // Add new collision objects
-          geometry_msgs::msg::Pose box_pose_2;
-          box_pose_2.position.x = 0.2;
-          box_pose_2.position.y = 0.4;
-          box_pose_2.position.z = 0.95;
+          geometry_msgs::msg::Pose box_pose;
+          box_pose.position.x = -0.4;
+          box_pose.position.y = 0.0;
+          box_pose.position.z = 0.85;
 
-          collision_object_2_.primitives.push_back(box_2_);
-          collision_object_2_.primitive_poses.push_back(box_pose_2);
-          collision_object_2_.operation = collision_object_2_.ADD;
+          collision_object_1_.primitives.push_back(box_1_);
+          collision_object_1_.primitive_poses.push_back(box_pose);
+          collision_object_1_.operation = collision_object_1_.ADD;
 
-          geometry_msgs::msg::Pose box_pose_3;
-          box_pose_3.position.x = 0.2;
-          box_pose_3.position.y = -0.4;
-          box_pose_3.position.z = 0.95;
-
-          collision_object_3_.primitives.push_back(box_2_);
-          collision_object_3_.primitive_poses.push_back(box_pose_3);
-          collision_object_3_.operation = collision_object_3_.ADD;
 
           // Add object to planning scene
           {  // Lock PlanningScene
@@ -174,19 +167,30 @@ public:
       return;
     }
 
-    geometry_msgs::msg::Pose box_pose;
-    box_pose.position.x = 0.4;
-    box_pose.position.y = 0.0;
-    box_pose.position.z = 0.85;
+    // Add new collision objects
+    geometry_msgs::msg::Pose box_pose_2;
+    box_pose_2.position.x = -0.2;
+    box_pose_2.position.y = 0.4;
+    box_pose_2.position.z = 0.95;
 
-    collision_object_1_.primitives.push_back(box_1_);
-    collision_object_1_.primitive_poses.push_back(box_pose);
-    collision_object_1_.operation = collision_object_1_.ADD;
+    collision_object_2_.primitives.push_back(box_2_);
+    collision_object_2_.primitive_poses.push_back(box_pose_2);
+    collision_object_2_.operation = collision_object_2_.ADD;
+
+    geometry_msgs::msg::Pose box_pose_3;
+    box_pose_3.position.x = -0.2;
+    box_pose_3.position.y = -0.4;
+    box_pose_3.position.z = 0.95;
+
+    collision_object_3_.primitives.push_back(box_2_);
+    collision_object_3_.primitive_poses.push_back(box_pose_3);
+    collision_object_3_.operation = collision_object_3_.ADD;
 
     // Add object to planning scene
     {  // Lock PlanningScene
       planning_scene_monitor::LockedPlanningSceneRW scene(planning_scene_monitor_);
-      scene->processCollisionObjectMsg(collision_object_1_);
+      scene->processCollisionObjectMsg(collision_object_2_);
+      scene->processCollisionObjectMsg(collision_object_3_);
     }  // Unlock PlanningScene
 
     RCLCPP_INFO(LOGGER, "Wait 5s for the collision object");

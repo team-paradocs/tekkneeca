@@ -41,7 +41,7 @@ namespace
 {
 const rclcpp::Logger LOGGER = rclcpp::get_logger("local_planner_component");
 // If stuck for this many iterations or more, abort the local planning action
-constexpr size_t STUCK_ITERATIONS_THRESHOLD = 10000;
+constexpr size_t STUCK_ITERATIONS_THRESHOLD = 5;
 constexpr double STUCK_THRESHOLD_RAD = 1e-4;  // L1-norm sum across all joints
 }  // namespace
 
@@ -82,6 +82,10 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
   // Create controller command trajectory
   robot_trajectory::RobotTrajectory robot_command(local_trajectory.getRobotModel(), local_trajectory.getGroupName());
 
+  RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "local_trajectory.getWayPointCount() = %ld", local_trajectory.getWayPointCount());
+  
+  RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */,local_trajectory.getGroupName().c_str());
+
   // Feedback
   moveit_msgs::action::LocalPlanner::Feedback feedback_result;
 
@@ -117,6 +121,8 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       }
       // Forward next waypoint to the robot controller
       robot_command.addSuffixWayPoint(local_trajectory.getWayPoint(0), 0.0);
+      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "robot_command.getWayPointCount() = %ld", robot_command.getWayPointCount());
+
     }
     else
     {
@@ -140,6 +146,9 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       }
       robot_command.empty();
       robot_command.addSuffixWayPoint(*current_state, local_trajectory.getWayPointDurationFromPrevious(0));
+    
+      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "robot_command.getWayPointCount() = %ld", robot_command.getWayPointCount());
+
     }
 
     // Detect if the local solver is stuck
@@ -173,6 +182,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
   moveit_msgs::msg::RobotTrajectory robot_command_msg;
   robot_command.getRobotTrajectoryMsg(robot_command_msg);
   local_solution = robot_command_msg.joint_trajectory;
+  RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "robot_command.getWayPointCount() = %ld", robot_command.getWayPointCount());
 
   return feedback_result;
 }
