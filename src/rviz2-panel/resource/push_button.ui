@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>gui</class>
+ <widget class="QWidget" name="gui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>317</width>
+    <height>103</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <!-- <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>20</y>
+     <width>161</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QLabel" name="label_1">
+      <property name="text">
+       <string>This is label 1.</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>This is label 2.</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget> -->
+
+<widget class="QGroupBox" name="groupBox">
+ <property name="title">
+    <string>Group Box</string>
+ </property>
+ <property name="geometry">
+    <rect>
+     <x>75</x>
+     <y>20</y>
+     <width>200</width>
+     <height>200</height>
+    </rect>
+ </property>
+ <widget class="QWidget" name="layoutWidget_2">
+    <property name="geometry">
+     <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>200</width>
+        <height>200</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+        <widget class="QPushButton" name="pushButton0">
+         <property name="text">
+            <string>Confirm Registration</string>
+         </property>
+        </widget>
+     </item>
+     <item>
+        <widget class="QPushButton" name="pushButton1">
+         <property name="text">
+            <string>Re-Register</string>
+         </property>
+        </widget>
+     </item>
+     <item>
+        <widget class="QPushButton" name="pushButton2">
+         <property name="text">
+            <string>Re-Plan</string>
+         </property>
+        </widget>
+     </item>
+     <item>
+        <widget class="QPushButton" name="pushButton3">
+         <property name="text">
+            <string>Confirm Plan</string>
+         </property>
+        </widget>
+     </item>
+     <item>
+        <widget class="QLabel" name="label_1">
+         <property name="text">
+            <string>This is label 1.</string>
+         </property>
+        </widget>
+     </item>
+    </layout>
+ </widget>
+</widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
