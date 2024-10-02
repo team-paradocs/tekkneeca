@@ -34,6 +34,24 @@ Assistive Robot for Total Knee Arthroplasty
 
         xhost +local:docker
 
+- Usage
+
+  build the image
+  
+        ./docker_build.sh
+  
+  run the image with hardware
+  
+        ./docker_run.sh
+  
+  run the image without hardware
+  
+        ./docker_run_sim.sh
+  
+  attach a new terminal to current container
+  
+        ./docker_terminal.sh
+
 - Trouble shooting
 
   If you encounter "Authorization required, but no authorization protocol specified" failure, run X11 forwarding again
