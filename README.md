@@ -36,7 +36,7 @@ Assistive Robot for Total Knee Arthroplasty
 
 - Trouble shooting
 
-  If you encouter authentication failure, run X11 forwarding again
+  If you encounter "Authorization required, but no authorization protocol specified" failure, run X11 forwarding again
 
   If you cannot connect to Arduino, chmod 777 /dev/ttyACM0
 
