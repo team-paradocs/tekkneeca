@@ -67,7 +67,7 @@ class PCDRegPipe(Node):
         self.input_thread.start()
 
         # Initialize SAM2 clicker
-        self.sam_clicker = RegistrationUI()
+        self.sam_clicker = RegistrationUI(size='large')
 
     def callback(self, msg):
         """Callback function for the subscriber.
@@ -126,7 +126,7 @@ class PCDRegPipe(Node):
     def process_point_cloud(self):
         """Processes the last received point cloud with Open3D."""
         if self.last_cloud is not None and self.last_image is not None:
-            mask, points,mask_points = self.sam_clicker.register(self.last_image)
+            mask, annotated_points, mask_points = self.sam_clicker.register(self.last_image)
             self.pcd_center = self.last_cloud.get_center()
             raw_cloud = self.last_cloud
             mask_cloud = self.lean_pipe.unproject_mask(mask,raw_cloud.points)
@@ -136,7 +136,7 @@ class PCDRegPipe(Node):
             self.target_cloud = filtered_cloud.voxel_down_sample(voxel_size=0.003)
 
 
-            init_transformation = self.lean_pipe.global_registration(self.source_cloud,self.target_cloud,mask_points)
+            init_transformation = self.lean_pipe.global_registration(self.source_cloud,self.target_cloud,annotated_points,mask_points)
             # init_transformation = np.eye(4)
             transform = init_transformation
             transform = self.lean_pipe.ransac_icp(self.source_cloud,self.target_cloud,transform)

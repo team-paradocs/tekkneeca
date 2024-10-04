@@ -7,7 +7,7 @@ from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 
 class RegistrationUI:
-    def __init__(self):
+    def __init__(self, size='small'):
         self.femur_point = None
         self.tibia_point = None
         self.mask_pointA = None
@@ -24,10 +24,19 @@ class RegistrationUI:
         self.device = torch.device("cuda")
         torch.autocast("cuda", dtype=torch.bfloat16).__enter__()
 
-        sam2_checkpoint = (
-            "/ros_ws/src/segment-anything-2/checkpoints/sam2_hiera_small.pt"
-        )
-        model_cfg = "sam2_hiera_s.yaml"
+        if size == 'small':
+            sam2_checkpoint = (
+                "/ros_ws/src/segment-anything-2/checkpoints/sam2_hiera_small.pt"
+            )
+            model_cfg = "sam2_hiera_s.yaml"
+        elif size == 'large':
+            sam2_checkpoint = (
+                "/ros_ws/src/segment-anything-2/checkpoints/sam2_hiera_large.pt"
+            )
+            model_cfg = "sam2_hiera_l.yaml"
+        else:
+            raise ValueError("Invalid size. Choose 'small' or 'large'.")
+
         t0 = time.time()
         sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
         self.predictor = SAM2ImagePredictor(sam2_model)

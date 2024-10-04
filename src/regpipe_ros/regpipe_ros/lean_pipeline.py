@@ -40,7 +40,7 @@ class LeanPipeline:
         cl, ind = pcd.remove_radius_outlier(nb_points=nb_neighbors, radius=radius)
         return pcd.select_by_index(ind)
     
-    def global_registration(self, source, target, mask_points):
+    def global_registration(self, source, target, annotated_points, mask_points):
         '''
         Centroid-based transformation estimation
         '''
@@ -68,6 +68,20 @@ class LeanPipeline:
         # Translate back to target's position
         translation_back = np.eye(4)
         translation_back[0:3, 3] = target_center
+
+        
+        # Get Distance of Femur Point to Target Center
+        px, py = annotated_points[0]
+        fx, fy = self.intrinsics[0,0], self.intrinsics[1,1]
+        cx, cy = self.intrinsics[0,2], self.intrinsics[1,2]
+        z = 0.404 # Temporary hardcoding of depth
+        X = (px - cx) *z / fx
+        Y = (py - cy) *z / fy
+        print(f"Femur Point X: {X}, Y: {Y}")
+        # Get distance vector to target center
+        distance_vector = target_center - np.array([X,Y,0])
+        print(f"Distance Vector: {distance_vector}")
+        translation_back[0:3, 3] = np.array([X,Y,target_center[2]])
 
         # Combine transformations
         transformation = translation_back @ rotation_4x4 @ translation_to_origin
