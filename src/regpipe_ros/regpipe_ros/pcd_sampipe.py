@@ -16,6 +16,7 @@ from scipy.spatial.transform import Rotation as R
 import geometry_msgs.msg
 
 from . import open3d_conversions, proc_pipeline, registration
+from .sam_clicker import RegistrationUI
 
 
 
@@ -64,6 +65,9 @@ class PCDRegPipe(Node):
         self.input_thread.daemon = True
         self.input_thread.start()
 
+        # Initialize SAM2 clicker
+        self.sam_clicker = RegistrationUI()
+
     def callback(self, msg):
         """Callback function for the subscriber.
         Args:
@@ -86,7 +90,7 @@ class PCDRegPipe(Node):
             cv_image = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
             cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
             self.last_image = cv_image
-            self.get_logger().info(f"Received image with shape {cv_image.shape} and type {cv_image.dtype}")
+            # self.get_logger().info(f"Received image with shape {cv_image.shape} and type {cv_image.dtype}")
         except Exception as e:
             self.get_logger().error(f"Error converting message to image: {e}")
 
@@ -120,7 +124,9 @@ class PCDRegPipe(Node):
 
     def process_point_cloud(self):
         """Processes the last received point cloud with Open3D."""
-        if self.last_cloud:
+        if self.last_cloud is not None and self.last_image is not None:
+            mask, points,mask_points = self.sam_clicker.register(self.last_image)
+            print(f"Mask: {mask.shape}")
             self.pcd_center = self.last_cloud.get_center()
             cloud = self.proc_pipe.run(self.last_cloud)
 
@@ -149,6 +155,8 @@ class PCDRegPipe(Node):
             else:
                 print("Not publishing. Moving on.")
                 return
+        else:
+            self.get_logger().error("No point cloud or image received.")
 
              
 
