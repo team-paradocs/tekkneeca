@@ -15,7 +15,7 @@ from geometry_msgs.msg import PoseStamped, PoseArray
 from scipy.spatial.transform import Rotation as R
 import geometry_msgs.msg
 
-from . import open3d_conversions, proc_pipeline, registration
+from . import open3d_conversions, proc_pipeline, lean_pipeline, registration
 from .sam_clicker import RegistrationUI
 
 
@@ -52,6 +52,7 @@ class PCDRegPipe(Node):
 
 
         self.proc_pipe = proc_pipeline.PointCloudProcessingPipeline(self.x_thresh, self.y_thresh, self.z_thresh)
+        self.lean_pipe = lean_pipeline.LeanPipeline()
         self.estimator = registration.Estimator('centroid')
         self.refiner = registration.Refiner('ransac_icp')
 
@@ -126,18 +127,19 @@ class PCDRegPipe(Node):
         """Processes the last received point cloud with Open3D."""
         if self.last_cloud is not None and self.last_image is not None:
             mask, points,mask_points = self.sam_clicker.register(self.last_image)
-            print(f"Mask: {mask.shape}")
             self.pcd_center = self.last_cloud.get_center()
-            cloud = self.proc_pipe.run(self.last_cloud)
+            raw_cloud = self.last_cloud
+            mask_cloud = self.lean_pipe.unproject_mask(mask,raw_cloud.points)
+            filtered_cloud = self.lean_pipe.filter_pcd(mask_cloud)
 
             self.source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
-            self.target_cloud = cloud.voxel_down_sample(voxel_size=0.003)
+            self.target_cloud = filtered_cloud.voxel_down_sample(voxel_size=0.003)
 
 
-            init_transformation = self.estimator.estimate(self.source_cloud, self.target_cloud)
+            init_transformation = self.lean_pipe.global_registration(self.source_cloud,self.target_cloud,mask_points)
             # init_transformation = np.eye(4)
             transform = init_transformation
-            transform = self.refiner.refine(self.source_cloud, self.target_cloud, init_transformation)
+            transform = self.lean_pipe.ransac_icp(self.source_cloud,self.target_cloud,transform)
             self.get_logger().info(f"Transformation matrix: {transform}")
 
             self.source_cloud.transform(transform)
