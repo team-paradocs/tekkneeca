@@ -14,6 +14,7 @@ from launch.substitutions import (
 from lbr_bringup import LBRMoveGroupMixin
 from lbr_description import GazeboMixin, LBRDescriptionMixin, RVizMixin
 from lbr_ros2_control import LBRROS2ControlMixin
+from launch_ros.actions import Node
 
 import os
 import yaml
@@ -85,7 +86,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     # Load additional OMPL pipeline
     ompl_planning_pipeline_config = {
-        "ompl_2": {
+        "ompl": {
             "planning_plugins": [
                 "ompl_interface/OMPLPlanner",
             ],
@@ -105,7 +106,19 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ompl_planning_yaml = load_yaml(
         "med7_moveit_config", "config/ompl_planning.yaml"
     )
-    ompl_planning_pipeline_config["ompl_2"].update(ompl_planning_yaml)
+    ompl_planning_pipeline_config["ompl"].update(ompl_planning_yaml)
+
+    pilz_industrial_motion_planner_yaml = load_yaml(
+        "med7_moveit_config", "config/pilz_industrial_motion_planner_planning.yaml"
+    )
+    pilz_planning_pipeline_config = {
+        "pilz_industrial_motion_planner": {
+            "planning_plugins": [
+                "pilz_industrial_motion_planner/CommandPlanner",
+            ],
+        }
+    }
+    pilz_planning_pipeline_config["pilz_industrial_motion_planner"].update(pilz_industrial_motion_planner_yaml)
 
     model = LaunchConfiguration("model").perform(context)
     moveit_configs_builder = LBRMoveGroupMixin.moveit_configs_builder(
@@ -119,6 +132,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
             parameters=[
                 moveit_configs_builder.to_dict(),
                 ompl_planning_pipeline_config,
+                pilz_planning_pipeline_config,
                 movegroup_params,
                 {"use_sim_time": True},
             ],
@@ -168,6 +182,22 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ld.add_action(rviz_event_handler)
 
     # TODO: Define start-up joint angles through Gazebo
+
+    # set_initial_joint_positions = Node(
+    #     package="paradocs_control",
+    #     executable="set_initial_joint_positions.py",
+    #     name="set_initial_joint_positions",
+    #     namespace="",
+    #     output="screen",
+    #     parameters=[
+    #         {"initial_positions": load_yaml(
+    #             "med7_moveit_config", "config/initial_positions.yaml"
+    #             )
+    #         },
+    #     ]
+    # )
+
+    # ld.add_action(set_initial_joint_positions)
 
     return ld.entities
 
