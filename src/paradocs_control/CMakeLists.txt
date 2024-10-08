@@ -7,12 +7,14 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+# find_package(Serial REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(moveit_ros_planning_interface)
 find_package(moveit_msgs REQUIRED)
+find_package(behaviortree_cpp REQUIRED)
 
 # Include Cpp "include" directory
 include_directories(include)
@@ -22,10 +24,14 @@ add_executable(hello_moveit src/hello_moveit.cpp)
 ament_target_dependencies(hello_moveit rclcpp moveit_ros_planning_interface)
 add_executable(static_obstacles src/static_obstacles.cpp)
 ament_target_dependencies(static_obstacles rclcpp moveit_ros_planning_interface)
+add_executable(arduino_bt behavior_tree_code/arduino_bt.cpp)
+ament_target_dependencies(arduino_bt rclcpp moveit_ros_planning_interface)
 add_executable(talker src/publisher_member_function.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 add_executable(listener src/subscriber_member_function.cpp)
 ament_target_dependencies(listener rclcpp std_msgs)
+
+target_link_libraries(arduino_bt behaviortree_cpp)
 
 # Install Cpp executables
 install(TARGETS
@@ -34,6 +40,7 @@ install(TARGETS
   listener
   hello_moveit
   static_obstacles
+  arduino_bt
   DESTINATION lib/${PROJECT_NAME}
 )
 

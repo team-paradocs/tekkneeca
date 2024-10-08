@@ -76,10 +76,14 @@ RUN pip install pyserial
 
 # Source ROS 2 setup file
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
 # RUN rosdep install --from-paths src --ignore-src -r -y
 
 # Install x11 dependencies for GUI applications
 RUN apt-get install -y libgl1-mesa-glx libxrender1 libxext6 libxtst6
+
+# CMD git clone https://github.com/BehaviorTree/BehaviorTree.CPP.git
+
 
 
 # Set the default command to run when starting the container
