@@ -26,6 +26,10 @@ class SerialWriterBTNode : public BT::SyncActionNode
                 std::bind(&SerialWriterBTNode::subscriber_callback, this, std::placeholders::_1));
             status = 1;        
         }
+        static BT::PortsList providedPorts()
+        {
+            return {BT::InputPort<std::string>("command")}; // Input port for command messages
+        }
         BT::NodeStatus tick() override
         {
             if (status == 1)
@@ -48,4 +52,4 @@ class SerialWriterBTNode : public BT::SyncActionNode
             status = 2;
         }
 
-}
+};
