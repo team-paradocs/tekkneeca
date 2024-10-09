@@ -24,8 +24,8 @@ add_executable(hello_moveit src/hello_moveit.cpp)
 ament_target_dependencies(hello_moveit rclcpp moveit_ros_planning_interface)
 add_executable(static_obstacles src/static_obstacles.cpp)
 ament_target_dependencies(static_obstacles rclcpp moveit_ros_planning_interface)
-add_executable(arduino_bt behavior_tree_code/arduino_bt.cpp)
-ament_target_dependencies(arduino_bt rclcpp moveit_ros_planning_interface)
+add_executable(drill_bt behavior_tree_code/drill_bt.cpp)
+ament_target_dependencies(drill_bt rclcpp moveit_ros_planning_interface)
 add_executable(talker src/publisher_member_function.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 add_executable(listener src/subscriber_member_function.cpp)
@@ -35,7 +35,7 @@ add_executable(bt_main behavior_tree_code/bt_main.cpp)
 ament_target_dependencies(bt_main rclcpp moveit_ros_planning_interface)
 
 
-target_link_libraries(arduino_bt behaviortree_cpp)
+target_link_libraries(drill_bt behaviortree_cpp)
 
 # Install Cpp executables
 install(TARGETS
@@ -44,7 +44,7 @@ install(TARGETS
   listener
   hello_moveit
   static_obstacles
-  arduino_bt
+  drill_bt
   bt_main
   DESTINATION lib/${PROJECT_NAME}
 )
