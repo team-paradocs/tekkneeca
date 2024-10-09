@@ -31,6 +31,10 @@ ament_target_dependencies(talker rclcpp std_msgs)
 add_executable(listener src/subscriber_member_function.cpp)
 ament_target_dependencies(listener rclcpp std_msgs)
 
+add_executable(bt_main behavior_tree_code/bt_main.cpp)
+ament_target_dependencies(bt_main rclcpp moveit_ros_planning_interface)
+
+
 target_link_libraries(arduino_bt behaviortree_cpp)
 
 # Install Cpp executables
@@ -41,6 +45,7 @@ install(TARGETS
   hello_moveit
   static_obstacles
   arduino_bt
+  bt_main
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -100,6 +100,6 @@ int main(int argc, char **argv)
 
     // Shutdown ROS 2 when done
     rclcpp::shutdown();
-    node_.reset();
+    node_.reset();createTreeFromFile
     return 0;
 }
