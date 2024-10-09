@@ -36,6 +36,8 @@ ament_target_dependencies(bt_main rclcpp moveit_ros_planning_interface)
 
 
 target_link_libraries(drill_bt behaviortree_cpp)
+target_link_libraries(bt_main behaviortree_cpp)
+
 
 # Install Cpp executables
 install(TARGETS
