@@ -104,6 +104,18 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
     ompl_planning_pipeline_config["ompl"].update(ompl_planning_yaml)
 
+    pilz_industrial_motion_planner_yaml = load_yaml(
+        "med7_moveit_config", "config/pilz_industrial_motion_planner_planning.yaml"
+    )
+    pilz_planning_pipeline_config = {
+        "pilz_industrial_motion_planner": {
+            "planning_plugins": [
+                "pilz_industrial_motion_planner/CommandPlanner",
+            ],
+        }
+    }
+    pilz_planning_pipeline_config["pilz_industrial_motion_planner"].update(pilz_industrial_motion_planner_yaml)
+
     model = LaunchConfiguration("model").perform(context)
     moveit_configs_builder = LBRMoveGroupMixin.moveit_configs_builder(
         robot_name=model,
@@ -116,6 +128,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
             parameters=[
                 moveit_configs_builder.to_dict(),
                 ompl_planning_pipeline_config,
+                pilz_planning_pipeline_config,
                 movegroup_params,
                 {"use_sim_time": True},
             ],
