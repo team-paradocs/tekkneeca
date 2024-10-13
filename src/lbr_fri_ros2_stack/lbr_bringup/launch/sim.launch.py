@@ -82,7 +82,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     # Load additional OMPL pipeline
     ompl_planning_pipeline_config = {
-        "ompl_2": {
+        "ompl": {
             "planning_plugins": [
                 "ompl_interface/OMPLPlanner",
             ],
@@ -102,7 +102,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ompl_planning_yaml = load_yaml(
         "med7_moveit_config", "config/ompl_planning.yaml"
     )
-    ompl_planning_pipeline_config["ompl_2"].update(ompl_planning_yaml)
+    ompl_planning_pipeline_config["ompl"].update(ompl_planning_yaml)
 
     model = LaunchConfiguration("model").perform(context)
     moveit_configs_builder = LBRMoveGroupMixin.moveit_configs_builder(
