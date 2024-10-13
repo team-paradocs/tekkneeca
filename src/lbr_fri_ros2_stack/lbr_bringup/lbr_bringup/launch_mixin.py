@@ -91,10 +91,11 @@ class LBRMoveGroupMixin:
                 get_package_share_directory(package_name),
                 "config/pilz_cartesian_limits.yaml"
             ))
-            .moveit_cpp(file_path=os.path.join(
-                get_package_share_directory("paradocs_planning"),
-                "config/global_planner.yaml"
-            ))
+            # don't need this
+            # .moveit_cpp(file_path=os.path.join(
+            #     get_package_share_directory("paradocs_planning"),
+            #     "config/global_planner.yaml"
+            # ))
         )
 
     @staticmethod

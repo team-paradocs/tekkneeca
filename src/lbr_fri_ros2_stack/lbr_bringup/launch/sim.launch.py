@@ -14,7 +14,6 @@ from launch.substitutions import (
 from lbr_bringup import LBRMoveGroupMixin
 from lbr_description import GazeboMixin, LBRDescriptionMixin, RVizMixin
 from lbr_ros2_control import LBRROS2ControlMixin
-from launch_ros.actions import Node
 
 import os
 import yaml
@@ -180,24 +179,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         OnProcessExit(target_action=spawn_entity, on_exit=[rviz_moveit, rviz])
     )
     ld.add_action(rviz_event_handler)
-
-    # TODO: Define start-up joint angles through Gazebo
-
-    # set_initial_joint_positions = Node(
-    #     package="paradocs_control",
-    #     executable="set_initial_joint_positions.py",
-    #     name="set_initial_joint_positions",
-    #     namespace="",
-    #     output="screen",
-    #     parameters=[
-    #         {"initial_positions": load_yaml(
-    #             "med7_moveit_config", "config/initial_positions.yaml"
-    #             )
-    #         },
-    #     ]
-    # )
-
-    # ld.add_action(set_initial_joint_positions)
 
     return ld.entities
 
