@@ -162,7 +162,7 @@ class PCDRegPipe(Node):
 
              
 
-    def compute_plan(self, transform,theta=-np.pi):
+    def compute_plan(self, transform,theta=-np.pi/2):
         """Computes the surgical drill point by transforming the default point with the given transform."""
 
         drill_pose_array = PoseArray()
