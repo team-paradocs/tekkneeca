@@ -222,8 +222,8 @@ public:
     goal_motion_request.num_planning_attempts = 10;
     goal_motion_request.max_velocity_scaling_factor = 0.1;
     goal_motion_request.max_acceleration_scaling_factor = 0.1;
-    goal_motion_request.allowed_planning_time = 2.0;
-    goal_motion_request.planner_id = "ompl";
+    goal_motion_request.allowed_planning_time = 5.0;
+    goal_motion_request.planner_id = "RRTstarkConfigDefault";
     goal_motion_request.pipeline_id = "ompl";
 
     moveit::core::RobotState goal_state(robot_model);
