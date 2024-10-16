@@ -61,6 +61,9 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <rclcpp_action/rclcpp_action.hpp>
+#include "control_msgs/action/follow_joint_trajectory.hpp"
+
 namespace moveit::hybrid_planning
 {
 // TODO(sjahr) Refactor and use repository wide solution
@@ -91,7 +94,8 @@ enum class LocalPlannerState : int8_t
   ERROR = 0,
   UNCONFIGURED = 1,
   AWAIT_GLOBAL_TRAJECTORY = 2,
-  LOCAL_PLANNING_ACTIVE = 3
+  LOCAL_PLANNING_ACTIVE = 3,
+  LOCAL_PLANNING_CANCELED = 4
 };
 
 /**
@@ -212,6 +216,7 @@ private:
   // Local solution publisher
   rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr local_trajectory_publisher_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr local_solution_publisher_;
+  rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr local_trajectory_action_client_;
 
   // Local constraint solver plugin loader
   std::unique_ptr<pluginlib::ClassLoader<LocalConstraintSolverInterface>> local_constraint_solver_plugin_loader_;

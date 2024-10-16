@@ -1,17 +1,19 @@
 robot_description: "robot_description"
 trajectory_operator_plugin_name: "moveit_hybrid_planning/SimpleSampler"
 local_constraint_solver_plugin_name: "moveit_hybrid_planning/ForwardTrajectory"
-# local_planning_frequency: 100.0
 local_planning_frequency: 10.0
+# local_planning_frequency: 0.1
 global_solution_topic: "global_trajectory"
 # local_solution_topic: "/kuka_joint_group_position_controller/commands" # or panda_arm_controller/joint_trajectory
 # local_solution_topic: "/kuka_joint_group_position_controller/joint_trajectory" # or panda_arm_controller/joint_trajectory
-local_solution_topic: "/lbr/joint_trajectory_controller/joint_trajectory"
+# local_solution_topic: "/lbr/joint_trajectory_controller/joint_trajectory"
+local_solution_topic: "/lbr/joint_trajectory_controller/follow_joint_trajectory"
 # local_solution_topic: /lbr/command/torque
 
 # local_solution_topic_type: "std_msgs/Float64MultiArray" # or trajectory_msgs/JointTrajectory
-local_solution_topic_type: "trajectory_msgs/msg/JointTrajectory"
+# local_solution_topic_type: "trajectory_msgs/msg/JointTrajectory"
 # local_solution_topic_type: "lbr_fri_msgs/msg/LBRTorqueCommand"
+local_solution_topic_type: "control_msgs/action/FollowJointTrajectory"
 
 publish_joint_positions: true
 publish_joint_velocities: false
