@@ -56,7 +56,9 @@ class GlobalPlannerComponent
 {
 public:
   /** \brief Constructor */
-  GlobalPlannerComponent(const rclcpp::NodeOptions& options);
+  GlobalPlannerComponent(const rclcpp::NodeOptions& options = rclcpp::NodeOptions()
+      .automatically_declare_parameters_from_overrides(true)
+      .allow_undeclared_parameters(true));
 
   /** \brief Destructor */
   ~GlobalPlannerComponent()
