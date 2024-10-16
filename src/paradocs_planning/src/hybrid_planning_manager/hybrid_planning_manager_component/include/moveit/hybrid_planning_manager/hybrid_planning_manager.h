@@ -51,106 +51,111 @@
 
 namespace moveit::hybrid_planning
 {
-/**
- * Class HybridPlanningManager - ROS 2 component node that implements the hybrid planning manager.
- */
-class HybridPlanningManager : public rclcpp::Node
-{
-public:
-  /** \brief Constructor */
-  HybridPlanningManager(const rclcpp::NodeOptions& options);
-
-  /** \brief Destructor */
-  ~HybridPlanningManager() override
+  /**
+  * Class HybridPlanningManager - ROS 2 component node that implements the hybrid planning manager.
+  */
+  class HybridPlanningManager : public rclcpp::Node
   {
-    // Join the thread used for long-running callbacks
-    if (long_callback_thread_.joinable())
+  public:
+    /** \brief Constructor */
+    HybridPlanningManager(const rclcpp::NodeOptions& options);
+
+    /** \brief Destructor */
+    ~HybridPlanningManager() override
     {
-      long_callback_thread_.join();
+      // Join the thread used for long-running callbacks
+      if (long_callback_thread_.joinable())
+      {
+        long_callback_thread_.join();
+      }
     }
-  }
 
-  /**
-   * Allows creation of a smart pointer that references to instances of this object
-   * @return shared pointer of the HybridPlanningManager instance that called the function
-   */
-  std::shared_ptr<HybridPlanningManager> shared_from_this()
-  {
-    return std::static_pointer_cast<HybridPlanningManager>(Node::shared_from_this());
-  }
+    /**
+    * Allows creation of a smart pointer that references to instances of this object
+    * @return shared pointer of the HybridPlanningManager instance that called the function
+    */
+    std::shared_ptr<HybridPlanningManager> shared_from_this()
+    {
+      return std::static_pointer_cast<HybridPlanningManager>(Node::shared_from_this());
+    }
 
-  /**
-   * Load and initialized planner logic plugin and ROS 2 action and topic interfaces
-   * @return Initialization successful yes/no
-   */
-  bool initialize();
+    /**
+    * Load and initialized planner logic plugin and ROS 2 action and topic interfaces
+    * @return Initialization successful yes/no
+    */
+    bool initialize();
 
-  /**
-   * Cancel any active action goals, including global and local planners
-   */
-  void cancelHybridManagerGoals() noexcept;
+    /**
+    * Cancel any active action goals, including global and local planners
+    */
+    void cancelHybridManagerGoals() noexcept;
 
-  /**
-   * This handles execution of a hybrid planning goal in a new thread, to avoid blocking the executor.
-   * @param goal_handle The action server goal
-   */
-  void executeHybridPlannerGoal(
-      std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> goal_handle);
+    /**
+    * This handles execution of a hybrid planning goal in a new thread, to avoid blocking the executor.
+    * @param goal_handle The action server goal
+    */
+    void executeHybridPlannerGoal(
+        std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> goal_handle);
 
-  /**
-   * Send global planning request to global planner component
-   * @return Global planner successfully started yes/no
-   */
-  bool sendGlobalPlannerAction();
+    /**
+    * Send global planning request to global planner component
+    * @return Global planner successfully started yes/no
+    */
+    bool sendGlobalPlannerAction();
 
-  /**
-   * Send local planning request to local planner component
-   * @return Local planner successfully started yes/no
-   */
-  bool sendLocalPlannerAction();
+    /**
+    * Send local planning request to local planner component
+    * @return Local planner successfully started yes/no
+    */
+    bool sendLocalPlannerAction();
 
-  /**
-   * Send back hybrid planning response
-   * @param success Indicates whether hybrid planning was successful
-   */
-  void sendHybridPlanningResponse(bool success);
+    /**
+    * Send back hybrid planning response
+    * @param success Indicates whether hybrid planning was successful
+    */
+    void sendHybridPlanningResponse(bool success);
 
-private:
-  // Planner logic plugin loader
-  std::unique_ptr<pluginlib::ClassLoader<PlannerLogicInterface>> planner_logic_plugin_loader_;
+    std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> 
+      getHybridPlanningGoalHandle() const {
+        return hybrid_planning_goal_handle_;
+      }
 
-  // Planner logic instance to implement reactive behavior
-  std::shared_ptr<PlannerLogicInterface> planner_logic_instance_;
+  private:
+    // Planner logic plugin loader
+    std::unique_ptr<pluginlib::ClassLoader<PlannerLogicInterface>> planner_logic_plugin_loader_;
 
-  // Timer to trigger events periodically
-  rclcpp::TimerBase::SharedPtr timer_;
+    // Planner logic instance to implement reactive behavior
+    std::shared_ptr<PlannerLogicInterface> planner_logic_instance_;
 
-  // Flag that indicates whether the manager is initialized
-  bool initialized_;
+    // Timer to trigger events periodically
+    rclcpp::TimerBase::SharedPtr timer_;
 
-  // Flag that indicates hybrid planning has been canceled
-  std::atomic<bool> stop_hybrid_planning_;
+    // Flag that indicates whether the manager is initialized
+    bool initialized_;
 
-  // Shared hybrid planning goal handle
-  std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> hybrid_planning_goal_handle_;
+    // Flag that indicates hybrid planning has been canceled
+    std::atomic<bool> stop_hybrid_planning_;
 
-  // Frequently updated feedback for the hybrid planning action requester
-  std::shared_ptr<moveit_msgs::action::HybridPlanner_Feedback> hybrid_planning_progess_;
+    // Shared hybrid planning goal handle
+    std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> hybrid_planning_goal_handle_;
 
-  // Planning request action clients
-  rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;
-  rclcpp_action::Client<moveit_msgs::action::GlobalPlanner>::SharedPtr global_planner_action_client_;
+    // Frequently updated feedback for the hybrid planning action requester
+    std::shared_ptr<moveit_msgs::action::HybridPlanner_Feedback> hybrid_planning_progess_;
 
-  // Hybrid planning request action server
-  rclcpp_action::Server<moveit_msgs::action::HybridPlanner>::SharedPtr hybrid_planning_request_server_;
+    // Planning request action clients
+    rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;
+    rclcpp_action::Client<moveit_msgs::action::GlobalPlanner>::SharedPtr global_planner_action_client_;
 
-  // Global solution subscriber
-  rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
+    // Hybrid planning request action server
+    rclcpp_action::Server<moveit_msgs::action::HybridPlanner>::SharedPtr hybrid_planning_request_server_;
 
-  // This thread is used for long-running callbacks. It's a member so they do not go out of scope.
-  std::thread long_callback_thread_;
+    // Global solution subscriber
+    rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
 
-  // A unique callback group, to avoid mixing callbacks with other action servers
-  rclcpp::CallbackGroup::SharedPtr cb_group_;
-};
+    // This thread is used for long-running callbacks. It's a member so they do not go out of scope.
+    std::thread long_callback_thread_;
+
+    // A unique callback group, to avoid mixing callbacks with other action servers
+    rclcpp::CallbackGroup::SharedPtr cb_group_;
+  };
 }  // namespace moveit::hybrid_planning

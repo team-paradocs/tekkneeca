@@ -26,6 +26,9 @@
   <depend>std_srvs</depend>
   <depend>tf2_ros</depend>
   <depend>trajectory_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
@@ -42,5 +45,6 @@
     <paradocs_planning plugin="${prefix}/plugins/replan_invalidated_trajectory_plugin.xml"/>
     <paradocs_planning plugin="${prefix}/plugins/single_plan_execution_plugin.xml"/>
     <paradocs_planning plugin="${prefix}/plugins/forward_trajectory_plugin.xml"/>
+    <paradocs_planning plugin="${prefix}/plugins/motion_compensation_plugin.xml"/>
   </export>
 </package>

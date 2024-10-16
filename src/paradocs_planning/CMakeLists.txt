@@ -22,6 +22,10 @@ find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 set(LIBRARIES
   # Components
@@ -33,6 +37,7 @@ set(LIBRARIES
   motion_planning_pipeline_plugin
   replan_invalidated_trajectory_plugin
   simple_sampler_plugin
+  motion_compensation_plugin
   single_plan_execution_plugin
 )
 
@@ -47,6 +52,9 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_components
   std_msgs
   std_srvs
+  control_msgs
+  tf2
+  tf2_geometry_msgs
   tf2_ros
   trajectory_msgs
 )
@@ -95,6 +103,7 @@ install(DIRECTORY ${THIS_PACKAGE_INCLUDE_DIRS} DESTINATION include)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/single_plan_execution_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/moveit_planning_pipeline_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/simple_sampler_plugin.xml)
+pluginlib_export_plugin_description_file(paradocs_planning plugins/motion_compensation_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/replan_invalidated_trajectory_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/forward_trajectory_plugin.xml)
 
@@ -110,12 +119,15 @@ add_executable(listener src/subscriber_member_function.cpp)
 ament_target_dependencies(listener rclcpp std_msgs)
 add_executable(hybrid_planning_demo src/test/hybrid_planning_demo_node.cpp)
 ament_target_dependencies(hybrid_planning_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
+add_executable(continuous_motion_demo src/test/continuous_motion_demo.cpp)
+ament_target_dependencies(continuous_motion_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
 
 # Install Cpp executables
 install(TARGETS
   talker
   listener
   hybrid_planning_demo
+  continuous_motion_demo
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -126,6 +138,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/publisher_member_function.py
   scripts/subscriber_member_function.py
+  scripts/continuous_pose_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

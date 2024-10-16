@@ -1,0 +1,7 @@
+<library path="motion_compensation_plugin">
+  <class name="moveit_hybrid_planning/MotionCompensation" type="moveit::hybrid_planning::MotionCompensation" base_class_type="moveit::hybrid_planning::PlannerLogicInterface">
+    <description>
+    ParaDocs Motion Compensation.
+    </description>
+  </class>
+</library>

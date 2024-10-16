@@ -1,1 +1,1 @@
-planner_logic_plugin_name: "moveit_hybrid_planning/ReplanInvalidatedTrajectory"
+planner_logic_plugin_name: "moveit_hybrid_planning/MotionCompensation"
