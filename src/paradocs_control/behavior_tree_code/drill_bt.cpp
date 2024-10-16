@@ -5,13 +5,14 @@
 #include "std_msgs/msg/string.hpp" // ROS 2 String message type
                                    // #include <serial/serial.h>                  // For Arduino communication
 
-rclcpp::Node::SharedPtr node_;
 
 class SerialWriterBTNode : public BT::SyncActionNode
 {   
     private:
         int status = 0;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+rclcpp::Node::SharedPtr node_;
+
 
     public:
         SerialWriterBTNode(const std::string &name, const BT::NodeConfiguration &config)
