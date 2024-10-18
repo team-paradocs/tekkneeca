@@ -1,1 +1,1 @@
-sudo docker build -f docker/Dockerfile -t paradockerimage:hybrid-planning .
+sudo docker build -f docker/Dockerfile -t paradockerimage:hybrid-planning-global .
