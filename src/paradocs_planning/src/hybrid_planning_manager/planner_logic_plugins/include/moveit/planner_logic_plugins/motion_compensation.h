@@ -55,10 +55,9 @@ public:
   ReactionResult react(const std::string& event) override;
 
 private:
-  void checkMotion();
+  bool checkMotionXsendAction();
   double calculateOrientationDifference(const geometry_msgs::msg::Pose& pose1, const geometry_msgs::msg::Pose& pose2); 
   double calculatePositionDifference(const geometry_msgs::msg::Pose& pose1, const geometry_msgs::msg::Pose& pose2);
-  geometry_msgs::msg::Pose constraintsToPose(const moveit_msgs::msg::Constraints& constraints);
 
   // threshold for the position difference (m)
   double position_threshold_ = 0.03;
@@ -67,7 +66,7 @@ private:
   double orientation_threshold_ = 10.0;
 
   // Previous goal
-  std::shared_ptr<moveit_msgs::action::HybridPlanner_Goal> previous_goal_ = nullptr;
+  std::shared_ptr<const geometry_msgs::msg::PoseStamped> previous_goal_ = nullptr;
 
   bool local_planner_started_ = false;
   bool global_planner_started_ = false;

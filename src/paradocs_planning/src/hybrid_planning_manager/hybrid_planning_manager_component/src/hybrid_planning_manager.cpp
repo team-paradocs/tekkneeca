@@ -48,7 +48,6 @@ namespace moveit::hybrid_planning
     : Node("hybrid_planning_manager", options), initialized_(false), stop_hybrid_planning_(false)
   {
     // Initialize hybrid planning component after construction
-    // TODO(sjahr) Remove once life cycle component nodes are available
     timer_ = this->create_wall_timer(1ms, [this]() {
       if (initialized_)
       {
@@ -79,7 +78,6 @@ namespace moveit::hybrid_planning
     {
       RCLCPP_ERROR(LOGGER, "Exception while creating planner logic plugin loader '%s'", ex.what());
     }
-    // TODO(sjahr) Refactor parameter declaration and use repository wide solution
     std::string logic_plugin_name = "";
     if (this->has_parameter("planner_logic_plugin_name"))
     {
@@ -136,46 +134,7 @@ namespace moveit::hybrid_planning
       return false;
     }
 
-    // Initialize hybrid planning action server
-    std::string hybrid_planning_action_name = this->declare_parameter<std::string>("hybrid_planning_action_name", "");
-    this->get_parameter<std::string>("hybrid_planning_action_name", hybrid_planning_action_name);
-    if (hybrid_planning_action_name.empty())
-    {
-      RCLCPP_ERROR(LOGGER, "hybrid_planning_action_name parameter was not defined");
-      return false;
-    }
-    cb_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-    hybrid_planning_request_server_ = rclcpp_action::create_server<moveit_msgs::action::HybridPlanner>(
-        this->get_node_base_interface(), this->get_node_clock_interface(), this->get_node_logging_interface(),
-        this->get_node_waitables_interface(), hybrid_planning_action_name,
-        // Goal callback
-        [](const rclcpp_action::GoalUUID& /*unused*/,
-          const std::shared_ptr<const moveit_msgs::action::HybridPlanner::Goal>& /*unused*/) {
-          RCLCPP_INFO(LOGGER, "Received hybrid-planning goal request");
-          // The below return goes to Execution callback
-          return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-        },
-        // Cancel callback
-        [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>>& /*unused*/) {
-          cancelHybridManagerGoals();
-          RCLCPP_INFO(LOGGER, "Received hybrid-planning request to cancel goal");
-          return rclcpp_action::CancelResponse::ACCEPT;
-        },
-        // Execution callback
-        [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> goal_handle) {
-          
-          RCLCPP_INFO(LOGGER, "Executing hybrid-planning goal request");
-          // this needs to return quickly to avoid blocking the executor, so spin up a new thread
-          
-          // kill previous goal execution thread if it is still running
-          if (long_callback_thread_.joinable())
-            cancelHybridManagerGoals();
-          // Execute the hybrid planner goal
-          long_callback_thread_ = std::thread(&HybridPlanningManager::executeHybridPlannerGoal, this, goal_handle);
-        },
-        rcl_action_server_get_default_options(), cb_group_);
-
-    // Initialize global solution subscriber
+    // Initialize global solution subscriber (react is do nothing)
     global_solution_sub_ = create_subscription<moveit_msgs::msg::MotionPlanResponse>(
         "global_trajectory", rclcpp::SystemDefaultsQoS(),
         [this](const moveit_msgs::msg::MotionPlanResponse::ConstSharedPtr& /* unused */) {
@@ -186,12 +145,54 @@ namespace moveit::hybrid_planning
             auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
             result->error_code.val = reaction_result.error_code.val;
             result->error_message = reaction_result.error_message;
-            hybrid_planning_goal_handle_->abort(result);
+            // hybrid_planning_goal_handle_->abort(result);
             RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
           }
-        });
+        }
+    );
 
-      // TODO: Software stop topic sub and react to it
+    // Initialize tracking goal subscriber
+    tracking_goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
+        "tracking_goal", rclcpp::SystemDefaultsQoS(),
+        [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
+
+          // TODO: Design the behavior here
+          if (long_callback_thread_.joinable())
+            cancelHybridManagerGoals();
+          // Execute the hybrid planner goal
+          long_callback_thread_ = std::thread(&HybridPlanningManager::executeHybridPlannerGoal, this, msg);
+
+        }
+    );
+
+    // For IK calculation
+    this->declare_parameter<std::string>("robot_description_kinematics.arm.kinematics_solver", "pick_ik/PickIkPlugin");
+    this->declare_parameter<double>("robot_description_kinematics.arm.kinematics_solver_timeout", 0.05);
+    this->declare_parameter<int>("robot_description_kinematics.arm.kinematics_solver_attempts", 3);
+    this->declare_parameter<std::string>("robot_description_kinematics.arm.mode", "global");
+    this->declare_parameter<double>("robot_description_kinematics.arm.position_scale", 1.0); 
+    this->declare_parameter<double>("robot_description_kinematics.arm.rotation_scale", 0.5);
+    this->declare_parameter<double>("robot_description_kinematics.arm.position_threshold", 0.001);
+    this->declare_parameter<double>("robot_description_kinematics.arm.orientation_threshold", 0.01);
+    this->declare_parameter<double>("robot_description_kinematics.arm.cost_threshold", 0.001);
+    this->declare_parameter<double>("robot_description_kinematics.arm.minimal_displacement_weight", 0.0);
+    this->declare_parameter<double>("robot_description_kinematics.arm.gd_step_size", 0.0001);
+
+    std::string robot_description = this->declare_parameter<std::string>("robot_description", "");
+    this->get_parameter<std::string>("robot_description", robot_description);
+    std::string planning_group = this->declare_parameter<std::string>("planning_group", "");
+    this->get_parameter<std::string>("planning_group", planning_group);
+
+    robot_model_loader::RobotModelLoader robot_model_loader(this->shared_from_this(), "robot_description");
+    // Get the robot model for IK
+    robot_model_ = robot_model_loader.getModel();
+    planning_group_ = planning_group;
+    goal_state_ = std::make_shared<moveit::core::RobotState>(robot_model_);
+    joint_model_group_ = std::shared_ptr<const moveit::core::JointModelGroup>(
+        goal_state_->getJointModelGroup(planning_group_));
+
+    
+    // TODO: Software stop topic sub and react to it
 
     return true;
   }
@@ -201,73 +202,60 @@ namespace moveit::hybrid_planning
 
     // Prevent any new global or local requests from going out
     stop_hybrid_planning_ = true;
-
     // Cancel local action
     auto local_future = local_planner_action_client_->async_cancel_all_goals();
-    if (local_future.valid()) {
-      // Wait for the cancellation to finish
-      // std::shared_future<T>::wait
-      local_future.wait();
-    }
-
+    // if (local_future.valid()) {
+    //   // Wait for the cancellation to finish
+    //   // std::shared_future<T>::wait
+    //   local_future.wait();
+    // }
     // Cancel global action
     auto global_future = global_planner_action_client_->async_cancel_all_goals();
-    if (global_future.valid()) {
-      // Wait for the cancellation to finish
-      // std::shared_future<T>::wait
-      global_future.wait();
-    }
-
+    // if (global_future.valid()) {
+    //   // Wait for the cancellation to finish
+    //   // std::shared_future<T>::wait
+    //   global_future.wait();
+    // }
     if (long_callback_thread_.joinable())
     {
       long_callback_thread_.join();
     }
-
     RCLCPP_INFO(LOGGER, "cancelHybridManagerGoals finished");
-
-
   }
 
   void HybridPlanningManager::executeHybridPlannerGoal(
-      std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> goal_handle)
-  {
-    // Reset the "stop" flag if it was set previously
-    stop_hybrid_planning_ = false;
+     const std::shared_ptr<const geometry_msgs::msg::PoseStamped>& goal_handle) {
 
-    // Pass goal handle to class member
-    hybrid_planning_goal_handle_ = std::move(goal_handle);
+      // Reset the "stop" flag if it was set previously
+      stop_hybrid_planning_ = false;
 
-    // react is defined in a hybrid_planning_manager plugin
-    ReactionResult reaction_result =
-        planner_logic_instance_->react(HybridPlanningEvent::HYBRID_PLANNING_REQUEST_RECEIVED);
-    if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
-    {
-      auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
-      result->error_code.val = reaction_result.error_code.val;
-      result->error_message = reaction_result.error_message;
-      hybrid_planning_goal_handle_->abort(result);
-      RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to  " << reaction_result.event);
+      // Pass goal handle to class member
+      hybrid_planning_goal_handle_ = std::move(goal_handle);
+
+      // react is defined in a hybrid_planning_manager plugin
+      ReactionResult reaction_result =
+          planner_logic_instance_->react(HybridPlanningEvent::HYBRID_PLANNING_REQUEST_RECEIVED);
+      if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
+        auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
+        result->error_code.val = reaction_result.error_code.val;
+        result->error_message = reaction_result.error_message;
+        RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to  " << reaction_result.event);
+      }
     }
-  }
 
   bool HybridPlanningManager::sendGlobalPlannerAction()
   {
+
     auto global_goal_options = rclcpp_action::Client<moveit_msgs::action::GlobalPlanner>::SendGoalOptions();
 
     // Add goal response callback
     global_goal_options.goal_response_callback =
         [this](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::GlobalPlanner>::SharedPtr& goal_handle) {
-          auto planning_progress = std::make_shared<moveit_msgs::action::HybridPlanner::Feedback>();
-          auto& feedback = planning_progress->feedback;
-          if (!goal_handle)
-          {
-            feedback = "Global goal was rejected by server";
+          if (!goal_handle) {
+            RCLCPP_ERROR(LOGGER, "Global goal was rejected by server");
+          } else {
+            RCLCPP_INFO(LOGGER, "Global goal accepted by server");
           }
-          else
-          {
-            feedback = "Global goal accepted by server";
-          }
-          hybrid_planning_goal_handle_->publish_feedback(planning_progress);
         };
     // Add result callback
     global_goal_options.result_callback =
@@ -295,17 +283,29 @@ namespace moveit::hybrid_planning
             auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
             result->error_code.val = reaction_result.error_code.val;
             result->error_message = reaction_result.error_message;
-
-            hybrid_planning_goal_handle_->abort(result);
             RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
           }
         };
 
-    // Forward global trajectory goal from hybrid planning request TODO(sjahr) pass goal as function argument
+    // Fill in the global planning goal
     auto global_goal_msg = moveit_msgs::action::GlobalPlanner::Goal();
-    global_goal_msg.motion_sequence =
-        (hybrid_planning_goal_handle_->get_goal())->motion_sequence;  // latest desired motion sequence;
-    global_goal_msg.planning_group = (hybrid_planning_goal_handle_->get_goal())->planning_group;  // planning_group_;
+          
+    // Create desired motion goal
+    moveit_msgs::msg::MotionPlanRequest goal_motion_request;
+
+    goal_motion_request.goal_constraints.resize(1);
+    goal_motion_request.goal_constraints[0] =
+        kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+
+    moveit_msgs::msg::MotionSequenceItem sequence_item;
+    sequence_item.req = goal_motion_request;
+    // Single goal
+    sequence_item.blend_radius = 0.0;
+    moveit_msgs::msg::MotionSequenceRequest sequence_request;
+    sequence_request.items.push_back(sequence_item);
+
+    global_goal_msg.motion_sequence = sequence_request;
+    global_goal_msg.planning_group = planning_group_;
 
     if (stop_hybrid_planning_)
     {
@@ -314,47 +314,38 @@ namespace moveit::hybrid_planning
 
     // Send global planning goal and wait until it's accepted
     auto goal_handle_future = global_planner_action_client_->async_send_goal(global_goal_msg, global_goal_options);
-    return true;  // return always success TODO(sjahr) add more error checking
+    return true;
   }
 
   bool HybridPlanningManager::sendLocalPlannerAction()
   {
-    // Setup empty dummy goal (Global trajectory is subscribed by the local planner) TODO(sjahr) pass goal as function argument
-    auto local_goal_msg = moveit_msgs::action::LocalPlanner::Goal();
+
     auto local_goal_options = rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SendGoalOptions();
-    rclcpp_action::ClientGoalHandle<moveit_msgs::action::LocalPlanner>::SharedPtr goal_handle;
+    // rclcpp_action::ClientGoalHandle<moveit_msgs::action::LocalPlanner>::SharedPtr goal_handle;
 
     // Add goal response callback
     local_goal_options.goal_response_callback =
         [this](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::LocalPlanner>::SharedPtr& goal_handle) {
-          auto planning_progress = std::make_shared<moveit_msgs::action::HybridPlanner::Feedback>();
-          auto& feedback = planning_progress->feedback;
-          if (!goal_handle)
-          {
-            feedback = "Local goal was rejected by server";
+          if (!goal_handle) {
+            RCLCPP_ERROR(LOGGER, "Local goal was rejected by server");
+          } else {
+            RCLCPP_INFO(LOGGER, "Local goal accepted by server");
           }
-          else
-          {
-            feedback = "Local goal accepted by server";
-          }
-          hybrid_planning_goal_handle_->publish_feedback(planning_progress);
         };
 
     // Add feedback callback
     local_goal_options.feedback_callback =
         [this](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::LocalPlanner>::SharedPtr& /*unused*/,
-              const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Feedback>& local_planner_feedback) {
-          // react is defined in a hybrid_planning_manager plugin
-          ReactionResult reaction_result = planner_logic_instance_->react(local_planner_feedback->feedback);
-          if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
-          {
-            auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
-            result->error_code.val = reaction_result.error_code.val;
-            result->error_message = reaction_result.error_message;
-            hybrid_planning_goal_handle_->abort(result);
-            RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
-          }
-        };
+          const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Feedback>& local_planner_feedback) {
+            // react is defined in a hybrid_planning_manager plugin
+            ReactionResult reaction_result = planner_logic_instance_->react(local_planner_feedback->feedback);
+            if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
+              auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
+              result->error_code.val = reaction_result.error_code.val;
+              result->error_message = reaction_result.error_message;
+              RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
+            }
+          };
 
     // Add result callback to print the result
     local_goal_options.result_callback =
@@ -379,14 +370,10 @@ namespace moveit::hybrid_planning
           // Abort hybrid planning if reaction fails
           if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
           {
-            const moveit_msgs::action::HybridPlanner::Result result([reaction_result]() {
-              moveit_msgs::action::HybridPlanner::Result result;
-              result.error_code.val = reaction_result.error_code.val;
-              result.error_message = reaction_result.error_message;
-              return result;
-            }());
-            hybrid_planning_goal_handle_->abort(std::make_shared<moveit_msgs::action::HybridPlanner::Result>(result));
-            RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to " << reaction_result.event);
+            auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
+            result->error_code.val = reaction_result.error_code.val;
+            result->error_message = reaction_result.error_message;
+            RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to  " << reaction_result.event);
           }
         };
 
@@ -395,25 +382,43 @@ namespace moveit::hybrid_planning
       return false;
     }
 
-    // Send global planning goal
+    // Setup local goal
+    auto local_goal_msg = moveit_msgs::action::LocalPlanner::Goal();
+    local_goal_msg.local_constraints.resize(1);
+
+    local_goal_msg.local_constraints[0] = 
+        kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), 
+                            joint_model_group_.get());
+
+    // Send local planning goal asynchronously
     auto goal_handle_future = local_planner_action_client_->async_send_goal(local_goal_msg, local_goal_options);
-    return true;  // return always success TODO(sjahr) add more error checking
+    return true;
   }
 
-  void HybridPlanningManager::sendHybridPlanningResponse(bool success)
+  bool HybridPlanningManager::calculateIK()
   {
-    // Return hybrid planning action result dependent on the function's argument
-    auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
-    if (success)
+    // Some alternative ways to give the goal info
+    // 1. set goal_state using joint values
+    // std::vector<double> joint_values = { 0.0, 0.0, 0.0, 1.57, 0.0, -1.57, 0.0};
+    // goal_state_.setJointGroupPositions(joint_model_group_, joint_values);
+    // 2. Skip goal state generates a constraint message intended to be used as a goal constraint for a given link. 
+    // The full constraint will contain a PositionConstraint and a OrientationConstraint, 
+    // constructed from the pose. A sphere will be used to represent the constraint region for the PositionConstraint.
+    // goal_motion_request.goal_constraints.resize(1);
+    // goal_motion_request.goal_constraints[0] =
+    //     kinematic_constraints::constructGoalConstraints("link_tool", hybrid_planning_goal_handle_->pose);	
+
+    bool success = goal_state_->setFromIK(joint_model_group_.get(), hybrid_planning_goal_handle_->pose);
+    // TODO: check if this is necessary
+    // goal_state_->update();
+    RCLCPP_WARN(LOGGER, "IK success: %d", success);
+    std::vector<double> joint_values;
+    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    for (size_t i = 0; i < joint_values.size(); ++i)
     {
-      result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
-      hybrid_planning_goal_handle_->succeed(result);
+      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
     }
-    else
-    {
-      result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
-      hybrid_planning_goal_handle_->abort(result);
-    }
+    return success;
   }
 
 }  // namespace moveit::hybrid_planning
