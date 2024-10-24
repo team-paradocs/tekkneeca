@@ -38,84 +38,92 @@
 
 namespace moveit::hybrid_planning
 {
-namespace
-{
-const rclcpp::Logger LOGGER = rclcpp::get_logger("local_planner_component");
-constexpr double WAYPOINT_RADIAN_TOLERANCE = 0.2;  // rad: L1-norm sum for all joints
-}  // namespace
-
-bool SimpleSampler::initialize([[maybe_unused]] const rclcpp::Node::SharedPtr& node,
-                               const moveit::core::RobotModelConstPtr& robot_model, const std::string& group_name)
-{
-  reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, group_name);
-  next_waypoint_index_ = 0;
-  joint_group_ = robot_model->getJointModelGroup(group_name);
-  return true;
-}
-
-moveit_msgs::action::LocalPlanner::Feedback
-SimpleSampler::addTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory)
-{
-  // Reset trajectory operator to delete old reference trajectory
-  reset();
-
-  // Throw away old reference trajectory and use trajectory update
-  reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(new_trajectory);
-
-  // Parametrize trajectory and calculate velocity and accelerations
-  time_parametrization_.computeTimeStamps(*reference_trajectory_);
-
-  // Return empty feedback
-  return feedback_;
-}
-
-bool SimpleSampler::reset()
-{
-  // Reset index
-  next_waypoint_index_ = 0;
-  reference_trajectory_->clear();
-  return true;
-}
-moveit_msgs::action::LocalPlanner::Feedback
-SimpleSampler::getLocalTrajectory(const moveit::core::RobotState& current_state,
-                                  robot_trajectory::RobotTrajectory& local_trajectory)
-{
-  if (reference_trajectory_->getWayPointCount() == 0)
+  namespace
   {
-    feedback_.feedback = "unhandled_exception";
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("local_planner_component");
+    constexpr double WAYPOINT_RADIAN_TOLERANCE = 0.2;  // rad: L1-norm sum for all joints
+  }  // namespace
+
+  bool SimpleSampler::initialize([[maybe_unused]] const rclcpp::Node::SharedPtr& node,
+                                const moveit::core::RobotModelConstPtr& robot_model, const std::string& group_name)
+  {
+    reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, group_name);
+    next_waypoint_index_ = 0;
+    joint_group_ = robot_model->getJointModelGroup(group_name);
+    return true;
+  }
+
+  moveit_msgs::action::LocalPlanner::Feedback
+  SimpleSampler::addTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory)
+  {
+    // Reset trajectory operator to delete old reference trajectory
+    reset();
+
+    if (reference_trajectory_->empty()) {
+      reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(new_trajectory);
+    } else {
+      // Append new trajectory segment to reference trajectory
+      // use same resample_dt=0.1 as time_parameterization's default
+      reference_trajectory_->append(new_trajectory, 0.1);
+    }
+
+    // Parametrize trajectory and calculate velocity and accelerations
+    time_parameterization_.computeTimeStamps(*reference_trajectory_);
+
+    // Return empty feedback
     return feedback_;
   }
 
-  // Delete previous local trajectory
-  local_trajectory.clear();
-
-  // Get next desired robot state
-  const moveit::core::RobotState next_desired_goal_state = reference_trajectory_->getWayPoint(next_waypoint_index_);
-
-  // Check if state is reached
-  if (next_desired_goal_state.distance(current_state, joint_group_) <= WAYPOINT_RADIAN_TOLERANCE)
+  bool SimpleSampler::reset()
   {
-    // Update index (and thus desired robot state)
-    next_waypoint_index_ = std::min(next_waypoint_index_ + 1, reference_trajectory_->getWayPointCount() - 1);
+    // Reset index
+    next_waypoint_index_ = 0;
+    reference_trajectory_->clear();
+    return true;
   }
 
-  // Construct local trajectory containing the next global trajectory waypoint
-  local_trajectory.addSuffixWayPoint(reference_trajectory_->getWayPoint(next_waypoint_index_),
-                                     reference_trajectory_->getWayPointDurationFromPrevious(next_waypoint_index_));
-
-  // Return empty feedback
-  return feedback_;
-}
-
-double SimpleSampler::getTrajectoryProgress([[maybe_unused]] const moveit::core::RobotState& current_state)
-{
-  // Check if trajectory is unwinded
-  if (next_waypoint_index_ >= reference_trajectory_->getWayPointCount() - 1)
+  moveit_msgs::action::LocalPlanner::Feedback
+  SimpleSampler::getLocalTrajectory(const moveit::core::RobotState& current_state,
+                                    robot_trajectory::RobotTrajectory& local_trajectory)
   {
-    return 1.0;
+    if (reference_trajectory_->getWayPointCount() == 0)
+    {
+      feedback_.feedback = "unhandled_exception";
+      return feedback_;
+    }
+
+    // Delete previous local trajectory
+    local_trajectory.clear();
+
+    // Get next desired robot state
+    const moveit::core::RobotState next_desired_goal_state = reference_trajectory_->getWayPoint(next_waypoint_index_);
+
+    // Check if state is reached
+    RCLCPP_INFO(LOGGER, "Distance to next waypoint: %f",
+                next_desired_goal_state.distance(current_state, joint_group_));
+    if (next_desired_goal_state.distance(current_state, joint_group_) <= WAYPOINT_RADIAN_TOLERANCE)
+    {
+      // Update index (and thus desired robot state)
+      next_waypoint_index_ = std::min(next_waypoint_index_ + 1, reference_trajectory_->getWayPointCount() - 1);
+    }
+
+    // Construct local trajectory containing the next global trajectory waypoint
+    local_trajectory.addSuffixWayPoint(reference_trajectory_->getWayPoint(next_waypoint_index_),
+                                      reference_trajectory_->getWayPointDurationFromPrevious(next_waypoint_index_));
+
+    // Return empty feedback
+    return feedback_;
   }
-  return 0.0;
-}
+
+  double SimpleSampler::getTrajectoryProgress([[maybe_unused]] const moveit::core::RobotState& current_state)
+  {
+    // Check if trajectory is unwinded
+    if (next_waypoint_index_ >= reference_trajectory_->getWayPointCount() - 1)
+    {
+      return 1.0;
+    }
+    return 0.0;
+  }
 }  // namespace moveit::hybrid_planning
 
 #include <pluginlib/class_list_macros.hpp>

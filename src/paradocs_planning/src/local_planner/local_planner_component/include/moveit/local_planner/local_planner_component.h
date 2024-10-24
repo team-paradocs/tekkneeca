@@ -214,8 +214,6 @@ private:
   rclcpp_action::Server<moveit_msgs::action::LocalPlanner>::SharedPtr local_planning_request_server_;
 
   // Local solution publisher
-  rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr local_trajectory_publisher_;
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr local_solution_publisher_;
   rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr local_trajectory_action_client_;
 
   // Local constraint solver plugin loader

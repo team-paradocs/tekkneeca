@@ -71,18 +71,6 @@ bool LocalPlannerComponent::initialize()
   // Load planner parameter
   config_.load(node_);
 
-  // Validate config
-  // if (config_.local_solution_topic_type == "std_msgs/Float64MultiArray")
-  // {
-  //   if ((config_.publish_joint_positions && config_.publish_joint_velocities) ||
-  //       (!config_.publish_joint_positions && !config_.publish_joint_velocities))
-  //   {
-  //     RCLCPP_ERROR(LOGGER, "When publishing a std_msgs/Float64MultiArray, you must select positions OR velocities. "
-  //                          "Enabling both or none is not possible!");
-  //     return false;
-  //   }
-  // }
-
   // Configure planning scene monitor
   planning_scene_monitor_ = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(
       node_, "robot_description", tf_buffer_, "local_planner/planning_scene_monitor");
@@ -139,6 +127,7 @@ bool LocalPlannerComponent::initialize()
   {
     local_constraint_solver_instance_ =
         local_constraint_solver_plugin_loader_->createUniqueInstance(config_.local_constraint_solver_plugin_name);
+    // pass in planning_scene_monitor_ for the plugin to check collision
     if (!local_constraint_solver_instance_->initialize(node_, planning_scene_monitor_, config_.group_name))
       throw std::runtime_error("Unable to initialize constraint solver plugin");
     RCLCPP_INFO(LOGGER, "Using constraint solver interface '%s'", config_.local_constraint_solver_plugin_name.c_str());
@@ -158,6 +147,8 @@ bool LocalPlannerComponent::initialize()
       [this](const rclcpp_action::GoalUUID& /*unused*/,
              const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal>& /*unused*/) {
         RCLCPP_INFO(LOGGER, "Received local planning goal request");
+        // TODO: modify the behavior here
+        // always accept the new goal
         // If another goal is active, cancel it and reject this goal
         if (long_callback_thread_.joinable())
         {
@@ -179,25 +170,37 @@ bool LocalPlannerComponent::initialize()
         {
           long_callback_thread_.join();
         }
-
         auto local_trajectory_future = local_trajectory_action_client_->async_cancel_all_goals();
-        if (local_trajectory_future.valid()) {
-          // Wait for the cancellation to finish
-          local_trajectory_future.wait();
-        }
-
+        // if (local_trajectory_future.valid()) {
+        //   // Wait for the cancellation to finish
+        //   local_trajectory_future.wait();
+        // }
         return rclcpp_action::CancelResponse::ACCEPT;
       },
       // Execution callback
       [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::LocalPlanner>> goal_handle) {
         local_planning_goal_handle_ = std::move(goal_handle);
+        // TODO: modify the behavior here
+        // should modify trajectory_operator_instance_ to compensate
+
+
+        // if (state_ == LocalPlannerState::LOCAL_PLANNING_ACTIVE) {
+
+        //   // (local_planning_goal_handle_->get_goal())->local_constraints
+
+        //   // trajectory_operator_instance_->addTrajectorySegment()
+        //   return;
+        // }
+
         // Check if a previous goal was running and needs to be cancelled.
-        if (long_callback_thread_.joinable())
-        {
-          long_callback_thread_.join();
-        }
+        // if (long_callback_thread_.joinable())
+        // {
+        //   long_callback_thread_.join();
+        // }
+
         // Start a local planning loop.
         // This needs to return quickly to avoid blocking the executor, so run the local planner in a new thread.
+        // The thread and the timer can only be stated once
         auto local_planner_timer = [&]() {
           timer_ =
               node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
@@ -212,7 +215,9 @@ bool LocalPlannerComponent::initialize()
       [this](const moveit_msgs::msg::MotionPlanResponse::ConstSharedPtr& msg) {
         // Add received trajectory to internal reference trajectory
         robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), msg->group_name);
+        // TODO: test the start state here
         moveit::core::RobotState start_state(planning_scene_monitor_->getRobotModel());
+        // start_state
         moveit::core::robotStateMsgToRobotState(msg->trajectory_start, start_state);
         new_trajectory.setRobotTrajectoryMsg(start_state, msg->trajectory);
         *local_planner_feedback_ = trajectory_operator_instance_->addTrajectorySegment(new_trajectory);
@@ -225,23 +230,13 @@ bool LocalPlannerComponent::initialize()
         }
 
         // Update local planner state
+        // TODO: modify the set of this state
         state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
-      });
+      }
+  );
 
   // Initialize local solution publisher
   RCLCPP_INFO(LOGGER, "Using '%s' as local solution topic type", config_.local_solution_topic_type.c_str());
-  // if (config_.local_solution_topic_type == "trajectory_msgs/msg/JointTrajectory")
-  // {
-  //   local_trajectory_publisher_ =
-  //       node_->create_publisher<trajectory_msgs::msg::JointTrajectory>(config_.local_solution_topic, 1);
-  // }
-  // else if (config_.local_solution_topic_type == "std_msgs/Float64MultiArray")
-  // {
-  //   local_solution_publisher_ =
-  //       node_->create_publisher<std_msgs::msg::Float64MultiArray>(config_.local_solution_topic, 1);
-  // }
-  // else if (config_.local_solution_topic_type == "control_msgs/action/FollowJointTrajectory")
-  // {
 
   // Local solution publisher is defined by the local constraint solver plugin
   local_trajectory_action_client_ = 
@@ -253,8 +248,6 @@ bool LocalPlannerComponent::initialize()
       "Waiting for FollowJointTrajectory action server to be available...");
   }
   RCLCPP_INFO(LOGGER, "FollowJointTrajectory Action server available.");
-
-  // }
 
   state_ = LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY;
   return true;
@@ -339,34 +332,6 @@ void LocalPlannerComponent::executeIteration()
       // Use a configurable message interface like MoveIt servo
       // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)
       // Format outgoing msg in the right format
-      // (trajectory_msgs/JointTrajectory or joint positions/velocities in form of std_msgs/Float64MultiArray).
-
-      // if (config_.local_solution_topic_type == "trajectory_msgs/msg/JointTrajectory")
-      // {
-      //   local_trajectory_publisher_->publish(local_solution);
-      //   // RCLCPP_INFO(LOGGER, "JointTrajectory Published");
-
-      // }
-      // else if (config_.local_solution_topic_type == "std_msgs/Float64MultiArray")
-      // {
-      //   // Transform "trajectory_msgs/JointTrajectory" to "std_msgs/Float64MultiArray"
-      //   auto joints = std::make_unique<std_msgs::msg::Float64MultiArray>();
-      //   if (!local_solution.points.empty())
-      //   {
-      //     if (config_.publish_joint_positions)
-      //     {
-      //       joints->data = local_solution.points[0].positions;
-      //     }
-      //     else if (config_.publish_joint_velocities)
-      //     {
-      //       joints->data = local_solution.points[0].velocities;
-      //     }
-      //   }
-      //   local_solution_publisher_->publish(std::move(joints));
-      //   // RCLCPP_INFO(LOGGER, "Float64MultiArray Published");
-      // }
-      // else if (config_.local_solution_topic_type == "control_msgs/action/FollowJointTrajectory")
-      // {
         
       // Local solution publisher is defined by the local constraint solver plugin
       auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
@@ -410,7 +375,6 @@ void LocalPlannerComponent::executeIteration()
       };
       local_trajectory_action_client_->async_send_goal(goal_msg, goal_options);
 
-      // }
       return;
     }
     default:
