@@ -44,7 +44,8 @@
 #include <moveit_msgs/action/local_planner.hpp>
 #include <moveit_msgs/action/global_planner.hpp>
 #include <moveit_msgs/action/hybrid_planner.hpp>
-
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/kinematic_constraints/utils.h>
 #include <moveit/hybrid_planning_manager/planner_logic_interface.h>
 
 #include <pluginlib/class_loader.hpp>
@@ -58,7 +59,9 @@ namespace moveit::hybrid_planning
   {
   public:
     /** \brief Constructor */
-    HybridPlanningManager(const rclcpp::NodeOptions& options);
+    HybridPlanningManager(const rclcpp::NodeOptions& options = rclcpp::NodeOptions()
+      .automatically_declare_parameters_from_overrides(true)
+      .allow_undeclared_parameters(true));
 
     /** \brief Destructor */
     ~HybridPlanningManager() override
@@ -95,7 +98,7 @@ namespace moveit::hybrid_planning
     * @param goal_handle The action server goal
     */
     void executeHybridPlannerGoal(
-        std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> goal_handle);
+        const std::shared_ptr<const geometry_msgs::msg::PoseStamped>& goal_handle);
 
     /**
     * Send global planning request to global planner component
@@ -113,9 +116,14 @@ namespace moveit::hybrid_planning
     * Send back hybrid planning response
     * @param success Indicates whether hybrid planning was successful
     */
-    void sendHybridPlanningResponse(bool success);
+    // void sendHybridPlanningResponse(bool success);
 
-    std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> 
+    /**
+    * Calculate IK
+    */
+    bool calculateIK();
+
+    std::shared_ptr<const geometry_msgs::msg::PoseStamped> 
       getHybridPlanningGoalHandle() const {
         return hybrid_planning_goal_handle_;
       }
@@ -130,6 +138,17 @@ namespace moveit::hybrid_planning
     // Timer to trigger events periodically
     rclcpp::TimerBase::SharedPtr timer_;
 
+    // Robot model
+    std::shared_ptr<moveit::core::RobotModel> robot_model_;
+
+    // Planning group
+    std::string planning_group_;
+
+    // Goal from IK calculation
+    std::shared_ptr<moveit::core::RobotState> goal_state_;
+
+    std::shared_ptr<const moveit::core::JointModelGroup> joint_model_group_;
+
     // Flag that indicates whether the manager is initialized
     bool initialized_;
 
@@ -137,10 +156,10 @@ namespace moveit::hybrid_planning
     std::atomic<bool> stop_hybrid_planning_;
 
     // Shared hybrid planning goal handle
-    std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> hybrid_planning_goal_handle_;
+    std::shared_ptr<const geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
 
     // Frequently updated feedback for the hybrid planning action requester
-    std::shared_ptr<moveit_msgs::action::HybridPlanner_Feedback> hybrid_planning_progess_;
+    // std::shared_ptr<moveit_msgs::action::HybridPlanner_Feedback> hybrid_planning_progess_;
 
     // Planning request action clients
     rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;
@@ -151,11 +170,12 @@ namespace moveit::hybrid_planning
 
     // Global solution subscriber
     rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr tracking_goal_sub_;
 
     // This thread is used for long-running callbacks. It's a member so they do not go out of scope.
     std::thread long_callback_thread_;
 
     // A unique callback group, to avoid mixing callbacks with other action servers
-    rclcpp::CallbackGroup::SharedPtr cb_group_;
+    // rclcpp::CallbackGroup::SharedPtr cb_group_;
   };
 }  // namespace moveit::hybrid_planning

@@ -52,19 +52,17 @@ namespace moveit::hybrid_planning
     switch (event)
     {
       case HybridPlanningEvent::HYBRID_PLANNING_REQUEST_RECEIVED:
-
         // Handle new hybrid planning request
-
-        checkMotion();
-
-        // if (!hybrid_planning_manager_->sendGlobalPlannerAction())  // Start global planning
-        // {
-        //   hybrid_planning_manager_->sendHybridPlanningResponse(false);
-        // }
-        // Reset local planner started flag
-        // local_planner_started_ = false;
-        return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
-
+        if (hybrid_planning_manager_->calculateIK()) {
+          if (checkMotionXsendAction())
+          {
+            return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
+          } else {
+            return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+          }
+        } else {
+          return ReactionResult(event, "Failed to calculate IK", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+        }
       case HybridPlanningEvent::GLOBAL_SOLUTION_AVAILABLE:
         // Do nothing since we wait for the global planning action to finish
         return ReactionResult(event, "Do nothing", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
@@ -77,7 +75,7 @@ namespace moveit::hybrid_planning
           // Start local planning
           if (!hybrid_planning_manager_->sendLocalPlannerAction())
           {
-            hybrid_planning_manager_->sendHybridPlanningResponse(false);
+            return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
           }
           // local_planner_started_ = true;
         // }
@@ -87,7 +85,6 @@ namespace moveit::hybrid_planning
         return ReactionResult(event, "Global planner actoin canceled",
                       moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 
-
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_ABORTED:
         // Abort hybrid planning if no global solution is found
         return ReactionResult(event, "Global planner failed to find a solution",
@@ -95,7 +92,6 @@ namespace moveit::hybrid_planning
 
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_SUCCESSFUL:
         // Finish hybrid planning action successfully because local planning action succeeded
-        hybrid_planning_manager_->sendHybridPlanningResponse(true);
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:
@@ -118,9 +114,9 @@ namespace moveit::hybrid_planning
                           moveit_msgs::msg::MoveItErrorCodes::FAILURE);
   }
 
-  void MotionCompensation::checkMotion()
+  bool MotionCompensation::checkMotionXsendAction()
   {
-    RCLCPP_INFO(LOGGER, "In checkMotion function");
+    RCLCPP_INFO(LOGGER, "In checkMotionXsendAction function");
 
     auto currentGoalHandle = hybrid_planning_manager_->getHybridPlanningGoalHandle();
 
@@ -133,21 +129,15 @@ namespace moveit::hybrid_planning
       if (!clientActionSuccessfullySent)
       {
         // report failure
-        hybrid_planning_manager_->sendHybridPlanningResponse(false);
+        return false;
       }
       global_planner_started_ = true;
     } 
     else 
     {
 
-      const moveit_msgs::msg::Constraints previous_constraints = previous_goal_->motion_sequence.items[0].req.goal_constraints[0];
-      const moveit_msgs::msg::Constraints currentconstraints = currentGoalHandle->get_goal()->motion_sequence.items[0].req.goal_constraints[0];
-
-      geometry_msgs::msg::Pose previous_pose = constraintsToPose(previous_constraints);
-      geometry_msgs::msg::Pose current_pose = constraintsToPose(currentconstraints);
-      
-      double position_difference = calculatePositionDifference(previous_pose, current_pose);
-      double orientation_difference = calculateOrientationDifference(previous_pose, current_pose);
+      double position_difference = calculatePositionDifference(previous_goal_->pose, currentGoalHandle->pose);
+      double orientation_difference = calculateOrientationDifference(previous_goal_->pose, currentGoalHandle->pose);
       std::cout << "Position difference: " << position_difference << ", Orientation difference: " << orientation_difference << std::endl;
 
       if (position_difference > position_threshold_ || orientation_difference > orientation_threshold_) 
@@ -157,25 +147,23 @@ namespace moveit::hybrid_planning
         if (!clientActionSuccessfullySent)
         {
           // report failure
-          hybrid_planning_manager_->sendHybridPlanningResponse(false);
+          return false;
         }
       } 
       else 
       {
-        // TODO: some undefined behavior in this path, try to debug
         RCLCPP_INFO(LOGGER, "Small motion detected");
         bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction();
         if (!clientActionSuccessfullySent)
         {
           // report failure
-          hybrid_planning_manager_->sendHybridPlanningResponse(false);
+          return false;
         }
       }
 
     }
-
-    previous_goal_ = std::const_pointer_cast<moveit_msgs::action::HybridPlanner_Goal>(currentGoalHandle->get_goal());
-
+    previous_goal_ = currentGoalHandle;
+    return true;
   }
 
   double MotionCompensation::calculatePositionDifference(const geometry_msgs::msg::Pose& pose1, const geometry_msgs::msg::Pose& pose2) {
@@ -217,29 +205,29 @@ namespace moveit::hybrid_planning
 
   }
 
-  geometry_msgs::msg::Pose MotionCompensation::constraintsToPose(const moveit_msgs::msg::Constraints& constraints)
-  {
+  // geometry_msgs::msg::Pose MotionCompensation::constraintsToPose(const moveit_msgs::msg::Constraints& constraints)
+  // {
 
-    geometry_msgs::msg::Pose pose;
-    // Assuming constraints.position_constraints has at least one element
-    if (!constraints.position_constraints.empty()) {
-        const auto& position_constraint = constraints.position_constraints[0];
-        pose.position.x = position_constraint.constraint_region.primitive_poses[0].position.x;
-        pose.position.y = position_constraint.constraint_region.primitive_poses[0].position.y;
-        pose.position.z = position_constraint.constraint_region.primitive_poses[0].position.z;
-    }
+  //   geometry_msgs::msg::Pose pose;
+  //   // Assuming constraints.position_constraints has at least one element
+  //   if (!constraints.position_constraints.empty()) {
+  //       const auto& position_constraint = constraints.position_constraints[0];
+  //       pose.position.x = position_constraint.constraint_region.primitive_poses[0].position.x;
+  //       pose.position.y = position_constraint.constraint_region.primitive_poses[0].position.y;
+  //       pose.position.z = position_constraint.constraint_region.primitive_poses[0].position.z;
+  //   }
 
-    // Assuming constraints.orientation_constraints has at least one element
-    if (!constraints.orientation_constraints.empty()) {
-        const auto& orientation_constraint = constraints.orientation_constraints[0];
-        pose.orientation.x = orientation_constraint.orientation.x;
-        pose.orientation.y = orientation_constraint.orientation.y;
-        pose.orientation.z = orientation_constraint.orientation.z;
-        pose.orientation.w = orientation_constraint.orientation.w;
-    }
+  //   // Assuming constraints.orientation_constraints has at least one element
+  //   if (!constraints.orientation_constraints.empty()) {
+  //       const auto& orientation_constraint = constraints.orientation_constraints[0];
+  //       pose.orientation.x = orientation_constraint.orientation.x;
+  //       pose.orientation.y = orientation_constraint.orientation.y;
+  //       pose.orientation.z = orientation_constraint.orientation.z;
+  //       pose.orientation.w = orientation_constraint.orientation.w;
+  //   }
 
-    return pose;
-  }
+  //   return pose;
+  // }
 
 
 }  // namespace moveit::hybrid_planning

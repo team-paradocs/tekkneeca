@@ -49,7 +49,8 @@ RUN apt-get update && apt-get install -y \
     ros-humble-moveit \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-ros-visualization \
-    ros-humble-moveit-setup-assistant ros-humble-gazebo-ros2-control
+    ros-humble-moveit-setup-assistant ros-humble-gazebo-ros2-control \
+    ros-humble-pick-ik
 
 RUN apt install -y ament-cmake-nose ros-humble-gazebo-ros-pkgs vim-gtk3
 RUN curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp | tee /etc/apt/keyrings/librealsense.pgp > /dev/null

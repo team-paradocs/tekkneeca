@@ -35,10 +35,8 @@ set(LIBRARIES
   # Plugins
   forward_trajectory_plugin
   motion_planning_pipeline_plugin
-  replan_invalidated_trajectory_plugin
   simple_sampler_plugin
   motion_compensation_plugin
-  single_plan_execution_plugin
 )
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
@@ -100,11 +98,9 @@ install(DIRECTORY ${THIS_PACKAGE_INCLUDE_DIRS} DESTINATION include)
 # install(DIRECTORY test/launch DESTINATION share/${PROJECT_NAME})
 # install(DIRECTORY test/config DESTINATION share/${PROJECT_NAME})
 
-pluginlib_export_plugin_description_file(paradocs_planning plugins/single_plan_execution_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/moveit_planning_pipeline_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/simple_sampler_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/motion_compensation_plugin.xml)
-pluginlib_export_plugin_description_file(paradocs_planning plugins/replan_invalidated_trajectory_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/forward_trajectory_plugin.xml)
 
 ament_export_include_directories(include)
