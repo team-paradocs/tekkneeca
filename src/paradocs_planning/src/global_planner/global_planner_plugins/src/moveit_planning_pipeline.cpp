@@ -173,6 +173,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
                         "planning goal!");
   }
   auto motion_plan_req = (global_goal_handle->get_goal())->motion_sequence.items[0].req;
+  auto group_name = (global_goal_handle->get_goal())->planning_group;
 
   // Set parameters required by the planning component
   moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
@@ -184,7 +185,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
   plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
   // Create planning component
-  auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(motion_plan_req.group_name, moveit_cpp_);
+  auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
 
   planning_components->setStartStateToCurrentState();
   // Copy goal constraint into planning component
@@ -200,7 +201,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
 
   // Transform solution into MotionPlanResponse and publish it
   response.trajectory_start = plan_solution.start_state;
-  response.group_name = motion_plan_req.group_name;
+  response.group_name = group_name;
   plan_solution.trajectory->getRobotTrajectoryMsg(response.trajectory);
   response.error_code = plan_solution.error_code;
 
