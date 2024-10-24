@@ -19,16 +19,32 @@ class CharucoPosePublisher(Node):
             '/camera/color/image_rect_raw',
             self.image_callback,
             10)
+        
+        self.D435_subscription = self.create_subscription(
+            Image,
+            '/D435/color/image_raw',
+            self.D435image_callback,
+            10)
+        
         self.tf_broadcaster = TransformBroadcaster(self)
         self.camera_info_sub = self.create_subscription(CameraInfo, '/camera/color/camera_info', self.camera_info_callback, 10)
+        self.D435_camera_info_sub = self.create_subscription(CameraInfo, '/D435/color/camera_info', self.D435_camera_info_callback, 10)
+
         self.publisher = self.create_publisher(PoseStamped, '/marker_1_frame', 10)
+        self.D435publisher = self.create_publisher(PoseStamped, '/marker_frame_2', 10)
+
         self.bridge = CvBridge()
         # self.aruco_dict = aruco.Dictionary(aruco.DICT_6X6_100, _markerSize=0.015)
         # self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
         self.aruco_dict = aruco.getPredefinedDictionary(0)
         self.charuco_board = aruco.CharucoBoard((6,6), 0.03, 0.024, self.aruco_dict)
+
+
+
         self.camera_matrix = None  # Load your camera matrix
         self.dist_coeffs = None  # Load your distortion coefficients
+        self.D435_camera_matrix = None  # Load your camera matrix
+        self.D435_dist_coeffs = None  # Load your distortion coefficients
 
     def camera_info_callback(self, camera_info_msg):
         # Extract camera intrinsic matrix and distortion coefficients from camera info
@@ -36,7 +52,25 @@ class CharucoPosePublisher(Node):
         self.dist_coeffs = np.array(camera_info_msg.d)
         # self.get_logger().info(f"Received camera info")
 
+    def D435_camera_info_callback(self, camera_info_msg):
+        # Extract camera intrinsic matrix and distortion coefficients from camera info
+        self.D435_camera_matrix = np.array(camera_info_msg.k).reshape(3, 3)
+        self.D435_dist_coeffs = np.array(camera_info_msg.d)
+        # self.get_logger().info(f"Received camera info")
+
+
+    def D435image_callback(self, msg):
+        frame_id = 'D435_color_optical_frame'
+        marker_frame = 'marker_frame_2'
+        self.detect_charuco(msg, frame_id, 'D435', marker_frame)
+
+
     def image_callback(self, msg):
+        frame_id = 'camera_color_optical_frame'
+        marker_frame = 'marker_1_frame'
+        self.detect_charuco(msg, frame_id, 'D405', marker_frame)
+
+    def detect_charuco(self, msg, frame_id, camera_name, marker_frame):
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = aruco.detectMarkers(gray, self.aruco_dict)
@@ -48,8 +82,18 @@ class CharucoPosePublisher(Node):
         if ids is not None:
             # print('Markers detected')
             detector_params = aruco.CharucoParameters()
-            detector_params.cameraMatrix = self.camera_matrix 
-            detector_params.distCoeffs = self.dist_coeffs
+            if camera_name == 'D405':
+
+                detector_params.cameraMatrix = self.camera_matrix 
+                detector_params.distCoeffs = self.dist_coeffs
+                camera_matrix = self.camera_matrix
+                dist_coeffs = self.dist_coeffs
+            else:
+                # print('D435')
+                detector_params.cameraMatrix = self.D435_camera_matrix 
+                detector_params.distCoeffs = self.D435_dist_coeffs
+                camera_matrix = self.D435_camera_matrix
+                dist_coeffs = self.D435_dist_coeffs
             # _, charuco_corners, charuco_ids = aruco.interpolateCornersCharuco(corners, ids, gray, self.charuco_board)
             charuco_detector = aruco.CharucoDetector(self.charuco_board, detector_params)
             charuco_corners = charuco_ids = None
@@ -60,49 +104,66 @@ class CharucoPosePublisher(Node):
                 # print('Charuco detected')
                 frame = aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids)
 
+
             if charuco_ids is not None and len(charuco_ids) > 3:
                 # print('Charuco detected')
                 rvec = np.zeros((3,1))
                 tvec = np.zeros((3,1))
-                retval = aruco.estimatePoseCharucoBoard(charuco_corners, charuco_ids, self.charuco_board, self.camera_matrix, self.dist_coeffs,rvec, tvec)
-                frame = aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids)
-                if retval:
+                retval = aruco.estimatePoseCharucoBoard(charuco_corners, charuco_ids, self.charuco_board, camera_matrix, dist_coeffs,rvec, tvec)
+                # print(retval)
+                # print("helloooooo", retval)
+                # print(rvec, tvec)
+                # frame = aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids)
+                # print("helllllllllllll", retval)
+
+                if retval[0]:
+                    # print('Pose estimated')
+                    # print(rvec, tvec)
+                    # print(retval)
                     # frame = aruco.drawAxis(frame, self.camera_matrix, self.dist_coeffs, rvec, tvec, 0.1)
-                    pose = PoseStamped()
-                    pose.header.stamp = self.get_clock().now().to_msg()
-                    pose.header.frame_id = 'camera_color_optical_frame'
-                    # pose.header.frame_id = 'marker_1_frame'
-                    # pose.header.reference_frame = 'camera_color_optical_frame'
-                    pose.pose.position.x = tvec[0][0]
-                    pose.pose.position.y = tvec[1][0]
-                    pose.pose.position.z = tvec[2][0]
-                    rotation_matrix, _ = cv2.Rodrigues(rvec)
-                    r = R.from_matrix(rotation_matrix)
-                    quaternion = r.as_quat()
-                    pose.pose.orientation.x = quaternion[0]
-                    pose.pose.orientation.y = quaternion[1]
-                    pose.pose.orientation.z = quaternion[2]
-                    pose.pose.orientation.w = quaternion[3]
-                    self.publisher.publish(pose)
-                    # print('Published pose', pose)
+                    self.publish(frame, camera_name, frame_id, rvec, tvec, marker_frame)
+                    
 
-                    t = TransformStamped()
-
-                    t.header.stamp = self.get_clock().now().to_msg()
-                    t.header.frame_id = 'camera_color_optical_frame'
-                    t.child_frame_id = 'marker_1_frame'
-                    t.transform.translation.x = tvec[0][0]
-                    t.transform.translation.y = tvec[1][0]
-                    t.transform.translation.z = tvec[2][0]
-                    t.transform.rotation.x = quaternion[0]
-                    t.transform.rotation.y = quaternion[1]
-                    t.transform.rotation.z = quaternion[2]
-                    t.transform.rotation.w = quaternion[3]
-
-                    self.tf_broadcaster.sendTransform(t)
-
-        cv2.imshow('frame', frame)
+        cv2.imshow(camera_name, frame)
         cv2.waitKey(1)
+    
+    def publish(self, pose, camera_name, frame_id, rvec, tvec, marker_frame):
+        pose = PoseStamped()
+        pose.header.stamp = self.get_clock().now().to_msg()
+        pose.header.frame_id = frame_id
+        # pose.header.frame_id = 'marker_1_frame'
+        # pose.header.reference_frame = 'camera_color_optical_frame'
+        pose.pose.position.x = tvec[0][0]
+        pose.pose.position.y = tvec[1][0]
+        pose.pose.position.z = tvec[2][0]
+        rotation_matrix, _ = cv2.Rodrigues(rvec)
+        r = R.from_matrix(rotation_matrix)
+        quaternion = r.as_quat()
+        pose.pose.orientation.x = quaternion[0]
+        pose.pose.orientation.y = quaternion[1]
+        pose.pose.orientation.z = quaternion[2]
+        pose.pose.orientation.w = quaternion[3]
+        if camera_name == 'D405':
+            self.publisher.publish(pose)
+        else:
+            self.D435publisher.publish(pose)
+        # print('Published pose', pose)
+
+        t = TransformStamped()
+
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = frame_id
+        t.child_frame_id = marker_frame
+        t.transform.translation.x = tvec[0][0]
+        t.transform.translation.y = tvec[1][0]
+        t.transform.translation.z = tvec[2][0]
+        t.transform.rotation.x = quaternion[0]
+        t.transform.rotation.y = quaternion[1]
+        t.transform.rotation.z = quaternion[2]
+        t.transform.rotation.w = quaternion[3]
+
+        self.tf_broadcaster.sendTransform(t)
+
 
 def main(args=None):
     rclpy.init(args=args)
