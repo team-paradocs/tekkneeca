@@ -27,16 +27,6 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
-    # dual_camera_node = Node(package='paradocs_control', executable='rs_dual_camera_launch.py', name='rs_dual_camera_node', output='screen', parameters=[{
-    #     'serial_no1': '128422270653',
-    #     'serial_no2': '242322073889',
-    #     'camera_name1': '',
-    #     'camera_name2': 'D435',
-    #     'camera_namespace1': '',
-    #     'camera_namespace2': 'D435',
-    # }])
-    # ld.add_action(dual_camera_node)
-
 
     arg_name = DeclareLaunchArgument('name',             
                 default_value=PathJoinSubstitution([
