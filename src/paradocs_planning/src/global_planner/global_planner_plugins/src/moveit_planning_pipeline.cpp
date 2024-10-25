@@ -43,6 +43,9 @@
 // #include <moveit_cpp/planning_component.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+//import movegroupinterface
+// #include <moveit/move_group_interface/move_group_interface.h>
+
 // #include <ompl/base/spaces/SE3StateSpace.h>
 // #include <moveit/ompl_interface/ompl_interface.h>
 
@@ -227,8 +230,9 @@ namespace moveit::hybrid_planning
     // Create position constraint for Cartesian bounds (loaded from YAML)
     moveit_msgs::msg::PositionConstraint position_constraint;
     position_constraint.header.frame_id = "link_0";
+    // position_constraint.header.frame_id = 
     position_constraint.link_name = "link_tool"; // Replace with the actual link name
-    position_constraint.constraint_region.primitives.resize(1);
+    // position_constraint.constraint_region.primitives.resize(3);
     position_constraint.constraint_region.primitives[0].type = shape_msgs::msg::SolidPrimitive::BOX;
     position_constraint.constraint_region.primitives[0].dimensions = {x_max - x_min, y_max - y_min, z_max - z_min};
 
@@ -253,6 +257,11 @@ namespace moveit::hybrid_planning
     // Set the path constraints in the PlanningComponent
     planning_components->setPathConstraints(constraints);
 
+    // // get the path constraints and print them
+    // auto path_constraints = planning_components->getPathConstraints();
+    // RCLCPP_INFO(LOGGER, "Shivangi Path Constraints: %s", path_constraints.position_constraints[0].link_name.c_str());
+
+
     // auto space = std::make_shared<ompl::base::SE3StateSpace>();
     // ompl::base::RealVectorBounds bounds(3);
 
@@ -272,6 +281,7 @@ namespace moveit::hybrid_planning
     auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
     auto planning_scene = planning_scene_monitor->getPlanningScene();
     auto current_state = planning_scene->getCurrentStateNonConst();
+    planning_components->setStartState(current_state);
     // auto start_state = 
 
     // Ensure the current state is valid within the planning scene
