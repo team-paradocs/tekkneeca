@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(shape_msgs REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_planning REQUIRED)
@@ -55,6 +56,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   tf2_geometry_msgs
   tf2_ros
   trajectory_msgs
+  shape_msgs
 )
 
 set(THIS_PACKAGE_INCLUDE_DIRS
@@ -135,6 +137,7 @@ install(PROGRAMS
   scripts/publisher_member_function.py
   scripts/subscriber_member_function.py
   scripts/continuous_pose_publisher.py
+  scripts/drill_pose_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
