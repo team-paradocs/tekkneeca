@@ -14,6 +14,7 @@ std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_inter
 std::shared_ptr<rclcpp::Node> node;
 rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
 geometry_msgs::msg::Pose home_pose;
+// Offsets fom SVD (world frame) (For D405)
 // float x_offset = 0.002;
 // float y_offset = 0.008;
 float x_offset = 0.00;

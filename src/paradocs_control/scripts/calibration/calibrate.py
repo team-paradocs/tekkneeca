@@ -1,9 +1,11 @@
 import os
-import pandas as pd
+
+import cv2
 import numpy as np
+import pandas as pd
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation as R
-import cv2
+
 # from sklearn.linear_model import LinearRegression
 
 
@@ -330,8 +332,6 @@ def error_function(camera_extrinsic_vector, ee_transform, camera_point, ground_t
 
 def plot( ee_transform, camera_point, ground_truth, result):
     import matplotlib.pyplot as plt
-
-    
 
     # Plot the results
     predicted_points = []
