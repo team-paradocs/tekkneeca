@@ -33,6 +33,7 @@
  *********************************************************************/
 
 #include <moveit/global_planner/moveit_planning_pipeline.h>
+#include <moveit_visual_tools/moveit_visual_tools.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_interface/planning_interface.h>
@@ -43,8 +44,8 @@
 // #include <moveit_cpp/planning_component.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-//import movegroupinterface
-// #include <moveit/move_group_interface/move_group_interface.h>
+// import movegroupinterface
+//  #include <moveit/move_group_interface/move_group_interface.h>
 
 // #include <ompl/base/spaces/SE3StateSpace.h>
 // #include <moveit/ompl_interface/ompl_interface.h>
@@ -156,6 +157,12 @@ namespace moveit::hybrid_planning
     moveit_cpp::MoveItCpp::Options moveit_cpp_options(node);
     moveit_cpp_ = std::make_shared<moveit_cpp::MoveItCpp>(node, moveit_cpp_options);
 
+    auto moveit_visual_tools =
+        moveit_visual_tools::MoveItVisualTools{node, "link_0", rviz_visual_tools::RVIZ_MARKER_TOPIC,
+                                               moveit_cpp_->getRobotModel()};
+    rclcpp::sleep_for(std::chrono::seconds(1));
+    moveit_visual_tools.deleteAllMarkers();
+    moveit_visual_tools.loadRemoteControl();
     return true;
   }
 
@@ -211,36 +218,43 @@ namespace moveit::hybrid_planning
     node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.z_min", z_min);
     node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.z_max", z_max);
 
-    x_min = -100.0;
-    x_max = 100.0;
-    y_min = -100.0;
-    y_max = 100.0;
-    z_min = -100.0;
-    z_max = 100.0;
+    x_min = -1.0;
+    x_max = 1.0;
+    y_min = -1.0;
+    y_max = 1.0;
+    z_min = -1.0;
+    z_max = 1.0;
 
     // Now you can use x_min, x_max, etc., as needed
-    RCLCPP_INFO(LOGGER, "Cartesian Limits - x: [%f, %f], y: [%f, %f], z: [%f, %f]",
+    RCLCPP_INFO(LOGGER, "Shivangi Cartesian Limits - x: [%f, %f], y: [%f, %f], z: [%f, %f]",
                 x_min, x_max, y_min, y_max, z_min, z_max);
 
     // Create planning component
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
+
+    RCLCPP_INFO(LOGGER, "Shivangi here");
 
     moveit_msgs::msg::Constraints constraints;
 
     // Create position constraint for Cartesian bounds (loaded from YAML)
     moveit_msgs::msg::PositionConstraint position_constraint;
     position_constraint.header.frame_id = "link_0";
-    // position_constraint.header.frame_id = 
+    // position_constraint.header.frame_id =
     position_constraint.link_name = "link_tool"; // Replace with the actual link name
     // position_constraint.constraint_region.primitives.resize(3);
-    position_constraint.constraint_region.primitives[0].type = shape_msgs::msg::SolidPrimitive::BOX;
-    position_constraint.constraint_region.primitives[0].dimensions = {x_max - x_min, y_max - y_min, z_max - z_min};
+
+    shape_msgs::msg::SolidPrimitive box;
+    box.type = shape_msgs::msg::SolidPrimitive::BOX;
+    box.dimensions = {2, 2, 2};
+    position_constraint.constraint_region.primitives.emplace_back(box);
+    // position_constraint.constraint_region.primitives[0].dimensions = {0, 0, 0};
+    // position_constraint.constraint_region.primitives[0].dimensions = {x_max - x_min, y_max - y_min, z_max - z_min};
 
     // Set the pose of the box (the center point of the box)
     geometry_msgs::msg::Pose box_pose;
-    box_pose.position.x = (x_max + x_min) / 2.0; // Center of the box in X direction
-    box_pose.position.y = (y_max + y_min) / 2.0; // Center of the box in Y direction
-    box_pose.position.z = (z_max + z_min) / 2.0; // Center of the box in Z direction
+    box_pose.position.x = 10; // Center of the box in X direction
+    box_pose.position.y = 10; // Center of the box in Y direction
+    box_pose.position.z = 10; // Center of the box in Z direction
 
     // Box orientation: Identity quaternion (no rotation)
     box_pose.orientation.w = 1.0;
@@ -249,18 +263,45 @@ namespace moveit::hybrid_planning
     box_pose.orientation.z = 0.0;
 
     // Assign the pose to the box
-    position_constraint.constraint_region.primitive_poses.push_back(box_pose);
+    position_constraint.constraint_region.primitive_poses.emplace_back(box_pose);
 
-    // Apply position constraint to the path constraints
-    constraints.position_constraints.push_back(position_constraint);
+    // Create orientation constraint
+    // moveit_msgs::msg::OrientationConstraint orientation_constraint;
+    // orientation_constraint.header.frame_id = "link_0";
+    // orientation_constraint.link_name = "link_tool"; // Replace with the actual link name
+    // orientation_constraint.orientation.w = 1.0;     // Desired orientation quaternion
+    // orientation_constraint.orientation.x = 0.0;
+    // orientation_constraint.orientation.y = 0.0;
+    // orientation_constraint.orientation.z = 0.0;
+    // orientation_constraint.absolute_x_axis_tolerance = 0.1; // Tolerance values
+    // orientation_constraint.absolute_y_axis_tolerance = 0.1;
+    // orientation_constraint.absolute_z_axis_tolerance = 0.1;
+    // orientation_constraint.weight = 1.0; // Weight of the constraint
+
+    // constraints.orientation_constraints.push_back(orientation_constraint); // TOGGLE ORIENTATION CONSTRAINT
+
+    constraints.position_constraints.emplace_back(position_constraint); // TOGGLE POSITION CONSTRAINT
 
     // Set the path constraints in the PlanningComponent
-    planning_components->setPathConstraints(constraints);
+    planning_components->setPathConstraints(constraints); // TOGGLE CONSTRAINT
+
+    // moveit_visual_tools::MoveItVisualTools moveit_visual_tools("link_0");
+    
+
+    Eigen::Vector3d box_point_1(box_pose.position.x - box.dimensions[0] / 2, box_pose.position.y - box.dimensions[1] / 2,
+                                box_pose.position.z - box.dimensions[2] / 2);
+    Eigen::Vector3d box_point_2(box_pose.position.x + box.dimensions[0] / 2, box_pose.position.y + box.dimensions[1] / 2,
+                                box_pose.position.z + box.dimensions[2] / 2);
+    // moveit_visual_tools.publishCuboid(box_point_1, box_point_2, rviz_visual_tools::TRANSLUCENT_DARK);
+    // moveit_visual_tools.trigger();
+
+    RCLCPP_INFO(LOGGER, "Shivangi Path Constraints: %s", constraints.position_constraints[0].link_name.c_str());
+    // RCLCPP_INFO(LOGGER, "Shivangi setting workspace");
+    // planning_components->setWorkspace(-1, -0.5, 0, 0, 0.5, 1);
 
     // // get the path constraints and print them
     // auto path_constraints = planning_components->getPathConstraints();
     // RCLCPP_INFO(LOGGER, "Shivangi Path Constraints: %s", path_constraints.position_constraints[0].link_name.c_str());
-
 
     // auto space = std::make_shared<ompl::base::SE3StateSpace>();
     // ompl::base::RealVectorBounds bounds(3);
@@ -282,10 +323,11 @@ namespace moveit::hybrid_planning
     auto planning_scene = planning_scene_monitor->getPlanningScene();
     auto current_state = planning_scene->getCurrentStateNonConst();
     planning_components->setStartState(current_state);
-    // auto start_state = 
+    // auto start_state =
 
     // Ensure the current state is valid within the planning scene
     bool is_valid = planning_scene->isStateValid(current_state, planning_components->getPlanningGroupName());
+    RCLCPP_INFO(LOGGER, "Shivangi State validity: %s", is_valid ? "valid" : "invalid");
     if (!is_valid)
     {
       // Print the Cartesian position of the current state
