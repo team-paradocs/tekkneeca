@@ -112,6 +112,7 @@ namespace moveit::hybrid_planning
     node->declare_parameter<std::string>("ompl.planner_configs.SPARStwokConfigDefault.type", "geometric::SPARStwo");
     node->declare_parameter<std::string>("ompl.planner_configs.TrajOptDefault.type", "geometric::TrajOpt");
     node->declare_parameter<std::string>("ompl.arm.projection_evaluator", "joints(A1, A2, A3, A4, A5, A6, A7)");
+    node->declare_parameter<bool>("ompl.arm.enforce_constrained_state_space", true);
 
     // optional parameters
     // node->declare_parameter<int>("ompl.planner_configs.RRTstarkConfigDefault.delay_collision_checking", 1);
@@ -207,28 +208,6 @@ namespace moveit::hybrid_planning
     plan_params.max_velocity_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
     plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
-    // plan_params.cartesian_limits = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits").as_string();
-    double x_min, x_max, y_min, y_max, z_min, z_max;
-
-    // Retrieve each parameter individually
-    node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.x_min", x_min);
-    node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.x_max", x_max);
-    node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.y_min", y_min);
-    node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.y_max", y_max);
-    node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.z_min", z_min);
-    node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "cartesian_limits.z_max", z_max);
-
-    x_min = -1.0;
-    x_max = 1.0;
-    y_min = -1.0;
-    y_max = 1.0;
-    z_min = -1.0;
-    z_max = 1.0;
-
-    // Now you can use x_min, x_max, etc., as needed
-    RCLCPP_INFO(LOGGER, "Shivangi Cartesian Limits - x: [%f, %f], y: [%f, %f], z: [%f, %f]",
-                x_min, x_max, y_min, y_max, z_min, z_max);
-
     // Create planning component
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
 
@@ -245,16 +224,16 @@ namespace moveit::hybrid_planning
 
     shape_msgs::msg::SolidPrimitive box;
     box.type = shape_msgs::msg::SolidPrimitive::BOX;
-    box.dimensions = {2, 2, 2};
+    box.dimensions = {0.7, 0.8, 0.8};
     position_constraint.constraint_region.primitives.emplace_back(box);
     // position_constraint.constraint_region.primitives[0].dimensions = {0, 0, 0};
     // position_constraint.constraint_region.primitives[0].dimensions = {x_max - x_min, y_max - y_min, z_max - z_min};
 
     // Set the pose of the box (the center point of the box)
     geometry_msgs::msg::Pose box_pose;
-    box_pose.position.x = 10; // Center of the box in X direction
-    box_pose.position.y = 10; // Center of the box in Y direction
-    box_pose.position.z = 10; // Center of the box in Z direction
+    box_pose.position.x = -0.5; // Center of the box in X direction
+    box_pose.position.y = 0; // Center of the box in Y direction
+    box_pose.position.z = 0.4; // Center of the box in Z direction
 
     // Box orientation: Identity quaternion (no rotation)
     box_pose.orientation.w = 1.0;
@@ -286,7 +265,6 @@ namespace moveit::hybrid_planning
     planning_components->setPathConstraints(constraints); // TOGGLE CONSTRAINT
 
     // moveit_visual_tools::MoveItVisualTools moveit_visual_tools("link_0");
-    
 
     Eigen::Vector3d box_point_1(box_pose.position.x - box.dimensions[0] / 2, box_pose.position.y - box.dimensions[1] / 2,
                                 box_pose.position.z - box.dimensions[2] / 2);
@@ -297,7 +275,7 @@ namespace moveit::hybrid_planning
 
     RCLCPP_INFO(LOGGER, "Shivangi Path Constraints: %s", constraints.position_constraints[0].link_name.c_str());
     // RCLCPP_INFO(LOGGER, "Shivangi setting workspace");
-    // planning_components->setWorkspace(-1, -0.5, 0, 0, 0.5, 1);
+    planning_components->setWorkspace(-1, -0.5, 0, 0, 0.5, 1);
 
     // // get the path constraints and print them
     // auto path_constraints = planning_components->getPathConstraints();
@@ -348,9 +326,19 @@ namespace moveit::hybrid_planning
 
     // Plan motion
     auto plan_solution = planning_components->plan(plan_params);
+    int max_attempts = 5;
+    int attempts = 0;
+    while (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS && attempts < max_attempts)
+    {
+      RCLCPP_WARN(LOGGER, "Planning attempt %d failed with error code: %d. Retrying...", attempts + 1, plan_solution.error_code.val);
+      plan_solution = planning_components->plan(plan_params);
+      attempts++;
+    }
+
     if (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
     {
       response.error_code = plan_solution.error_code;
+      RCLCPP_ERROR(LOGGER, "Planning failed after %d attempts with error code: %d", attempts, plan_solution.error_code.val);
       return response;
     }
 

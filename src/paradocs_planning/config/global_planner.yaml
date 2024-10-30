@@ -17,7 +17,7 @@ planning_scene_monitor_options:
   wait_for_initial_state_timeout: 10.0
 
 plan_request_params:
-  planner_id: "RRTstarkConfigDefault"
+  planner_id: "RRTConnectkConfigDefault"
   planning_pipeline: ompl
   # planner_id: "LIN"
   # planning_pipeline: pilz_industrial_motion_planner
@@ -71,6 +71,7 @@ ompl:
     - SPARSkConfigDefault
     - SPARStwokConfigDefault
     - TrajOptDefault
+    enforce_constrained_state_space: true
   planner_configs:
     BFMTkConfigDefault:
       balanced: 0
