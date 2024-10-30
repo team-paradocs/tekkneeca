@@ -61,6 +61,14 @@ class LBRMoveGroupMixin:
                 robot_name=robot_name,
                 package_name=package_name,
             )
+            .trajectory_execution(file_path=os.path.join(
+                get_package_share_directory(package_name),
+                "config/moveit_controllers.yaml"
+            ))
+            .joint_limits(file_path=os.path.join(
+                get_package_share_directory(package_name),
+                "config/joint_limits.yaml"
+            ))
             .robot_description(
                 os.path.join(
                     get_package_share_directory("lbr_description"),
@@ -83,6 +91,13 @@ class LBRMoveGroupMixin:
                 get_package_share_directory(package_name),
                 "config/pilz_cartesian_limits.yaml"
             ))
+            .sensors_3d(
+            file_path=os.path.join(
+                get_package_share_directory("paradocs_control"),
+                "config/sensors_3d.yaml",
+            )
+            )
+            
             # don't need this
             # .moveit_cpp(file_path=os.path.join(
             #     get_package_share_directory("paradocs_planning"),
@@ -117,6 +132,7 @@ class LBRMoveGroupMixin:
             "publish_transforms_updates": LaunchConfiguration(
                 "publish_monitored_planning_scene"
             ),
+            
             "monitor_dynamics": False,
         }
         return move_group_configuration
