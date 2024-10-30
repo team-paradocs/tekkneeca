@@ -89,6 +89,15 @@ class LBRDescriptionMixin:
                     port_id,
                     " sim:=",
                     sim,
+                    " initial_positions_file:=",
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("lbr_description"),
+                            "urdf",
+                            model,
+                            "initial_positions.yaml",
+                        ]
+                    ),
                 ]
             )
         }

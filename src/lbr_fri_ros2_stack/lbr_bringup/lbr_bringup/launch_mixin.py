@@ -67,7 +67,27 @@ class LBRMoveGroupMixin:
                     f"urdf/{robot_name}/{robot_name}.urdf.xacro",
                 ),
             )
-            .planning_pipelines(default_planning_pipeline="ompl", pipelines=["ompl"])
+            .robot_description_semantic(
+                os.path.join(
+                    get_package_share_directory(package_name),
+                    "config/med7.srdf",
+                ),
+            )
+            .robot_description_kinematics(file_path=os.path.join(
+                get_package_share_directory(package_name),
+                "config/kinematics.yaml"
+            ))
+            .planning_pipelines(default_planning_pipeline="ompl", 
+                                pipelines=["ompl", "pilz_industrial_motion_planner"])
+            .pilz_cartesian_limits(file_path=os.path.join(
+                get_package_share_directory(package_name),
+                "config/pilz_cartesian_limits.yaml"
+            ))
+            # don't need this
+            # .moveit_cpp(file_path=os.path.join(
+            #     get_package_share_directory("paradocs_planning"),
+            #     "config/global_planner.yaml"
+            # ))
         )
 
     @staticmethod

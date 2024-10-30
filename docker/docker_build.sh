@@ -1,1 +1,1 @@
-sudo docker build -f Dockerfile -t paradockerimage .
+sudo docker build -f docker/Dockerfile -t paradockerimage .

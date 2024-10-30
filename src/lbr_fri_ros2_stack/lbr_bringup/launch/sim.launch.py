@@ -82,7 +82,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     # Load additional OMPL pipeline
     ompl_planning_pipeline_config = {
-        "ompl_2": {
+        "ompl": {
             "planning_plugins": [
                 "ompl_interface/OMPLPlanner",
             ],
@@ -102,7 +102,19 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     ompl_planning_yaml = load_yaml(
         "med7_moveit_config", "config/ompl_planning.yaml"
     )
-    ompl_planning_pipeline_config["ompl_2"].update(ompl_planning_yaml)
+    ompl_planning_pipeline_config["ompl"].update(ompl_planning_yaml)
+
+    pilz_industrial_motion_planner_yaml = load_yaml(
+        "med7_moveit_config", "config/pilz_industrial_motion_planner_planning.yaml"
+    )
+    pilz_planning_pipeline_config = {
+        "pilz_industrial_motion_planner": {
+            "planning_plugins": [
+                "pilz_industrial_motion_planner/CommandPlanner",
+            ],
+        }
+    }
+    pilz_planning_pipeline_config["pilz_industrial_motion_planner"].update(pilz_industrial_motion_planner_yaml)
 
     model = LaunchConfiguration("model").perform(context)
     moveit_configs_builder = LBRMoveGroupMixin.moveit_configs_builder(
@@ -116,6 +128,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
             parameters=[
                 moveit_configs_builder.to_dict(),
                 ompl_planning_pipeline_config,
+                pilz_planning_pipeline_config,
                 movegroup_params,
                 {"use_sim_time": True},
             ],
@@ -163,26 +176,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         OnProcessExit(target_action=spawn_entity, on_exit=[rviz_moveit, rviz])
     )
     ld.add_action(rviz_event_handler)
-
-    # Define joint angles for arm configuration
-    joint_angles = {
-        'A1': 0.0,
-        'A2': 0.0,
-        'A3': 0.0,
-        'A4': 1.5708,
-        'A5': 0.0,
-        'A6': -1.5708,
-        'A7': 0.0,
-        # Add more joint angles as needed
-    }
-
-    set_joint_positions = ExecuteProcess(
-        cmd=['ros2', 'control', 'set_joint_positions', '--controller', 'joint_trajectory_controller'] +
-            [f'{joint_name}={joint_angle}' for joint_name, joint_angle in joint_angles.items()],
-        output='screen'
-    )
-    
-    ld.add_action(set_joint_positions)
 
     return ld.entities
 
