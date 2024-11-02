@@ -135,6 +135,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 movegroup_params,
                 {"use_sim_time": True},
             ],
+            arguments=['--ros-args', '--log-level', 'warn'],
             condition=IfCondition(LaunchConfiguration("moveit")),
             namespace=robot_name,
         )

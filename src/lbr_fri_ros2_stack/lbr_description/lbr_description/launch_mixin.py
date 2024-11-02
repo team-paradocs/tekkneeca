@@ -44,6 +44,9 @@ class GazeboMixin:
                 LaunchConfiguration("robot_name"),
                 "-robot_namespace",
                 LaunchConfiguration("robot_name"),
+                "--ros-args",
+                "--log-level",
+                "warn",
             ],
             output="screen",
             namespace=LaunchConfiguration("robot_name"),
@@ -220,6 +223,9 @@ class RVizMixin:
                         rviz_config,
                     ]
                 ),
+                "--ros-args",
+                "--log-level",
+                "warn",
             ],
             **kwargs,
         )
