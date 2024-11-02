@@ -135,6 +135,7 @@ install(PROGRAMS
   scripts/publisher_member_function.py
   scripts/subscriber_member_function.py
   scripts/continuous_pose_publisher.py
+  scripts/realistic_pose_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
