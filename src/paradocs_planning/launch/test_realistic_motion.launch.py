@@ -145,8 +145,20 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 name="hybrid_planning_manager",
                 parameters=[
                     common_hybrid_planning_param,
-                    hybrid_planning_manager_param,
+                    # hybrid_planning_manager_param,
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("paradocs_planning"),
+                            "config",
+                            "hybrid_planning_manager.yaml",
+                        ]
+                    ),
                     robot_description,
+                ],
+                extra_arguments=[
+                    {"use_intra_process_comms": True},
+                    {'automatically_declare_parameters_from_overrides': True},
+                    {'allow_undeclared_parameters': True}
                 ],
             ),
         ],

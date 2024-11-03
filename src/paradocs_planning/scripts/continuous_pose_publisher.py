@@ -31,7 +31,7 @@ class PosePublisher(Node):
         self.diff = 0.05
         self.smallDiff = 0.02
         self.cntMax = 10
-        timer_period = 15.0  # seconds
+        timer_period = 1.0  # seconds
         # timer_period = 0.2  # 5 Hz
 
         self.basePose = Pose()

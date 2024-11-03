@@ -145,8 +145,20 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 name="hybrid_planning_manager",
                 parameters=[
                     common_hybrid_planning_param,
-                    hybrid_planning_manager_param,
+                    # hybrid_planning_manager_param,
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("paradocs_planning"),
+                            "config",
+                            "hybrid_planning_manager.yaml",
+                        ]
+                    ),
                     robot_description,
+                ],
+                extra_arguments=[
+                    {"use_intra_process_comms": True},
+                    {'automatically_declare_parameters_from_overrides': True},
+                    {'allow_undeclared_parameters': True}
                 ],
             ),
         ],
@@ -154,27 +166,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
 
     ld.add_action(container)
-
-    # demo_node = Node(
-    #     package="paradocs_planning",
-    #     executable="continuous_motion_demo",
-    #     name="continuous_motion_demo",
-    #     namespace="",
-    #     output="screen",
-    #     parameters=[
-    #         # for gazebo
-    #         {'use_sim_time': True},
-    #         robot_description,
-    #         robot_description_semantic,
-    #         common_hybrid_planning_param,
-    #     ],
-    #     remappings=[
-    #         ("/joint_states", "/lbr/joint_states"),
-    #         ("/planning_scene", "/lbr/planning_scene"),
-    #     ],
-    # )
-
-    # ld.add_action(demo_node)
 
     pose_publisher = Node(
         package="paradocs_planning",
