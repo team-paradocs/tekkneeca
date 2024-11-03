@@ -184,9 +184,13 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
   plan_params.max_velocity_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
   plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
+  // update planning scene with current state
+  moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
+
   // Create planning component
   auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
 
+  // Set start state to current state
   planning_components->setStartStateToCurrentState();
   // Copy goal constraint into planning component
   planning_components->setGoal(motion_plan_req.goal_constraints);
