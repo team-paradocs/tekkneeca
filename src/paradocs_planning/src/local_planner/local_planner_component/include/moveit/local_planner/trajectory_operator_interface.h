@@ -82,7 +82,7 @@ public:
    * @return True if segment was successfully added
    */
   virtual moveit_msgs::action::LocalPlanner::Feedback
-  addTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory) = 0;
+  setTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory, bool replace) = 0;
 
   /**
    * Return the current local constraints based on the newest robot state

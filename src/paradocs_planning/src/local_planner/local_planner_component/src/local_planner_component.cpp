@@ -101,7 +101,7 @@ bool LocalPlannerComponent::initialize()
     trajectory_operator_instance_ =
         trajectory_operator_loader_->createUniqueInstance(config_.trajectory_operator_plugin_name);
     if (!trajectory_operator_instance_->initialize(node_, planning_scene_monitor_->getRobotModel(),
-                                                   config_.group_name))  // TODO(sjahr) add default group param
+                                                   config_.group_name))
       throw std::runtime_error("Unable to initialize trajectory operator plugin");
     RCLCPP_INFO(LOGGER, "Using trajectory operator interface '%s'", config_.trajectory_operator_plugin_name.c_str());
   }
@@ -179,24 +179,64 @@ bool LocalPlannerComponent::initialize()
       },
       // Execution callback
       [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::LocalPlanner>> goal_handle) {
+
         local_planning_goal_handle_ = std::move(goal_handle);
-        // TODO: modify the behavior here
-        // should modify trajectory_operator_instance_ to compensate
 
+        size_t constraintSize = (local_planning_goal_handle_->get_goal())->local_constraints.size();
+        RCLCPP_INFO(LOGGER, "Local planning goal size: %ld ", constraintSize);
+        if (constraintSize > 0) {
 
-        // if (state_ == LocalPlannerState::LOCAL_PLANNING_ACTIVE) {
+          // If there is a constraint, then it is a compensation
+          auto goal_constraint = (local_planning_goal_handle_->get_goal())->local_constraints[0];
 
-        //   // (local_planning_goal_handle_->get_goal())->local_constraints
+          // RCLCPP_INFO(LOGGER, "Joint Constraint:");
+          // RCLCPP_INFO(LOGGER, "Joint name %s,",
+          //   goal_constraint.joint_constraints[0].joint_name.c_str());
+          
+          // RCLCPP_INFO(LOGGER, "position: %f, tolerance_above: %f, tolerance_below: %f, weight: %f",
+          //   goal_constraint.joint_constraints[0].position,
+          //   goal_constraint.joint_constraints[0].tolerance_above,
+          //   goal_constraint.joint_constraints[0].tolerance_below,
+          //   goal_constraint.joint_constraints[0].weight);           
+            
+          planning_scene_monitor_->updateSceneWithCurrentState();
 
-        //   // trajectory_operator_instance_->addTrajectorySegment()
-        //   return;
-        // }
+          // Read current robot state
+          const moveit::core::RobotState current_robot_state = [this] {
+            planning_scene_monitor::LockedPlanningSceneRO ls(planning_scene_monitor_);
+            return ls->getCurrentState();
+          }();
+
+          auto goal_state = std::make_shared<moveit::core::RobotState>(planning_scene_monitor_->getRobotModel());
+          std::vector<double> joint_positions;
+          for (size_t i = 0; i < goal_constraint.joint_constraints.size(); i++)
+          {
+            joint_positions.push_back(goal_constraint.joint_constraints[i].position);
+          }
+          
+          goal_state->setVariablePositions(joint_positions.data());
+
+          robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), config_.group_name);
+          if (state_ != LocalPlannerState::LOCAL_PLANNING_ACTIVE)
+          {
+            // need to append start state and start local planer
+            new_trajectory.addSuffixWayPoint(std::make_shared<moveit::core::RobotState>(current_robot_state), 0.1);
+            state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
+          }
+          
+          new_trajectory.addSuffixWayPoint(goal_state, 0.1);
+          RCLCPP_INFO(LOGGER, "Number of waypoints in new_trajectory: %lu", new_trajectory.getWayPointCount());
+
+          // append the new trajectory to the existing one
+          trajectory_operator_instance_->setTrajectorySegment(new_trajectory, false);
+          // RCLCPP_INFO(LOGGER, "Number of waypoints in new_trajectory: %lu", trajectory_operator_instance_->getTrajectory().getWayPointCount());
+        }
 
         // Check if a previous goal was running and needs to be cancelled.
-        // if (long_callback_thread_.joinable())
-        // {
-        //   long_callback_thread_.join();
-        // }
+        if (long_callback_thread_.joinable())
+        {
+          long_callback_thread_.join();
+        }
 
         // Start a local planning loop.
         // This needs to return quickly to avoid blocking the executor, so run the local planner in a new thread.
@@ -213,14 +253,14 @@ bool LocalPlannerComponent::initialize()
   global_solution_subscriber_ = node_->create_subscription<moveit_msgs::msg::MotionPlanResponse>(
       config_.global_solution_topic, rclcpp::SystemDefaultsQoS(),
       [this](const moveit_msgs::msg::MotionPlanResponse::ConstSharedPtr& msg) {
+
         // Add received trajectory to internal reference trajectory
         robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), msg->group_name);
-        // TODO: test the start state here
         moveit::core::RobotState start_state(planning_scene_monitor_->getRobotModel());
-        // start_state
         moveit::core::robotStateMsgToRobotState(msg->trajectory_start, start_state);
         new_trajectory.setRobotTrajectoryMsg(start_state, msg->trajectory);
-        *local_planner_feedback_ = trajectory_operator_instance_->addTrajectorySegment(new_trajectory);
+        // replace current trajectory
+        trajectory_operator_instance_->setTrajectorySegment(new_trajectory, true);
 
         // Feedback is only send when the hybrid planning architecture should react to a discrete event that occurred
         // when the reference trajectory is updated
@@ -230,7 +270,6 @@ bool LocalPlannerComponent::initialize()
         }
 
         // Update local planner state
-        // TODO: modify the set of this state
         state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
       }
   );
@@ -293,6 +332,7 @@ void LocalPlannerComponent::executeIteration()
       // Check if the global goal is reached
       if (trajectory_operator_instance_->getTrajectoryProgress(current_robot_state) > PROGRESS_THRESHOLD)
       {
+        RCLCPP_INFO(LOGGER, "Local planner reached the goal");
         local_planning_goal_handle_->succeed(result);
         reset();
         return;
@@ -348,7 +388,7 @@ void LocalPlannerComponent::executeIteration()
           if (!goal_handle) {
               RCLCPP_ERROR(LOGGER, "Goal was rejected by the joint trajectory controller action server.");
           } else {
-              RCLCPP_INFO(LOGGER, "Goal accepted by the joint trajectory controller action server, executing...");
+              // RCLCPP_INFO(LOGGER, "Goal accepted by the joint trajectory controller action server, executing...");
           }
         };        
 
@@ -382,7 +422,7 @@ void LocalPlannerComponent::executeIteration()
       result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
       result->error_message = "Unexpected failure.";
       local_planning_goal_handle_->abort(result);
-      // RCLCPP_ERROR(LOGGER, "Local planner somehow failed");  // TODO(sjahr) Add more detailed failure information
+      RCLCPP_ERROR(LOGGER, "Local planner somehow failed");
       reset();
       return;
     }

@@ -66,7 +66,6 @@
 
 namespace moveit::hybrid_planning
 {
-// TODO(sjahr) Refactor and use repository wide solution
 template <typename T>
 void declareOrGetParam(const std::string& param_name, T& output_value, const T& default_value,
                        const rclcpp::Node::SharedPtr& node)
