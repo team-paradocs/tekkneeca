@@ -3,72 +3,86 @@ Assistive Robot for Total Knee Arthroplasty
 
 ## Installation
 
-- Clone the package
+Clone the package
 
-        cd ~/<ros2_ws>/src
-        git clone git@github.com:team-paradocs/tekkneeca.git
+```
+mkdir ~/<ros2_ws>
+cd ~/<ros2_ws>/src
+git clone git@github.com:team-paradocs/tekkneeca.git
+```
 
-- Build the packages
+Grant docker permission
+```
+sudo groupadd docker
+sudo gpasswd -a $USER docker
+newgrp docker
+```
 
-        cd ~/<ros2_ws>
-        colcon build
+Set X11 forwarding 
+```
+xhost +local:docker
+```
 
-- source environment
+Build the image
 
-        source ~/<ros2_ws>/install/setup.bash
+```
+./docker/docker_build.sh
+```
 
-## With Docker
+## Usage
 
-- Clone the package
+Run the image with hardware
+ ``` 
+./docker/docker_run.sh
+```
 
-        cd ~/<ros2_ws>/src
-        git clone git@github.com:team-paradocs/tekkneeca.git
+Run the image without Arduino
+```
+./docker/docker_run_camera_only.sh
+```
 
-- Grant docker permission
+Run the image without hardware
+```  
+./docker/docker_run_sim.sh
+```  
 
-        sudo groupadd docker
-        sudo gpasswd -a $USER docker
-        newgrp docker
+Attach a new terminal to current container
+```  
+./docker/docker_terminal.sh
+```
 
-- X11 Forwarding 
+## Trouble shooting
 
-        xhost +local:docker
+If you encounter "Authorization required, but no authorization protocol specified" failure, run X11 forwarding again
 
-- Usage
-
-  build the image
+```
+xhost +local:docker
+```
   
-        ./docker_build.sh
-  
-  run the image with hardware
-  
-        ./docker_run.sh
-  
-  run the image without hardware
-  
-        ./docker_run_sim.sh
-  
-  attach a new terminal to current container
-  
-        ./docker_terminal.sh
+If you cannot connect to Arduino
+```  
+chmod 777 /dev/ttyACM0
+```
 
-- Trouble shooting
+## Launch the system
 
-  If you encounter "Authorization required, but no authorization protocol specified" failure, run X11 forwarding again
+Inside docker container
+```
+ros2 launch paradocs_control tekkneeca.launch.py
+```
 
-  If you cannot connect to Arduino, chmod 777 /dev/ttyACM0
+In another container terminal
+```
+ros2 run regpipe_ros pcd_sampipe
+```
 
 ## SAM Changelog
 Added SAM (`segment-anything-2`) to the `src` folder
 
 Checkpoints are not included so download them manually.
- 
-        ./docker/get_ckpts.sh
+``` 
+./docker/get_ckpts.sh
+```
+
 Note - Only downloads the small and large models. If you want additional models, modify segment-anything-2/checkpoints/download_ckpts.sh
-
-Update build and runs scripts to run from root dir. So now do - 
-
-        ./docker/docker_build.sh
-        ./docker/docker_run.sh
-
 
