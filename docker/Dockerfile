@@ -94,6 +94,11 @@ RUN pip install pyserial
 
 # Source ROS 2 setup file
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+RUN echo "export RCUTILS_CONSOLE_OUTPUT_FORMAT="[{severity}] [{name}]: {message}"" >> ~/.bashrc
+RUN echo "export RCUTILS_COLORIZED_OUTPUT=1" >> ~/.bashrc
+RUN echo "alias tek_kill='(ps aux | grep ros | grep -v grep && ps aux | grep gzserver | grep -v grep && ps aux | grep gzclient | grep -v grep) | awk '\''{print $2}'\'' | xargs kill -9'" >> ~/.bashrc
+RUN echo "alias tek_install='colcon build && source install/setup.bash'" >> ~/.bashrc
+
 # RUN rosdep install --from-paths src --ignore-src -r -y
 
 # Install x11 dependencies for GUI applications
