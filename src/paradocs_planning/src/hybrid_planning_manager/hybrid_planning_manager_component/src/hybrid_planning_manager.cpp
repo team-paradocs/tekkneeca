@@ -48,6 +48,7 @@ namespace moveit::hybrid_planning
     : Node("hybrid_planning_manager", options), initialized_(false), stop_hybrid_planning_(false)
   {
     // Initialize hybrid planning component after construction
+    RCLCPP_INFO(LOGGER, "auto declare %d", Node::get_node_options().automatically_declare_parameters_from_overrides());
     timer_ = this->create_wall_timer(1ms, [this]() {
       if (initialized_)
       {
@@ -146,7 +147,7 @@ namespace moveit::hybrid_planning
             result->error_code.val = reaction_result.error_code.val;
             result->error_message = reaction_result.error_message;
             // hybrid_planning_goal_handle_->abort(result);
-            RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
+            RCLCPP_ERROR(LOGGER, "Inside global_solution_sub_, Hybrid Planning Manager failed to react to '%s'", reaction_result.event.c_str());
           }
         }
     );
@@ -156,11 +157,13 @@ namespace moveit::hybrid_planning
         "tracking_goal", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
 
-          // TODO: Design the behavior here
-          if (long_callback_thread_.joinable())
-            cancelHybridManagerGoals();
+          // Threading is removed
+          // if (long_callback_thread_.joinable())
+          //   cancelHybridManagerGoals();
           // Execute the hybrid planner goal
-          long_callback_thread_ = std::thread(&HybridPlanningManager::executeHybridPlannerGoal, this, msg);
+          // long_callback_thread_ = std::thread(&HybridPlanningManager::executeHybridPlannerGoal, this, msg);
+          
+          executeHybridPlannerGoal(msg);
 
         }
     );
@@ -216,10 +219,12 @@ namespace moveit::hybrid_planning
     //   // std::shared_future<T>::wait
     //   global_future.wait();
     // }
-    if (long_callback_thread_.joinable())
-    {
-      long_callback_thread_.join();
-    }
+    
+    // Threading is removed
+    // if (long_callback_thread_.joinable())
+    // {
+    //   long_callback_thread_.join();
+    // }
     RCLCPP_INFO(LOGGER, "cancelHybridManagerGoals finished");
   }
 
@@ -239,7 +244,7 @@ namespace moveit::hybrid_planning
         auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
         result->error_code.val = reaction_result.error_code.val;
         result->error_message = reaction_result.error_message;
-        RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to  " << reaction_result.event);
+        RCLCPP_ERROR_STREAM(LOGGER, "Inside executeHybridPlannerGoal, Hybrid Planning Manager failed to react to " << reaction_result.event);
       }
     }
 
@@ -283,7 +288,7 @@ namespace moveit::hybrid_planning
             auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
             result->error_code.val = reaction_result.error_code.val;
             result->error_message = reaction_result.error_message;
-            RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
+            RCLCPP_ERROR(LOGGER, "Inside sendGlobalPlannerAction, Hybrid Planning Manager failed to react to '%s'", reaction_result.event.c_str());
           }
         };
 
@@ -317,7 +322,7 @@ namespace moveit::hybrid_planning
     return true;
   }
 
-  bool HybridPlanningManager::sendLocalPlannerAction()
+  bool HybridPlanningManager::sendLocalPlannerAction(bool isCompensation)
   {
 
     auto local_goal_options = rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SendGoalOptions();
@@ -343,7 +348,7 @@ namespace moveit::hybrid_planning
               auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
               result->error_code.val = reaction_result.error_code.val;
               result->error_message = reaction_result.error_message;
-              RCLCPP_ERROR(LOGGER, "Hybrid Planning Manager failed to react to  '%s'", reaction_result.event.c_str());
+              RCLCPP_ERROR(LOGGER, "Inside local_goal_options.feedback_callback, Hybrid Planning Manager failed to react to '%s'", reaction_result.event.c_str());
             }
           };
 
@@ -373,7 +378,7 @@ namespace moveit::hybrid_planning
             auto result = std::make_shared<moveit_msgs::action::HybridPlanner::Result>();
             result->error_code.val = reaction_result.error_code.val;
             result->error_message = reaction_result.error_message;
-            RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to  " << reaction_result.event);
+            RCLCPP_ERROR_STREAM(LOGGER, "Inside local_goal_options.result_callback, Hybrid Planning Manager failed to react to " << reaction_result.event);
           }
         };
 
@@ -384,12 +389,17 @@ namespace moveit::hybrid_planning
 
     // Setup local goal
     auto local_goal_msg = moveit_msgs::action::LocalPlanner::Goal();
-    local_goal_msg.local_constraints.resize(1);
 
-    local_goal_msg.local_constraints[0] = 
-        kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), 
-                            joint_model_group_.get());
-
+    if (isCompensation)
+    {
+      local_goal_msg.local_constraints.resize(1);
+      local_goal_msg.local_constraints[0] = 
+          kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), 
+                              joint_model_group_.get());
+    } else {
+      local_goal_msg.local_constraints.resize(0);
+    }
+    
     // Send local planning goal asynchronously
     auto goal_handle_future = local_planner_action_client_->async_send_goal(local_goal_msg, local_goal_options);
     return true;
@@ -411,12 +421,12 @@ namespace moveit::hybrid_planning
     bool success = goal_state_->setFromIK(joint_model_group_.get(), hybrid_planning_goal_handle_->pose);
     // TODO: check if this is necessary
     // goal_state_->update();
-    RCLCPP_WARN(LOGGER, "IK success: %d", success);
+    RCLCPP_INFO(LOGGER, "IK success: %d", success);
     std::vector<double> joint_values;
     goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
     for (size_t i = 0; i < joint_values.size(); ++i)
     {
-      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+      RCLCPP_INFO(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
     }
     return success;
   }

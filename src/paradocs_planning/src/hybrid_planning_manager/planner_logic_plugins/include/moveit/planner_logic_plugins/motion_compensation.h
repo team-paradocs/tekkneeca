@@ -63,7 +63,7 @@ private:
   double position_threshold_ = 0.03;
 
   // threshold for the orientation difference (deg)
-  double orientation_threshold_ = 10.0;
+  double orientation_threshold_ = 90.0;
 
   // Previous goal
   std::shared_ptr<const geometry_msgs::msg::PoseStamped> previous_goal_ = nullptr;

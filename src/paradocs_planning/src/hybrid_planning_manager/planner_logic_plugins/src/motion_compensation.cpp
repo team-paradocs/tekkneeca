@@ -73,7 +73,7 @@ namespace moveit::hybrid_planning
         // if (!local_planner_started_)
         // {
           // Start local planning
-          if (!hybrid_planning_manager_->sendLocalPlannerAction())
+          if (!hybrid_planning_manager_->sendLocalPlannerAction(false))
           {
             return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
           }
@@ -153,7 +153,7 @@ namespace moveit::hybrid_planning
       else 
       {
         RCLCPP_INFO(LOGGER, "Small motion detected");
-        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction();
+        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(true);
         if (!clientActionSuccessfullySent)
         {
           // report failure

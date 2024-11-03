@@ -66,11 +66,12 @@ namespace moveit::hybrid_planning
     /** \brief Destructor */
     ~HybridPlanningManager() override
     {
+      // Threading is removed
       // Join the thread used for long-running callbacks
-      if (long_callback_thread_.joinable())
-      {
-        long_callback_thread_.join();
-      }
+      // if (long_callback_thread_.joinable())
+      // {
+      //   long_callback_thread_.join();
+      // }
     }
 
     /**
@@ -110,7 +111,7 @@ namespace moveit::hybrid_planning
     * Send local planning request to local planner component
     * @return Local planner successfully started yes/no
     */
-    bool sendLocalPlannerAction();
+    bool sendLocalPlannerAction(bool isCompensation);
 
     /**
     * Send back hybrid planning response
