@@ -58,3 +58,17 @@ Assistive Robot for Total Knee Arthroplasty
 
   If you cannot connect to Arduino, chmod 777 /dev/ttyACM0
 
+## SAM Changelog
+Added SAM (`segment-anything-2`) to the `src` folder
+
+Checkpoints are not included so download them manually.
+ 
+        ./docker/get_ckpts.sh
+Note - Only downloads the small and large models. If you want additional models, modify segment-anything-2/checkpoints/download_ckpts.sh
+
+Update build and runs scripts to run from root dir. So now do - 
+
+        ./docker/docker_build.sh
+        ./docker/docker_run.sh
+
+

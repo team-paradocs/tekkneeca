@@ -120,11 +120,6 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-          plank:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
           world:
             Alpha: 1
             Show Axes: false
@@ -229,11 +224,6 @@ Visualization Manager:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-          plank:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
           world:
             Alpha: 1
             Show Axes: false
@@ -314,8 +304,6 @@ Visualization Manager:
           Value: false
         lbr/link_tool:
           Value: true
-        lbr/plank:
-          Value: false
         lbr/world:
           Value: false
         world:
@@ -347,8 +335,6 @@ Visualization Manager:
                               lbr/link_drillbit:
                                 lbr/link_tool:
                                   {}
-            lbr/plank:
-              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
