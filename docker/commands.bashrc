@@ -12,9 +12,9 @@ export RCUTILS_COLORIZED_OUTPUT=1
 
 # Alias to kill all ROS2 and Gazebo processes
 alias tek_kill="( \
-    ps aux | grep ros | grep -v grep | awk '{print \$2}' | xargs -r kill -9; \
-    ps aux | grep gzserver | grep -v grep | awk '{print \$2}' | xargs -r kill -9; \
-    ps aux | grep gzclient | grep -v grep | awk '{print \$2}' | xargs -r kill -9 \
+    pkill -f ros; \
+    pkill -f gzserver; \
+    pkill -f gzclient \
 )"
 
 # Alias to build the workspace and source the new setup file
