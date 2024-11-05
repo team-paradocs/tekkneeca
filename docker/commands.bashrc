@@ -20,7 +20,7 @@ alias tek_kill="( \
 # Alias to build the workspace and source the new setup file
 alias tek_install='colcon build && source install/setup.bash'
 
-# Enable case-insensitive + menu-autocomplete for zsh like experience
+# Zsh like experience
 bind 'set completion-ignore-case on'
 bind 'set show-all-if-ambiguous on'
 bind 'TAB:menu-complete'

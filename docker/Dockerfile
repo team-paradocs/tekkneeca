@@ -96,7 +96,10 @@ RUN rosdep update
 
 # Install oh-my-bash
 RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)" && \
-    sed -i 's/OSH_THEME="font"/OSH_THEME="robbyrussell"/' ~/.bashrc
+    sed -i 's/OSH_THEME="font"/OSH_THEME="robbyrussell"/' ~/.bashrc && \
+    sed -i \
+    's|PS1="${arrow}  ${python_venv}${base_directory} "|PS1="[docker] ${arrow}  ${python_venv}${base_directory} "|' \
+    /root/.oh-my-bash/themes/robbyrussell/robbyrussell.theme.sh
 
 # Copy custom commands into .bashrc
 COPY docker/commands.bashrc /ros_ws/
