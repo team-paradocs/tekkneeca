@@ -56,7 +56,7 @@ function run_container {
         --gpus all \
         --network host \
         --ipc host \
-        --volume="$(pwd):/ros_ws:rw" \
+        --volume="$(pwd)/src:/ros_ws/src:rw" \
         --volume="$XSOCK:$XSOCK:rw" \
         --volume="/dev/shm:/dev/shm" \
         --volume="/dev:/dev" \

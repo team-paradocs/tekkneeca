@@ -107,4 +107,6 @@ COPY docker/commands.bashrc /ros_ws/
 RUN cat /ros_ws/commands.bashrc >> ~/.bashrc
 
 # Set the default command to run when starting the container
+COPY docker/entrypoint.sh /ros_ws/
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/bin/bash"]
