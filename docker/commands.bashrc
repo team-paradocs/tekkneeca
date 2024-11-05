@@ -15,3 +15,8 @@ alias tek_kill='(ps aux | grep ros | grep -v grep && ps aux | grep gzserver | gr
 
 # Alias to build the workspace and source the new setup file
 alias tek_install='colcon build && source install/setup.bash'
+
+# Add Conditional Source of ROS2 workspace setup file
+if [ -f "/ros_ws/install/setup.bash" ]; then
+    source /ros_ws/install/setup.bash
+fi
