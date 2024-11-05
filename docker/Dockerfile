@@ -94,6 +94,10 @@ RUN pip install open3d==0.18.0 \
 # Initialize rosdep
 RUN rosdep update
 
+# Install oh-my-bash
+RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)" && \
+    sed -i 's/OSH_THEME="font"/OSH_THEME="robbyrussell"/' ~/.bashrc
+
 # Copy custom commands into .bashrc
 COPY docker/commands.bashrc /ros_ws/
 RUN cat /ros_ws/commands.bashrc >> ~/.bashrc
