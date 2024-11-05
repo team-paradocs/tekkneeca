@@ -50,7 +50,8 @@ RUN apt-get install -y \
     ros-humble-ros2-controllers \
     ros-humble-control-toolbox \
     ros-humble-joint-state-publisher \
-    ros-humble-rviz2
+    ros-humble-rviz2 \
+    ros-humble-tf-transformations
 
 # Install MoveIt and Gazebo ROS 2 control
 RUN apt-get install -y \
