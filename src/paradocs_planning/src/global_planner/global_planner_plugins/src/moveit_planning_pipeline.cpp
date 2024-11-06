@@ -33,7 +33,7 @@
  *********************************************************************/
 
 #include <moveit/global_planner/moveit_planning_pipeline.h>
-#include <moveit_visual_tools/moveit_visual_tools.h>
+// #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_interface/planning_interface.h>
@@ -158,12 +158,12 @@ namespace moveit::hybrid_planning
     moveit_cpp::MoveItCpp::Options moveit_cpp_options(node);
     moveit_cpp_ = std::make_shared<moveit_cpp::MoveItCpp>(node, moveit_cpp_options);
 
-    auto moveit_visual_tools =
-        moveit_visual_tools::MoveItVisualTools{node, "link_0", rviz_visual_tools::RVIZ_MARKER_TOPIC,
-                                               moveit_cpp_->getRobotModel()};
+    // auto moveit_visual_tools =
+    //     moveit_visual_tools::MoveItVisualTools{node, "link_0", rviz_visual_tools::RVIZ_MARKER_TOPIC,
+    //                                            moveit_cpp_->getRobotModel()};
     rclcpp::sleep_for(std::chrono::seconds(1));
-    moveit_visual_tools.deleteAllMarkers();
-    moveit_visual_tools.loadRemoteControl();
+    // moveit_visual_tools.deleteAllMarkers();
+    // moveit_visual_tools.loadRemoteControl();
     return true;
   }
 
@@ -225,7 +225,6 @@ namespace moveit::hybrid_planning
     shape_msgs::msg::SolidPrimitive box;
     box.type = shape_msgs::msg::SolidPrimitive::BOX;
     box.dimensions = {0.7, 0.8, 0.8};
-    position_constraint.constraint_region.primitives.emplace_back(box);
     // position_constraint.constraint_region.primitives[0].dimensions = {0, 0, 0};
     // position_constraint.constraint_region.primitives[0].dimensions = {x_max - x_min, y_max - y_min, z_max - z_min};
 
@@ -242,22 +241,92 @@ namespace moveit::hybrid_planning
     box_pose.orientation.z = 0.0;
 
     // Assign the pose to the box
+    auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
+    auto planning_scene = planning_scene_monitor->getPlanningScene();
+
+    //////CREATING SMALLER BOX CONSTRAINT
+    planning_components->setStartStateToCurrentState();
+    auto current_state = planning_scene->getCurrentStateNonConst();
+    const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
+      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
+                  link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
+      
+
+    shape_msgs::msg::SolidPrimitive small_box;
+    small_box.type = shape_msgs::msg::SolidPrimitive::BOX;
+    geometry_msgs::msg::Pose small_box_pose;
+
+    if (!motion_plan_req.goal_constraints.empty())
+    {
+      const auto &goal_constraints = motion_plan_req.goal_constraints[0];
+      if (!goal_constraints.position_constraints.empty())
+      {
+        const auto &goal_position = goal_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
+        RCLCPP_INFO(LOGGER, "Goal Position - x: %f, y: %f, z: %f", goal_position.x, goal_position.y, goal_position.z);
+        double ee_size = 2*0.05;
+        double x_dim = std::abs(goal_position.x - link_state.translation().x());
+        double y_dim = std::abs(goal_position.y - link_state.translation().y());
+        double z_dim = 1.0+std::abs(goal_position.z - link_state.translation().z());
+        small_box.dimensions = {x_dim + ee_size, y_dim + ee_size, z_dim + ee_size};
+        // small_box.dimensions = {std::abs(goal_position.x - link_state.translation().x()), 
+        //       std::abs(goal_position.y - link_state.translation().y()), 
+        //       std::abs(goal_position.z - link_state.translation().z())};
+              small_box_pose.position.x = (goal_position.x + link_state.translation().x()) / 2;
+              small_box_pose.position.y = (goal_position.y + link_state.translation().y()) / 2;
+              small_box_pose.position.z = (goal_position.z + link_state.translation().z()) / 2;
+      }
+      if (!goal_constraints.orientation_constraints.empty())
+      {
+        const auto &goal_orientation = goal_constraints.orientation_constraints[0].orientation;
+        RCLCPP_INFO(LOGGER, "Goal Orientation - w: %f, x: %f, y: %f, z: %f", goal_orientation.w, goal_orientation.x, goal_orientation.y, goal_orientation.z);
+      }
+    }
+
+    // position_constraint.constraint_region.primitives.emplace_back(small_box);
+    // position_constraint.constraint_region.primitives[0].dimensions = {0, 0, 0};
+    // position_constraint.constraint_region.primitives[0].dimensions = {x_max - x_min, y_max - y_min, z_max - z_min};
+
+    // Set the pose of the small_box (the center point of the small_box)
+    
+    // small_box_pose.position.x = -0.5; // Center of the small_box in X direction
+    // small_box_pose.position.y = 0; // Center of the small_box in Y direction
+    // small_box_pose.position.z = 0.4; // Center of the small_box in Z direction
+
+    // small_Box orientation: Identity quaternion (no rotation)
+    small_box_pose.orientation.w = 1.0;
+    small_box_pose.orientation.x = 0.0;
+    small_box_pose.orientation.y = 0.0;
+    small_box_pose.orientation.z = 0.0;
+
+    // Assign the pose to the small_box
+    // position_constraint.constraint_region.primitive_poses.emplace_back(small_box_pose);
+    position_constraint.constraint_region.primitives.emplace_back(box);
     position_constraint.constraint_region.primitive_poses.emplace_back(box_pose);
 
-    // Create orientation constraint
-    // moveit_msgs::msg::OrientationConstraint orientation_constraint;
-    // orientation_constraint.header.frame_id = "link_0";
-    // orientation_constraint.link_name = "link_tool"; // Replace with the actual link name
-    // orientation_constraint.orientation.w = 1.0;     // Desired orientation quaternion
-    // orientation_constraint.orientation.x = 0.0;
-    // orientation_constraint.orientation.y = 0.0;
-    // orientation_constraint.orientation.z = 0.0;
-    // orientation_constraint.absolute_x_axis_tolerance = 0.1; // Tolerance values
-    // orientation_constraint.absolute_y_axis_tolerance = 0.1;
-    // orientation_constraint.absolute_z_axis_tolerance = 0.1;
-    // orientation_constraint.weight = 1.0; // Weight of the constraint
 
-    // constraints.orientation_constraints.push_back(orientation_constraint); // TOGGLE ORIENTATION CONSTRAINT
+
+    // Extract the position and orientation from the goal constraints
+    
+
+    // Create orientation constraint
+    moveit_msgs::msg::OrientationConstraint orientation_constraint;
+    orientation_constraint.header.frame_id = "link_0";
+    orientation_constraint.link_name = "link_tool"; // Replace with the actual link name
+    // Get the current orientation of the end effector
+    const auto &current_orientation = link_state.rotation();
+    Eigen::Quaterniond current_quat(current_orientation);
+
+    // Set the orientation constraint to the current orientation
+    orientation_constraint.orientation.w = current_quat.w();
+    orientation_constraint.orientation.x = current_quat.x();
+    orientation_constraint.orientation.y = current_quat.y();
+    orientation_constraint.orientation.z = current_quat.z();
+    orientation_constraint.absolute_x_axis_tolerance = 0.4; // Tolerance values
+    orientation_constraint.absolute_y_axis_tolerance = 0.4;
+    orientation_constraint.absolute_z_axis_tolerance = 0.4;
+    orientation_constraint.weight = 0.5; // Weight of the constraint
+
+    constraints.orientation_constraints.push_back(orientation_constraint); // TOGGLE ORIENTATION CONSTRAINT
 
     constraints.position_constraints.emplace_back(position_constraint); // TOGGLE POSITION CONSTRAINT
 
@@ -296,11 +365,10 @@ namespace moveit::hybrid_planning
     // auto ompl_interface = std::make_shared<ompl_interface::OMPLInterface>(planning_components->getPlanningScene(), planning_components->getRobotModel());
     // ompl_interface->getPlanningContext()->getOMPLSimpleSetup()->getSpaceInformation()->getStateSpace()->as<ompl::base::SE3StateSpace>()->setBounds(bounds);
 
-    planning_components->setStartStateToCurrentState();
-    auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
-    auto planning_scene = planning_scene_monitor->getPlanningScene();
-    auto current_state = planning_scene->getCurrentStateNonConst();
-    planning_components->setStartState(current_state);
+    
+    
+    
+    // planning_components->setStartState(current_state);
     // auto start_state =
 
     // Ensure the current state is valid within the planning scene
@@ -322,11 +390,24 @@ namespace moveit::hybrid_planning
       RCLCPP_INFO(rclcpp::get_logger("planner"), "Shivangi Start state is valid!");
     }
     // Copy goal constraint into planning component
+    // if (!motion_plan_req.goal_constraints.empty())
+    // {
+    //   for (auto &goal_constraint : motion_plan_req.goal_constraints)
+    //   {
+    //     for (auto &orientation_constraint : goal_constraint.orientation_constraints)
+    //     {
+    //       orientation_constraint.orientation.w = current_quat.w();
+    //       orientation_constraint.orientation.x = current_quat.x();
+    //       orientation_constraint.orientation.y = current_quat.y();
+    //       orientation_constraint.orientation.z = current_quat.z();
+    //     }
+    //   }
+    // }
     planning_components->setGoal(motion_plan_req.goal_constraints);
 
     // Plan motion
     auto plan_solution = planning_components->plan(plan_params);
-    int max_attempts = 5;
+    int max_attempts = 15;
     int attempts = 0;
     while (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS && attempts < max_attempts)
     {

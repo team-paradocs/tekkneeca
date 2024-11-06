@@ -17,7 +17,7 @@ planning_scene_monitor_options:
   wait_for_initial_state_timeout: 10.0
 
 plan_request_params:
-  planner_id: "RRTConnectkConfigDefault"
+  planner_id: "RRTStarkConfigDefault"
   planning_pipeline: ompl
   # planner_id: "LIN"
   # planning_pipeline: pilz_industrial_motion_planner

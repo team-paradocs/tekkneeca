@@ -27,8 +27,6 @@ find_package(rclcpp_action REQUIRED)
 find_package(control_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
-find_package(graph_msgs REQUIRED)
-find_package(moveit_visual_tools REQUIRED)
 
 set(LIBRARIES
   # Components
@@ -59,8 +57,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   tf2_ros
   trajectory_msgs
   shape_msgs
-  graph_msgs
-  moveit_visual_tools
 )
 
 set(THIS_PACKAGE_INCLUDE_DIRS

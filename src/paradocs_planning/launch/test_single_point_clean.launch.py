@@ -184,7 +184,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         output="screen",
     )
 
-    ld.add_action(pose_publisher)
+    # ld.add_action(pose_publisher)
 
     return ld.entities
 
