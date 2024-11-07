@@ -171,6 +171,9 @@ class LBRDescriptionMixin:
                 parent,
                 "--child-frame-id",
                 child,
+                "--ros-args",
+                "--log-level",
+                "warn",
             ],
             **kwargs,
         )

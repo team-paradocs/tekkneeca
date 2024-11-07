@@ -72,6 +72,11 @@ class LBRROS2ControlMixin:
                 ),
                 robot_description,
             ],
+            arguments=[
+                "--ros-args",
+                "--log-level",
+                "warn",
+            ],
             namespace=robot_name,
             **kwargs,
         )
@@ -94,6 +99,9 @@ class LBRROS2ControlMixin:
                 controller,
                 "--controller-manager",
                 "controller_manager",
+                "--ros-args",
+                "--log-level",
+                "warn",
             ],
             namespace=robot_name,
             **kwargs,
@@ -122,6 +130,11 @@ class LBRROS2ControlMixin:
                 {
                     "frame_prefix": PathJoinSubstitution([robot_name, ""])
                 },  # neat hack to add trailing slash, which is required by frame_prefix
+            ],
+            arguments=[
+                "--ros-args",
+                "--log-level",
+                "warn",
             ],
             namespace=robot_name,
             **kwargs,
