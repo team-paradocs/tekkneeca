@@ -1,5 +1,8 @@
 global_planner_name: "moveit_hybrid_planning/MoveItPlanningPipeline"
 
+robot_description: "robot_description"
+planning_group: "arm"
+
 # The rest of these parameters are typical for moveit_cpp
 planning_scene_monitor_options:
   name: "planning_scene_monitor"
@@ -17,12 +20,12 @@ planning_scene_monitor_options:
   wait_for_initial_state_timeout: 10.0
 
 plan_request_params:
-  planner_id: "RRTStarkConfigDefault"
+  planner_id: "RRTstarkConfigDefault"
   planning_pipeline: ompl
   # planner_id: "LIN"
   # planning_pipeline: pilz_industrial_motion_planner
   planning_attempts: 5
-  planning_time: 5.0
+  planning_time: 10.0
   max_velocity_scaling_factor: 1.0
   max_acceleration_scaling_factor: 1.0
   cartesian_limits:

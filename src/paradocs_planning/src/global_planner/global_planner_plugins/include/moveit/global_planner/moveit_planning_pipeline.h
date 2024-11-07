@@ -43,6 +43,7 @@
 // MoveitCpp
 #include <moveit/moveit_cpp/moveit_cpp.h>
 #include <moveit/moveit_cpp/planning_component.h>
+#include <moveit/kinematic_constraints/utils.h>
 
 namespace moveit::hybrid_planning
 {
@@ -60,5 +61,13 @@ public:
 private:
   rclcpp::Node::SharedPtr node_ptr_;
   std::shared_ptr<moveit_cpp::MoveItCpp> moveit_cpp_;
+
+
+  // Goal from IK calculation
+  std::shared_ptr<moveit::core::RobotState> goal_state_;
+
+  std::shared_ptr<const moveit::core::JointModelGroup> joint_model_group_;
+
+  std::shared_ptr<const moveit::core::RobotModel> robot_model_;
 };
 }  // namespace moveit::hybrid_planning

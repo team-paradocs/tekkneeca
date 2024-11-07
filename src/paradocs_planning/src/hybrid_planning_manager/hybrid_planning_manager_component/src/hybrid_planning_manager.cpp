@@ -293,9 +293,13 @@ namespace moveit::hybrid_planning
     // Create desired motion goal
     moveit_msgs::msg::MotionPlanRequest goal_motion_request;
 
+    // goal_motion_request.goal_constraints.resize(1);
+    // goal_motion_request.goal_constraints[0] =
+    //     kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+
     goal_motion_request.goal_constraints.resize(1);
     goal_motion_request.goal_constraints[0] =
-        kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+      kinematic_constraints::constructGoalConstraints("link_tool", *(hybrid_planning_goal_handle_.get()));	
 
     moveit_msgs::msg::MotionSequenceItem sequence_item;
     sequence_item.req = goal_motion_request;
@@ -407,18 +411,22 @@ namespace moveit::hybrid_planning
     // goal_motion_request.goal_constraints.resize(1);
     // goal_motion_request.goal_constraints[0] =
     //     kinematic_constraints::constructGoalConstraints("link_tool", hybrid_planning_goal_handle_->pose);	
+    return true;
 
-    bool success = goal_state_->setFromIK(joint_model_group_.get(), hybrid_planning_goal_handle_->pose);
-    // TODO: check if this is necessary
-    // goal_state_->update();
-    RCLCPP_WARN(LOGGER, "IK success: %d", success);
-    std::vector<double> joint_values;
-    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
-    for (size_t i = 0; i < joint_values.size(); ++i)
-    {
-      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
-    }
-    return success;
+    // bool success = goal_state_->setFromIK(joint_model_group_.get(), hybrid_planning_goal_handle_->pose);
+    // // TODO: check if this is necessary
+    // // goal_state_->update();
+    // RCLCPP_WARN(LOGGER, "IK success: %d", success);
+    // std::vector<double> joint_values;
+    
+    
+    
+    // ->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    // for (size_t i = 0; i < joint_values.size(); ++i)
+    // {
+    //   RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+    // }
+    // return success;
   }
 
 }  // namespace moveit::hybrid_planning
