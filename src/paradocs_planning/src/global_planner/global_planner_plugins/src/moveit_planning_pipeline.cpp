@@ -198,18 +198,17 @@ namespace moveit::hybrid_planning
     // Set parameters required by the planning component
     moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
     plan_params.planner_id = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planner_id").as_string();
-    RCLCPP_INFO(LOGGER, "Shivangi Planner ID: %s", plan_params.planner_id.c_str());
+    RCLCPP_INFO(LOGGER, "Planner ID: %s", plan_params.planner_id.c_str());
     plan_params.planning_pipeline = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_pipeline").as_string();
     plan_params.planning_attempts = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_attempts").as_int();
     plan_params.planning_time = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_time").as_double();
-    RCLCPP_INFO(LOGGER, "Shivangi Planner time: %f", plan_params.planning_time);
+    RCLCPP_INFO(LOGGER, "Planner time: %f", plan_params.planning_time);
 
     plan_params.max_velocity_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
     plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
     // Create planning component
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
-    RCLCPP_INFO(LOGGER, "Shivangi here");
 
     // create the moveit interface, and update the planning scene
     auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
@@ -221,7 +220,7 @@ namespace moveit::hybrid_planning
     planning_components->setStartStateToCurrentState();
     auto current_state = planning_scene->getCurrentStateNonConst();
     const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
+      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
                   link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
 
     // add position and orientation constraints
@@ -280,21 +279,21 @@ namespace moveit::hybrid_planning
 
     // Check if the start state is valid as per the constraints
     bool is_valid = planning_scene->isStateValid(current_state, planning_components->getPlanningGroupName());
-    RCLCPP_INFO(LOGGER, "Shivangi State validity: %s", is_valid ? "valid" : "invalid");
+    RCLCPP_INFO(LOGGER, "State validity: %s", is_valid ? "valid" : "invalid");
     if (!is_valid)
     {
       // Print the Cartesian position of the current state
       const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
+      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
                   link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
-      RCLCPP_ERROR(rclcpp::get_logger("planner"), "Shivangi Start state is invalid!");
+      RCLCPP_ERROR(rclcpp::get_logger("planner"), "Start state is invalid!");
     }
     else
     {
       const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
+      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
                   link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
-      RCLCPP_INFO(rclcpp::get_logger("planner"), "Shivangi Start state is valid!");
+      RCLCPP_INFO(rclcpp::get_logger("planner"), "Start state is valid!");
     }
 
 
