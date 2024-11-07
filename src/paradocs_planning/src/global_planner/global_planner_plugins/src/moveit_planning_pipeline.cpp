@@ -156,6 +156,8 @@ bool MoveItPlanningPipeline::reset() noexcept
 moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>> global_goal_handle)
 {
+  RCLCPP_INFO(LOGGER, "In Global planner plan function");
+
   moveit_msgs::msg::MotionPlanResponse response;
 
   if ((global_goal_handle->get_goal())->motion_sequence.items.empty())
@@ -184,7 +186,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
   plan_params.max_velocity_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
   plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
-  // update planning scene with current state
+  // update planning scene with current state 
   moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
 
   // Create planning component
