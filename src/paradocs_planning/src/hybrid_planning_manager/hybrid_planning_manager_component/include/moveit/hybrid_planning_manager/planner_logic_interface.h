@@ -132,6 +132,8 @@ public:
    */
   virtual ReactionResult react(const std::string& event) = 0;
 
+  virtual void reset() = 0;
+
 protected:
   // The hybrid planning manager instance that runs this logic plugin
   std::shared_ptr<HybridPlanningManager> hybrid_planning_manager_ = nullptr;

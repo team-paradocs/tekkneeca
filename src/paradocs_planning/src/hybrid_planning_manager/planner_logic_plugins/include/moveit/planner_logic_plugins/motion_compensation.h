@@ -39,6 +39,7 @@
 
 #include <moveit/hybrid_planning_manager/planner_logic_interface.h>
 #include <moveit/hybrid_planning_manager/hybrid_planning_manager.h>
+#include <moveit/local_planner/feedback_types.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <cmath>
@@ -53,6 +54,7 @@ public:
   bool initialize(const std::shared_ptr<HybridPlanningManager>& hybrid_planning_manager) override;
   ReactionResult react(const HybridPlanningEvent& event) override;
   ReactionResult react(const std::string& event) override;
+  void reset();
 
 private:
   bool checkMotionXsendAction();
@@ -68,7 +70,7 @@ private:
   // Previous goal
   std::shared_ptr<const geometry_msgs::msg::PoseStamped> previous_goal_ = nullptr;
 
-  bool local_planner_started_ = false;
-  bool global_planner_started_ = false;
+  // bool local_planner_started_ = false;
+  bool first_time_ = true;
 };
 }  // namespace moveit::hybrid_planning
