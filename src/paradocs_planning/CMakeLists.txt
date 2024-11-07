@@ -20,6 +20,8 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(graph_msgs REQUIRED)
+find_package(moveit_visual_tools REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
@@ -50,6 +52,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_action
   rclcpp_components
   std_msgs
+  graph_msgs
+  moveit_visual_tools
   std_srvs
   control_msgs
   tf2
@@ -138,6 +142,7 @@ install(PROGRAMS
   scripts/subscriber_member_function.py
   scripts/continuous_pose_publisher.py
   scripts/drill_pose_publisher.py
+  scripts/realistic_pose_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

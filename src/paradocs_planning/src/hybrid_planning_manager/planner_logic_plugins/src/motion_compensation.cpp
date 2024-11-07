@@ -64,8 +64,9 @@ namespace moveit::hybrid_planning
           return ReactionResult(event, "Failed to calculate IK", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
         }
       case HybridPlanningEvent::GLOBAL_SOLUTION_AVAILABLE:
+        // this event can be deleted
         // Do nothing since we wait for the global planning action to finish
-        return ReactionResult(event, "Do nothing", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
+        return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_SUCCESSFUL:
         // Activate local planner once global solution is available
@@ -73,10 +74,10 @@ namespace moveit::hybrid_planning
         // if (!local_planner_started_)
         // {
           // Start local planning
-          if (!hybrid_planning_manager_->sendLocalPlannerAction())
-          {
-            return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
-          }
+        // if (!hybrid_planning_manager_->sendLocalPlannerAction(false))
+        // {
+        //   return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+        // }
           // local_planner_started_ = true;
         // }
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
@@ -110,9 +111,47 @@ namespace moveit::hybrid_planning
 
   ReactionResult MotionCompensation::react(const std::string& event)
   {
-    return ReactionResult(event, "MotionCompensation plugin cannot handle events given as string.",
-                          moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+    // react to eveents that are not defined in the HybridPlanningEvent enum
+    // return ReactionResult(event, "MotionCompensation plugin cannot handle events given as string.",
+    //                       moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+
+    if ((event == toString(LocalFeedbackEnum::COLLISION_AHEAD)) ||
+        (event == toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK)))
+    {
+
+      // stop executing the local plan
+      hybrid_planning_manager_->stopLocalPlanner();
+
+      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+      if (!clientActionSuccessfullySent)
+      {
+        // report failure
+        return ReactionResult(event, "Failed to sendGlobalPlannerAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+      }
+      // start local
+      clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
+      if (!clientActionSuccessfullySent)
+      {
+        // report failure
+        return ReactionResult(event, "Failed to sendLocalPlannerAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+      }
+      return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
+    }
+    else
+    {
+      return ReactionResult(event, "MotionCompensation plugin cannot handle this event.",
+                            moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+    }
+
   }
+
+  void MotionCompensation::reset()
+  {
+    // local_planner_started_ = false;
+    first_time_ = true;
+    previous_goal_ = nullptr;
+  }
+
 
   bool MotionCompensation::checkMotionXsendAction()
   {
@@ -120,18 +159,26 @@ namespace moveit::hybrid_planning
 
     auto currentGoalHandle = hybrid_planning_manager_->getHybridPlanningGoalHandle();
 
-    if (!global_planner_started_)
+    if (first_time_)
     {
       // First time
-      // Start global planning
-      RCLCPP_INFO(LOGGER, "Global Planner not started yet, start Global Planner");
-      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+      // Start local planning
+      RCLCPP_INFO(LOGGER, "Local Planner not started yet, start Local Planner");
+      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
       if (!clientActionSuccessfullySent)
       {
         // report failure
         return false;
       }
-      global_planner_started_ = true;
+      // Start global planning
+      RCLCPP_INFO(LOGGER, "Global Planner not started yet, start Global Planner");
+      clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+      if (!clientActionSuccessfullySent)
+      {
+        // report failure
+        return false;
+      }
+      first_time_ = false;
     } 
     else 
     {
@@ -143,7 +190,18 @@ namespace moveit::hybrid_planning
       if (position_difference > position_threshold_ || orientation_difference > orientation_threshold_) 
       {
         RCLCPP_INFO(LOGGER, "Large motion detected");
+        
+        // stop executing the local plan
+        hybrid_planning_manager_->stopLocalPlanner();
+
         bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+        if (!clientActionSuccessfullySent)
+        {
+          // report failure
+          return false;
+        }
+        // start execution
+        clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
         if (!clientActionSuccessfullySent)
         {
           // report failure
@@ -153,7 +211,7 @@ namespace moveit::hybrid_planning
       else 
       {
         RCLCPP_INFO(LOGGER, "Small motion detected");
-        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction();
+        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(true);
         if (!clientActionSuccessfullySent)
         {
           // report failure
@@ -204,31 +262,6 @@ namespace moveit::hybrid_planning
     return angle_degrees;
 
   }
-
-  // geometry_msgs::msg::Pose MotionCompensation::constraintsToPose(const moveit_msgs::msg::Constraints& constraints)
-  // {
-
-  //   geometry_msgs::msg::Pose pose;
-  //   // Assuming constraints.position_constraints has at least one element
-  //   if (!constraints.position_constraints.empty()) {
-  //       const auto& position_constraint = constraints.position_constraints[0];
-  //       pose.position.x = position_constraint.constraint_region.primitive_poses[0].position.x;
-  //       pose.position.y = position_constraint.constraint_region.primitive_poses[0].position.y;
-  //       pose.position.z = position_constraint.constraint_region.primitive_poses[0].position.z;
-  //   }
-
-  //   // Assuming constraints.orientation_constraints has at least one element
-  //   if (!constraints.orientation_constraints.empty()) {
-  //       const auto& orientation_constraint = constraints.orientation_constraints[0];
-  //       pose.orientation.x = orientation_constraint.orientation.x;
-  //       pose.orientation.y = orientation_constraint.orientation.y;
-  //       pose.orientation.z = orientation_constraint.orientation.z;
-  //       pose.orientation.w = orientation_constraint.orientation.w;
-  //   }
-
-  //   return pose;
-  // }
-
 
 }  // namespace moveit::hybrid_planning
 

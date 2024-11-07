@@ -144,5 +144,6 @@ class LBRMoveGroupMixin:
             package="moveit_ros_move_group",
             executable="move_group",
             output="screen",
+            arguments=['--ros-args', '--log-level', 'warn'],
             **kwargs,
         )

@@ -169,8 +169,8 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     pose_publisher = Node(
         package="paradocs_planning",
-        executable="continuous_pose_publisher.py",
-        name="continuous_pose_publisher",
+        executable="realistic_pose_publisher.py",
+        name="realistic_pose_publisher",
         namespace="",
         output="screen",
     )

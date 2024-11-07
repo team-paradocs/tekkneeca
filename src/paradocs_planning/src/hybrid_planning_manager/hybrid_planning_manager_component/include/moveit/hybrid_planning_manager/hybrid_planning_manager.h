@@ -41,6 +41,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 
+#include <std_msgs/msg/int32.hpp>
 #include <moveit_msgs/action/local_planner.hpp>
 #include <moveit_msgs/action/global_planner.hpp>
 #include <moveit_msgs/action/hybrid_planner.hpp>
@@ -66,11 +67,12 @@ namespace moveit::hybrid_planning
     /** \brief Destructor */
     ~HybridPlanningManager() override
     {
+      // Threading is removed
       // Join the thread used for long-running callbacks
-      if (long_callback_thread_.joinable())
-      {
-        long_callback_thread_.join();
-      }
+      // if (long_callback_thread_.joinable())
+      // {
+      //   long_callback_thread_.join();
+      // }
     }
 
     /**
@@ -87,6 +89,10 @@ namespace moveit::hybrid_planning
     * @return Initialization successful yes/no
     */
     bool initialize();
+
+    void stopGlobalPlanner();
+    
+    void stopLocalPlanner();
 
     /**
     * Cancel any active action goals, including global and local planners
@@ -110,13 +116,7 @@ namespace moveit::hybrid_planning
     * Send local planning request to local planner component
     * @return Local planner successfully started yes/no
     */
-    bool sendLocalPlannerAction();
-
-    /**
-    * Send back hybrid planning response
-    * @param success Indicates whether hybrid planning was successful
-    */
-    // void sendHybridPlanningResponse(bool success);
+    bool sendLocalPlannerAction(bool isCompensation);
 
     /**
     * Calculate IK
@@ -158,9 +158,6 @@ namespace moveit::hybrid_planning
     // Shared hybrid planning goal handle
     std::shared_ptr<const geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
 
-    // Frequently updated feedback for the hybrid planning action requester
-    // std::shared_ptr<moveit_msgs::action::HybridPlanner_Feedback> hybrid_planning_progess_;
-
     // Planning request action clients
     rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;
     rclcpp_action::Client<moveit_msgs::action::GlobalPlanner>::SharedPtr global_planner_action_client_;
@@ -169,11 +166,16 @@ namespace moveit::hybrid_planning
     rclcpp_action::Server<moveit_msgs::action::HybridPlanner>::SharedPtr hybrid_planning_request_server_;
 
     // Global solution subscriber
-    rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
+    // rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
+
+    // Tracking goal subscriber
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr tracking_goal_sub_;
 
+    // Planning state subscriber
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr planning_state_sub_;
+
     // This thread is used for long-running callbacks. It's a member so they do not go out of scope.
-    std::thread long_callback_thread_;
+    // std::thread long_callback_thread_;
 
     // A unique callback group, to avoid mixing callbacks with other action servers
     // rclcpp::CallbackGroup::SharedPtr cb_group_;

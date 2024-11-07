@@ -78,19 +78,18 @@ bool GlobalPlannerComponent::initializeGlobalPlanner()
       [this](const rclcpp_action::GoalUUID& /*unused*/,
              const std::shared_ptr<const moveit_msgs::action::GlobalPlanner::Goal>& /*unused*/) {
         RCLCPP_INFO(LOGGER, "Received global planning goal request");
-        // If another goal is active, cancel it and reject this goal
+        // If another goal is active, cancel it and take the new goal
         if (long_callback_thread_.joinable())
         {
-          // Try to terminate the execution thread
+          // Try to join the execution thread
+          // aync to try to call std::thread::join() and wait for it to finish
+          // if after 1 sec still not able to join the thread, means the goal is still executing
+          // so reject the new goal
           auto future = std::async(std::launch::async, &std::thread::join, &long_callback_thread_);
           if (future.wait_for(JOIN_THREAD_TIMEOUT) == std::future_status::timeout)
           {
-            RCLCPP_WARN(LOGGER, "Another goal was running. Rejecting the new hybrid planning goal.");
-            return rclcpp_action::GoalResponse::REJECT;
-          }
-          if (!global_planner_instance_->reset())
-          {
-            throw std::runtime_error("Failed to reset the global planner while aborting current global planning");
+            RCLCPP_WARN(LOGGER, "Another goal was running. don't publish the current goal and plan for the new global goal.");
+            dont_pub_ = true;
           }
         }
         return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
@@ -102,19 +101,17 @@ bool GlobalPlannerComponent::initializeGlobalPlanner()
         {
           long_callback_thread_.join();
         }
-        if (!global_planner_instance_->reset())
-        {
-          throw std::runtime_error("Failed to reset the global planner while aborting current global planning");
-        }
+        dont_pub_ = true;
+        // goal_handle will go to canceled state
         return rclcpp_action::CancelResponse::ACCEPT;
       },
       // Execution callback
       [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>> goal_handle) {
         // this needs to return quickly to avoid blocking the executor, so spin up a new thread
+        
         if (long_callback_thread_.joinable())
         {
           long_callback_thread_.join();
-          global_planner_instance_->reset();
         }
         long_callback_thread_ = std::thread(&GlobalPlannerComponent::globalPlanningRequestCallback, this, goal_handle);
       },
@@ -152,12 +149,15 @@ bool GlobalPlannerComponent::initializeGlobalPlanner()
     return false;
   }
   RCLCPP_INFO(LOGGER, "Using global planner plugin '%s'", planner_plugin_name_.c_str());
+  // default to publish the global plan
+  dont_pub_ = false;
   return true;
 }
 
 void GlobalPlannerComponent::globalPlanningRequestCallback(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>>& goal_handle)
 {
+  dont_pub_ = false;
   // Plan global trajectory
   moveit_msgs::msg::MotionPlanResponse planning_solution = global_planner_instance_->plan(goal_handle);
 
@@ -167,17 +167,25 @@ void GlobalPlannerComponent::globalPlanningRequestCallback(
 
   if (planning_solution.error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
   {
+    if (dont_pub_)
+    {
+      // don't publish the global trajectory if dont_pub_ flag is true
+      RCLCPP_WARN(LOGGER, "Global planning won't publish the global plan");
+      return;
+    }
+
     // Publish global planning solution to the local planner
+    RCLCPP_INFO(LOGGER, "Global planning publish global plan");
     global_trajectory_pub_->publish(planning_solution);
+    RCLCPP_INFO(LOGGER, "Global planning succeeded");
     goal_handle->succeed(result);
   }
   else
   {
+    // planning failed
     goal_handle->abort(result);
   }
 
-  // Reset the global planner
-  global_planner_instance_->reset();
 };
 }  // namespace moveit::hybrid_planning
 

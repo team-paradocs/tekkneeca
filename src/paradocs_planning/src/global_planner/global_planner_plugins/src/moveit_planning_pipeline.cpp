@@ -173,6 +173,8 @@ namespace moveit::hybrid_planning
   moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
       const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>> global_goal_handle)
   {
+    
+    RCLCPP_INFO(LOGGER, "In Global planner plan function");
 
     moveit_msgs::msg::MotionPlanResponse response;
 
@@ -209,9 +211,13 @@ namespace moveit::hybrid_planning
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
     RCLCPP_INFO(LOGGER, "Shivangi here");
 
-        // create the moveit interface, and update the planning scene
+    // create the moveit interface, and update the planning scene
     auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
     auto planning_scene = planning_scene_monitor->getPlanningScene();
+    
+    // update planning scene with current state 
+    moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
+    
     planning_components->setStartStateToCurrentState();
     auto current_state = planning_scene->getCurrentStateNonConst();
     const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name

@@ -54,16 +54,14 @@ namespace moveit::hybrid_planning
   }
 
   moveit_msgs::action::LocalPlanner::Feedback
-  SimpleSampler::addTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory)
+  SimpleSampler::setTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory, bool replace)
   {
     // Reset trajectory operator to delete old reference trajectory
-    reset();
-
-    if (reference_trajectory_->empty()) {
+    if (replace) {
+      reset();
       reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(new_trajectory);
     } else {
-      // Append new trajectory segment to reference trajectory
-      // use same resample_dt=0.1 as time_parameterization's default
+      // append
       reference_trajectory_->append(new_trajectory, 0.1);
     }
 
@@ -99,8 +97,8 @@ namespace moveit::hybrid_planning
     const moveit::core::RobotState next_desired_goal_state = reference_trajectory_->getWayPoint(next_waypoint_index_);
 
     // Check if state is reached
-    RCLCPP_INFO(LOGGER, "Distance to next waypoint: %f",
-                next_desired_goal_state.distance(current_state, joint_group_));
+    // RCLCPP_INFO(LOGGER, "Distance to next waypoint: %f",
+    //             next_desired_goal_state.distance(current_state, joint_group_));
     if (next_desired_goal_state.distance(current_state, joint_group_) <= WAYPOINT_RADIAN_TOLERANCE)
     {
       // Update index (and thus desired robot state)

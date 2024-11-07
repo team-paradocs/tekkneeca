@@ -82,7 +82,6 @@ public:
    */
   virtual moveit_msgs::action::LocalPlanner::Feedback
   solve(const robot_trajectory::RobotTrajectory& local_trajectory,
-        const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal> local_goal,
         trajectory_msgs::msg::JointTrajectory& local_solution) = 0;
 
   /**
