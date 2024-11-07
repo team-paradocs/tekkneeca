@@ -47,6 +47,8 @@
 #include <moveit_msgs/action/local_planner.hpp>
 #include <moveit_msgs/msg/motion_plan_response.hpp>
 #include <moveit_msgs/msg/robot_trajectory.hpp>
+#include <moveit_msgs/msg/display_trajectory.hpp>
+#include <moveit_visual_tools/moveit_visual_tools.h>
 
 #include <std_msgs/msg/float64.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
@@ -94,7 +96,7 @@ enum class LocalPlannerState : int8_t
   UNCONFIGURED = 1,
   AWAIT_GLOBAL_TRAJECTORY = 2,
   LOCAL_PLANNING_ACTIVE = 3,
-  LOCAL_PLANNING_CANCELED = 4
+  LOCAL_PLANNING_PAUSE = 4
 };
 
 /**
@@ -212,8 +214,16 @@ private:
   // Local planning request action server
   rclcpp_action::Server<moveit_msgs::action::LocalPlanner>::SharedPtr local_planning_request_server_;
 
-  // Local solution publisher
+  // Local solution action client
   rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr local_trajectory_action_client_;
+
+  rclcpp::Publisher<moveit_msgs::msg::DisplayTrajectory>::SharedPtr display_publisher_;
+
+  std::shared_ptr<const moveit::core::JointModelGroup> joint_model_group_;
+
+  std::shared_ptr<moveit_visual_tools::MoveItVisualTools> visual_tools_;
+
+  robot_trajectory::RobotTrajectoryPtr temp_robot_trajectory_;
 
   // Local constraint solver plugin loader
   std::unique_ptr<pluginlib::ClassLoader<LocalConstraintSolverInterface>> local_constraint_solver_plugin_loader_;

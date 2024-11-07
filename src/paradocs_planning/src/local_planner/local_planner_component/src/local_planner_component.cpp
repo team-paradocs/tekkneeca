@@ -147,16 +147,16 @@ bool LocalPlannerComponent::initialize()
       [this](const rclcpp_action::GoalUUID& /*unused*/,
              const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal>& /*unused*/) {
         RCLCPP_INFO(LOGGER, "Received local planning goal request");
-        // TODO: modify the behavior here
         // always accept the new goal
-        // If another goal is active, cancel it and reject this goal
         if (long_callback_thread_.joinable())
         {
-          // Try to terminate the execution thread
+          // Try to join the execution thread
           auto future = std::async(std::launch::async, &std::thread::join, &long_callback_thread_);
           if (future.wait_for(JOIN_THREAD_TIMEOUT) == std::future_status::timeout)
           {
-            RCLCPP_WARN(LOGGER, "Another goal was running. Rejecting the new hybrid planning goal.");
+            // should never happen because our thread ends very fast, won't reach timeout
+            RCLCPP_WARN(LOGGER, "Another local goal was running. Rejecting the new hybrid planning goal.");
+            // If another goal is active, cancel it and reject this goal
             return rclcpp_action::GoalResponse::REJECT;
           }
         }
@@ -164,29 +164,37 @@ bool LocalPlannerComponent::initialize()
       },
       // Cancel callback
       [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::LocalPlanner>>& /*unused*/) {
-        RCLCPP_INFO(LOGGER, "Received request to cancel local planning goal");
-        state_ = LocalPlannerState::LOCAL_PLANNING_CANCELED;
+        RCLCPP_INFO(LOGGER, "Received request to cancel local planning execution");
+
         if (long_callback_thread_.joinable())
         {
           long_callback_thread_.join();
         }
-        auto local_trajectory_future = local_trajectory_action_client_->async_cancel_all_goals();
+
+        // auto local_trajectory_future = local_trajectory_action_client_->async_cancel_all_goals();
         // if (local_trajectory_future.valid()) {
         //   // Wait for the cancellation to finish
         //   local_trajectory_future.wait();
         // }
+        reset();
+        RCLCPP_INFO(LOGGER, "Local planning execution canceled");
+        state_ = LocalPlannerState::LOCAL_PLANNING_PAUSE;
+
+        // aftet ACCEPT, the state will change EXECUTING -> CANCELING -> CANCELED
         return rclcpp_action::CancelResponse::ACCEPT;
       },
       // Execution callback
       [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::LocalPlanner>> goal_handle) {
 
+        // assign local_planning_goal_handle_
         local_planning_goal_handle_ = std::move(goal_handle);
 
         size_t constraintSize = (local_planning_goal_handle_->get_goal())->local_constraints.size();
         RCLCPP_INFO(LOGGER, "Local planning goal size: %ld ", constraintSize);
+
+        // If there is a constraint, then it is a compensation
         if (constraintSize > 0) {
 
-          // If there is a constraint, then it is a compensation
           auto goal_constraint = (local_planning_goal_handle_->get_goal())->local_constraints[0];
 
           // RCLCPP_INFO(LOGGER, "Joint Constraint:");
@@ -217,35 +225,44 @@ bool LocalPlannerComponent::initialize()
           goal_state->setVariablePositions(joint_positions.data());
 
           robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), config_.group_name);
-          if (state_ != LocalPlannerState::LOCAL_PLANNING_ACTIVE)
+
+          RCLCPP_INFO(LOGGER, "state_ %d", static_cast<int>(state_.load()));
+          if (state_ == LocalPlannerState::LOCAL_PLANNING_PAUSE)
+          {
+            // cache the small motion
+            temp_robot_trajectory_->addSuffixWayPoint(goal_state, 0.1);
+          }
+          else if (state_ == LocalPlannerState::LOCAL_PLANNING_ACTIVE)
+          {
+            new_trajectory.addSuffixWayPoint(goal_state, 0.1);
+            trajectory_operator_instance_->setTrajectorySegment(new_trajectory, false);
+          }
+          else
           {
             // need to append start state and start local planer
+            RCLCPP_INFO(LOGGER, "Add current_robot_state as part of compensation");
             new_trajectory.addSuffixWayPoint(std::make_shared<moveit::core::RobotState>(current_robot_state), 0.1);
+            new_trajectory.addSuffixWayPoint(goal_state, 0.1);
             state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
+            trajectory_operator_instance_->setTrajectorySegment(new_trajectory, false);
           }
-          
-          new_trajectory.addSuffixWayPoint(goal_state, 0.1);
-          RCLCPP_INFO(LOGGER, "Number of waypoints in new_trajectory: %lu", new_trajectory.getWayPointCount());
-
-          // append the new trajectory to the existing one
-          trajectory_operator_instance_->setTrajectorySegment(new_trajectory, false);
-          // RCLCPP_INFO(LOGGER, "Number of waypoints in new_trajectory: %lu", trajectory_operator_instance_->getTrajectory().getWayPointCount());
-        }
-
-        // Check if a previous goal was running and needs to be cancelled.
-        if (long_callback_thread_.joinable())
+        } 
+        else
         {
-          long_callback_thread_.join();
-        }
+          // Start a local planning loop
+          // The thread and the timer can only be stated once
+          if (long_callback_thread_.joinable())
+          {
+            long_callback_thread_.join();
+          }
 
-        // Start a local planning loop.
-        // This needs to return quickly to avoid blocking the executor, so run the local planner in a new thread.
-        // The thread and the timer can only be stated once
-        auto local_planner_timer = [&]() {
-          timer_ =
-              node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
-        };
-        long_callback_thread_ = std::thread(local_planner_timer);
+          auto local_planner_timer = [&]() {
+            timer_ =
+                node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
+          };
+          long_callback_thread_ = std::thread(local_planner_timer);
+          // state_ = LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY;
+        }
       },
       rcl_action_server_get_default_options(), cb_group_);
 
@@ -254,22 +271,53 @@ bool LocalPlannerComponent::initialize()
       config_.global_solution_topic, rclcpp::SystemDefaultsQoS(),
       [this](const moveit_msgs::msg::MotionPlanResponse::ConstSharedPtr& msg) {
 
-        // Add received trajectory to internal reference trajectory
+        RCLCPP_INFO(LOGGER, "Received global trajectory");
+
+        // Replace internal reference trajectory with received trajectory 
         robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), msg->group_name);
         moveit::core::RobotState start_state(planning_scene_monitor_->getRobotModel());
         moveit::core::robotStateMsgToRobotState(msg->trajectory_start, start_state);
         new_trajectory.setRobotTrajectoryMsg(start_state, msg->trajectory);
         // replace current trajectory
+
+        if (temp_robot_trajectory_->getWayPointCount() > 0)
+        {
+          // append the cached trajectory
+          new_trajectory.append(*(temp_robot_trajectory_.get()), 0.1);
+          temp_robot_trajectory_->clear();
+        }       
+
         trajectory_operator_instance_->setTrajectorySegment(new_trajectory, true);
 
+        // TODO: decide whether we display the global trajectory
+        // moveit_msgs::msg::DisplayTrajectory display_trajectory;
+        // moveit::core::robotStateToRobotStateMsg(start_state, display_trajectory.trajectory_start);
+        // moveit_msgs::msg::RobotTrajectory msg_trajectory;
+        // new_trajectory.getRobotTrajectoryMsg(msg_trajectory); 
+        // display_trajectory.trajectory.push_back(msg_trajectory);
+        // // display_publisher->publish(display_trajectory);
+        // visual_tools_->publishTrajectoryLine(new_trajectory, joint_model_group_.get());
+        // visual_tools_->trigger();
+
         // Feedback is only send when the hybrid planning architecture should react to a discrete event that occurred
+        // We don't want the hybrid planning manager to react to this so we don't send feedback
         // when the reference trajectory is updated
-        if (!local_planner_feedback_->feedback.empty())
-        {
-          local_planning_goal_handle_->publish_feedback(local_planner_feedback_);
-        }
+        // if (!local_planner_feedback_->feedback.empty())
+        // {
+        //   local_planning_goal_handle_->publish_feedback(local_planner_feedback_);
+        // }
 
         // Update local planner state
+        if (long_callback_thread_.joinable())
+        {
+          long_callback_thread_.join();
+        }
+
+        auto local_planner_timer = [&]() {
+          timer_ =
+              node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
+        };
+        long_callback_thread_ = std::thread(local_planner_timer);
         state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
       }
   );
@@ -288,6 +336,18 @@ bool LocalPlannerComponent::initialize()
   }
   RCLCPP_INFO(LOGGER, "FollowJointTrajectory Action server available.");
 
+  // TODO: decide whether we display the planned trajectory
+  // display_publisher_ = node_->create_publisher<moveit_msgs::msg::DisplayTrajectory>("/lbr/display_planned_path", 1);
+  // RCLCPP_INFO(LOGGER, "Will display the planned trajectory");
+  // joint_model_group_ = std::shared_ptr<const moveit::core::JointModelGroup>(planning_scene_monitor_->getRobotModel()->getJointModelGroup(config_.group_name));
+  // visual_tools_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(node_, "link_0", "local_planner_traj", planning_scene_monitor_);
+  // visual_tools_->deleteAllMarkers();
+  // visual_tools_->loadRemoteControl();
+
+  // this is a dummy goal to publish feedback to manager's client
+
+  // initialize the temp_robot_trajectory_
+  temp_robot_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(planning_scene_monitor_->getRobotModel(), config_.group_name);
   state_ = LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY;
   return true;
 }
@@ -303,11 +363,11 @@ void LocalPlannerComponent::executeIteration()
     case LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY:
       // Do nothing
       return;
-    case LocalPlannerState::LOCAL_PLANNING_CANCELED:
-      result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED;
-      result->error_message = "Local planner is in an canceled state. Resetting.";
-      local_planning_goal_handle_->canceled(result);
-      reset();
+    case LocalPlannerState::LOCAL_PLANNING_PAUSE:
+      // TODO: decide if we need to remove the reference_trajectory here
+      // Do nothing for now
+      // Keep monitor the motion
+      // reset();
       return;
     // Notify action client that local planning failed
     case LocalPlannerState::ABORT:
@@ -360,19 +420,17 @@ void LocalPlannerComponent::executeIteration()
       // Feedback is only send when the hybrid planning architecture should react to a discrete event that occurred
       // while computing a local solution
       *local_planner_feedback_ = local_constraint_solver_instance_->solve(
-          local_trajectory, local_planning_goal_handle_->get_goal(), local_solution);
+          local_trajectory, local_solution);
 
       // Feedback is only send when the hybrid planning architecture should react to a discrete event
       if (!local_planner_feedback_->feedback.empty())
       {
+        // stucked or collision ahead
         local_planning_goal_handle_->publish_feedback(local_planner_feedback_);
+        // TODO: decide if we need to change state here
         return;
       }
 
-      // Use a configurable message interface like MoveIt servo
-      // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)
-      // Format outgoing msg in the right format
-        
       // Local solution publisher is defined by the local constraint solver plugin
       auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
 
@@ -393,8 +451,8 @@ void LocalPlannerComponent::executeIteration()
         };        
 
       goal_options.feedback_callback = [this](rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr /*unused*/,
-                                              const std::shared_ptr<const control_msgs::action::FollowJointTrajectory::Feedback> feedback) {
-          RCLCPP_INFO(LOGGER, "Received feedback: %f", feedback->desired.positions[0]);  // Access feedback values
+                                              const std::shared_ptr<const control_msgs::action::FollowJointTrajectory::Feedback> /*unused*/) {
+          // RCLCPP_INFO(LOGGER, "Received feedback: %f", feedback->desired.positions[0]);  // Access feedback values
       };
 
       goal_options.result_callback = [this](const rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::WrappedResult &result) {
