@@ -102,6 +102,9 @@ private:
   // Initialize planning scene monitor and load pipelines
   bool initializeGlobalPlanner();
 
+  // Flag to avoid publishing the global plan
+  std::atomic<bool> dont_pub_;
+
   // This thread is used for long-running callbacks. It's a member so they do not go out of scope.
   std::thread long_callback_thread_;
 
