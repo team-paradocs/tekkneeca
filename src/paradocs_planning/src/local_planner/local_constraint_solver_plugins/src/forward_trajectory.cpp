@@ -55,7 +55,7 @@ bool ForwardTrajectory::initialize(const rclcpp::Node::SharedPtr& node,
   if (node->has_parameter("stop_before_collision"))
     node->get_parameter<bool>("stop_before_collision", stop_before_collision_);
   else
-    stop_before_collision_ = node->declare_parameter<bool>("stop_before_collision", false);
+    stop_before_collision_ = node->declare_parameter<bool>("stop_before_collision", true);
   planning_scene_monitor_ = planning_scene_monitor;
   node_ = node;
   path_invalidation_event_send_ = false;
@@ -73,7 +73,6 @@ bool ForwardTrajectory::reset()
 
 moveit_msgs::action::LocalPlanner::Feedback
 ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajectory,
-                         const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal> /* unused */,
                          trajectory_msgs::msg::JointTrajectory& local_solution)
 {
   // A message every once in awhile is useful in case the local planner gets stuck
@@ -82,9 +81,8 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
   // Create controller command trajectory
   robot_trajectory::RobotTrajectory robot_command(local_trajectory.getRobotModel(), local_trajectory.getGroupName());
 
-  RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "local_trajectory.getWayPointCount() = %ld", local_trajectory.getWayPointCount());
-  
-  RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */,local_trajectory.getGroupName().c_str());
+  // RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "local_trajectory.getWayPointCount() = %ld", local_trajectory.getWayPointCount());
+  // RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */,local_trajectory.getGroupName().c_str());
 
   // Feedback
   moveit_msgs::action::LocalPlanner::Feedback feedback_result;
@@ -115,21 +113,19 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "True is_path_valid");
       if (path_invalidation_event_send_)
       {
-        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Reset path_invalidation_event_send_");
+        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Reset path_invalidation_event_send_ flag");
 
         path_invalidation_event_send_ = false;  // Reset flag
       }
       // Forward next waypoint to the robot controller
       robot_command.addSuffixWayPoint(local_trajectory.getWayPoint(0), 0.0);
-      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "robot_command.getWayPointCount() = %ld", robot_command.getWayPointCount());
-
     }
     else
     {
       RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False is_path_valid");
       if (!path_invalidation_event_send_)
       { // Send feedback only once
-        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "True path_invalidation_event_send_");
+        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Send path_invalidation_event, set path_invalidation_event_send_ flag");
         feedback_result.feedback = toString(LocalFeedbackEnum::COLLISION_AHEAD);
         path_invalidation_event_send_ = true;  // Set feedback flag
       }
@@ -146,20 +142,18 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       }
       robot_command.empty();
       robot_command.addSuffixWayPoint(*current_state, local_trajectory.getWayPointDurationFromPrevious(0));
-    
-      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "robot_command.getWayPointCount() = %ld", robot_command.getWayPointCount());
-
     }
 
     // Detect if the local solver is stuck
     if (!prev_waypoint_target_)
     {
-      RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False prev_waypoint_target_");
+      // RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False prev_waypoint_target_");
       // Just initialize if this is the first iteration
       prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
     }
     else
     {
+      // Check if we don't move for a while
       if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
       {
         RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Smaller than STUCK_THRESHOLD_RAD");
@@ -182,8 +176,6 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
   moveit_msgs::msg::RobotTrajectory robot_command_msg;
   robot_command.getRobotTrajectoryMsg(robot_command_msg);
   local_solution = robot_command_msg.joint_trajectory;
-  RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "robot_command.getWayPointCount() = %ld", robot_command.getWayPointCount());
-
   return feedback_result;
 }
 }  // namespace moveit::hybrid_planning
