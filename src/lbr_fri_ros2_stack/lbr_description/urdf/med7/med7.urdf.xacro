@@ -20,11 +20,6 @@
         <parent link="world" />
         <child link="link_0" />
     </joint>
-    
-    <joint name="world_plank_joint" type="fixed">
-        <parent link="world" />
-        <child link="plank" />
-    </joint>
 
     <!-- med -->
     <xacro:med7 robot_name="$(arg robot_name)" port_id="$(arg port_id)" sim="$(arg sim)" initial_positions_file="$(arg initial_positions_file)"/>

@@ -1,0 +1,56 @@
+<mujoco>
+    <asset>
+        <texture type="2d" name="checkerboard" builtin="checker" rgb1=".2 .3 .4" rgb2=".3 .4 .5" width="300" height="300"/>
+        <material name="floor_mat" texture="checkerboard" texrepeat="5 5" texuniform="true"/>
+        <mesh name="femur" file="femur_full.stl" scale="0.001 0.001 0.001"/>
+        <texture type="skybox" name="sky" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="800" height="800"/>
+        <texture type="2d" name="white" builtin="flat" rgb1="1 1 1" rgb2="1 1 1" width="1" height="1"/>
+        <material name="femur_mat" texture="white" texuniform="true"/>
+        <texture type="2d" name="wood" file="wood_tex.png"/>
+        <material name="wood_mat" texture="wood" texrepeat="1 1" texuniform="true"/>
+    </asset>
+
+    <worldbody>
+        <!-- Checkered surface at the bottom -->
+        <geom type="plane" size="5 5 0.1" material="floor_mat"/>
+
+        <!-- Light at the top -->
+        <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1"/>
+
+        <!-- Wooden table -->
+        <body pos="0 0 0">
+            <geom type="box" size="0.5 0.3 0.02" pos="0 0 0.4" material="wood_mat"/>
+            <geom type="cylinder" size="0.02 0.22" pos="0.45 0.25 0.2" material="wood_mat"/>
+            <geom type="cylinder" size="0.02 0.22" pos="0.45 -0.25 0.2" material="wood_mat"/>
+            <geom type="cylinder" size="0.02 0.22" pos="-0.45 0.25 0.2" material="wood_mat"/>
+            <geom type="cylinder" size="0.02 0.22" pos="-0.45 -0.25 0.2" material="wood_mat"/>
+        </body>
+
+        <!-- Femur mesh above the table -->
+        <body pos="0.45 0 0.5">
+            <geom type="mesh" mesh="femur" material="femur_mat" euler="0 0 -90"/>
+        </body>
+
+        <!-- Virtual camera body -->
+        <body name="virtual_camera_body" pos="0 0 1.5">
+            <!-- Joint that only allows vertical movement -->
+            <joint name="virtual_camera_joint" type="slide" axis="0 0 1" range="0.7 1.5"/>
+            <geom type="sphere" size="0.005" rgba="1 0 0 1" />
+            <camera name="virtual_camera" mode="fixed" pos="0 0 0" fovy="64.500" xyaxes="1 0 0 0 1 0"/>
+        </body>
+        
+    </worldbody>
+
+    <visual>
+        <map znear="0.01" zfar="10"/>
+
+        <global offwidth="1440" offheight="1024"/>
+    </visual>
+</mujoco>
+
+<!-- camera intrinsic info: -->
+
+<!-- >>> print("Focal length (fx, fy):", intr.fx, intr.fy)
+Focal length (fx, fy): 380.3755798339844 380.3755798339844
+>>> print("Principal point (cx, cy):", intr.ppx, intr.ppy)
+Principal point (cx, cy): 323.3452453613281 239.9287872314453 -->

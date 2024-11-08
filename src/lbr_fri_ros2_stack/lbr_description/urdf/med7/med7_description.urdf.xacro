@@ -29,34 +29,6 @@
     <!-- robot as extracted via https://github.com/syuntoku14/fusion2urdf -->
     <xacro:macro name="med7"
         params="robot_name:=^|lbr port_id:=^|30200 sim:=^|true initial_positions_file:=^|initial_positions.yaml">
-        
-        <link name="plank">
-            <inertial>
-                <origin rpy="0 0 0" xyz="-0.001896 0.0 0.076263" />
-                <mass value="7.143112" />
-                <inertia ixx="0.038694" ixy="0.0" ixz="-0.000686" iyy="0.039461" iyz="0.0"
-                    izz="0.054387" />
-            </inertial>
-            <visual>
-                <origin rpy="0 0 0" xyz="-0.47 0 -0.017" />
-                <geometry>
-                    <box size="0.64 1.1 0.02"/>
-                </geometry>
-                <material name="gray">
-                    <color rgba="0.5 0.5 0.5 1.0" />
-                </material>
-            </visual>
-
-            <!-- maybe need to turn this on, for now it is off for spawning in gazebo -->
-            <!-- <collision>
-                <origin rpy="0 0 0" xyz="-0.47 0 -0.017" />
-                <geometry>
-                    <box size="0.64 1.1 0.02"/>
-                </geometry>
-            </collision> -->
-
-        </link>
-        
 
         <link name="link_0">
             <inertial>

@@ -27,19 +27,6 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
-    ld.add_action(
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution(
-                    [
-                        FindPackageShare("paradocs_control"),
-                        "launch",
-                        "rs_launch.py",
-                    ]
-                )
-            ),
-        )
-    )
 
     arg_name = DeclareLaunchArgument('name',             
                 default_value=PathJoinSubstitution([
@@ -52,7 +39,20 @@ def generate_launch_description() -> LaunchDescription:
     }])
 
     ld.add_action(arg_name)
-    ld.add_action(handeye_publisher) 
+    ld.add_action(handeye_publisher)
+
+    arg_name_d435 = DeclareLaunchArgument('nameD435',             
+                default_value=PathJoinSubstitution([
+                FindPackageShare('paradocs_control'),  # Finds the install/share directory for your package
+                TextSubstitution(text='config/eih_cam2')  # Appends the relative path to your file
+            ]),)
+
+    handeye_publisher_d435 = Node(package='easy_handeye2', executable='handeye_publisher', name='handeye_publisher_d435', parameters=[{
+        'name': LaunchConfiguration('nameD435'),
+    }])
+
+    ld.add_action(arg_name_d435)
+    ld.add_action(handeye_publisher_d435) 
 
     ld.add_action(
         IncludeLaunchDescription(
@@ -68,6 +68,27 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
+    ld.add_action(
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution(
+                    [
+                        FindPackageShare("paradocs_control"),
+                        "launch",
+                        "rs_dual_camera_launch.py",
+                    ]
+                )
+            ),
+            launch_arguments={
+                'serial_no1': '_128422270653',
+                'serial_no2': '_242322073889',
+                'camera_name1': 'camera',
+                'camera_name2': 'D435',
+                'camera_namespace1': '',
+                'camera_namespace2': '',
+            }.items(),
+        )
+    )
 
     # now testing aruco_pose, uncomment when doing the drill_pose
     drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')

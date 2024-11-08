@@ -378,8 +378,8 @@ int main(int argc, char** argv)
 
   HybridPlanningDemo demo(node);
   std::thread run_demo([&demo]() {
-    // This sleep isn't necessary but it gives humans time to process what's going on
-    rclcpp::sleep_for(20s);
+    // Just allowing time for user to switch to the MoveIt scene, etc.
+    rclcpp::sleep_for(10s);
     demo.run();
   });
 

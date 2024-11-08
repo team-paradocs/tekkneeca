@@ -9,7 +9,7 @@
         kinematics_solver: pick_ik/PickIkPlugin
         kinematics_solver_timeout: 0.05
         kinematics_solver_attempts: 3
-        mode: global
+        mode: local
         position_scale: 1.0
         rotation_scale: 0.5
         position_threshold: 0.001
