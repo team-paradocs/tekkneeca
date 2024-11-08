@@ -54,19 +54,19 @@ def generate_launch_description() -> LaunchDescription:
     ld.add_action(arg_name_d435)
     ld.add_action(handeye_publisher_d435) 
 
-    ld.add_action(
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution(
-                    [
-                        FindPackageShare("paradocs_control"),
-                        "launch",
-                        "static_obstacles.launch.py",
-                    ]
-                )
-            ),
-        )
-    )
+    # ld.add_action(
+    #     IncludeLaunchDescription(
+    #         PythonLaunchDescriptionSource(
+    #             PathJoinSubstitution(
+    #                 [
+    #                     FindPackageShare("paradocs_control"),
+    #                     "launch",
+    #                     "static_obstacles.launch.py",
+    #                 ]
+    #             )
+    #         ),
+    #     )
+    # )
 
     ld.add_action(
         IncludeLaunchDescription(
