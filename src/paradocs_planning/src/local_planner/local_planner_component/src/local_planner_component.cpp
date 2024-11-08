@@ -178,7 +178,7 @@ bool LocalPlannerComponent::initialize()
         // }
         reset();
         RCLCPP_INFO(LOGGER, "Local planning execution canceled");
-        state_ = LocalPlannerState::LOCAL_PLANNING_PAUSE;
+        // state_ = LocalPlannerState::LOCAL_PLANNING_PAUSE;
 
         // aftet ACCEPT, the state will change EXECUTING -> CANCELING -> CANCELED
         return rclcpp_action::CancelResponse::ACCEPT;
@@ -227,7 +227,7 @@ bool LocalPlannerComponent::initialize()
           robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), config_.group_name);
 
           RCLCPP_INFO(LOGGER, "state_ %d", static_cast<int>(state_.load()));
-          if (state_ == LocalPlannerState::LOCAL_PLANNING_PAUSE)
+          if (state_ == LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY)
           {
             // cache the small motion
             temp_robot_trajectory_->addSuffixWayPoint(goal_state, 0.1);
@@ -235,16 +235,36 @@ bool LocalPlannerComponent::initialize()
           else if (state_ == LocalPlannerState::LOCAL_PLANNING_ACTIVE)
           {
             new_trajectory.addSuffixWayPoint(goal_state, 0.1);
-            trajectory_operator_instance_->setTrajectorySegment(new_trajectory, false);
+            // type 2: modify the current trajectory's last point to the new trajectory's last point
+            trajectory_operator_instance_->setTrajectorySegment(new_trajectory, 2);
           }
-          else
+          else if (state_ == LocalPlannerState::LOCAL_PLANNING_PAUSE)
           {
+            // inactive
             // need to append start state and start local planer
             RCLCPP_INFO(LOGGER, "Add current_robot_state as part of compensation");
             new_trajectory.addSuffixWayPoint(std::make_shared<moveit::core::RobotState>(current_robot_state), 0.1);
             new_trajectory.addSuffixWayPoint(goal_state, 0.1);
             state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
-            trajectory_operator_instance_->setTrajectorySegment(new_trajectory, false);
+            trajectory_operator_instance_->setTrajectorySegment(new_trajectory, 1);
+
+            // Start a local planning loop
+            // The thread and the timer can only be stated once
+            if (long_callback_thread_.joinable())
+            {
+              long_callback_thread_.join();
+            }
+
+            auto local_planner_timer = [&]() {
+              timer_ =
+                  node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
+            };
+            long_callback_thread_ = std::thread(local_planner_timer);
+
+          }
+          else
+          {
+            RCLCPP_ERROR(LOGGER, "Unexpected state %d", static_cast<int>(state_.load()));
           }
         } 
         else
@@ -261,7 +281,7 @@ bool LocalPlannerComponent::initialize()
                 node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
           };
           long_callback_thread_ = std::thread(local_planner_timer);
-          // state_ = LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY;
+          state_ = LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY;
         }
       },
       rcl_action_server_get_default_options(), cb_group_);
@@ -282,12 +302,43 @@ bool LocalPlannerComponent::initialize()
 
         if (temp_robot_trajectory_->getWayPointCount() > 0)
         {
-          // append the cached trajectory
-          new_trajectory.append(*(temp_robot_trajectory_.get()), 0.1);
+          // append the entire cached trajectory
+          // new_trajectory.append(*(temp_robot_trajectory_.get()), 0.1);
+          // append the last goal in cached trajectory
+
+          // new_trajectory.removeWayPoint(new_trajectory.getWayPointCount() - 1);
+
+          // Modify the last waypoint of the current trajectory
+          if (new_trajectory.getWayPointCount() > 0)
+          {
+
+            // Create a temporary copy of the current trajectory
+            auto tmp_traj = std::make_shared<robot_trajectory::RobotTrajectory>(
+                new_trajectory.getRobotModel(), new_trajectory.getGroupName());
+
+            // Copy all but the last waypoint
+            for (size_t i = 0; i < new_trajectory.getWayPointCount() - 1; ++i)
+            {
+                tmp_traj->addSuffixWayPoint(new_trajectory.getWayPoint(i), new_trajectory.getWayPointDurationFromPrevious(i));
+            }
+
+            // Add the last waypoint from the new trajectory
+            tmp_traj->addSuffixWayPoint(temp_robot_trajectory_->getLastWayPoint(), 0.1);
+
+            // Replace the reference trajectory with the modified one
+            new_trajectory = *(tmp_traj.get());
+          }
+          else
+          {
+              throw std::runtime_error("Current trajectory is empty, cannot modify the last waypoint.");
+          }
+
+          new_trajectory.addSuffixWayPoint(temp_robot_trajectory_->getLastWayPoint(), 0.1);
           temp_robot_trajectory_->clear();
         }       
 
-        trajectory_operator_instance_->setTrajectorySegment(new_trajectory, true);
+        // type 0: replace the current trajectory with the new trajectory
+        trajectory_operator_instance_->setTrajectorySegment(new_trajectory, 0);
 
         // TODO: decide whether we display the global trajectory
         // moveit_msgs::msg::DisplayTrajectory display_trajectory;
@@ -312,13 +363,14 @@ bool LocalPlannerComponent::initialize()
         {
           long_callback_thread_.join();
         }
+        
+        state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
 
         auto local_planner_timer = [&]() {
           timer_ =
               node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
         };
         long_callback_thread_ = std::thread(local_planner_timer);
-        state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
       }
   );
 
@@ -395,6 +447,7 @@ void LocalPlannerComponent::executeIteration()
         RCLCPP_INFO(LOGGER, "Local planner reached the goal");
         local_planning_goal_handle_->succeed(result);
         reset();
+        state_ = LocalPlannerState::LOCAL_PLANNING_PAUSE;
         return;
       }
 
@@ -491,6 +544,7 @@ void LocalPlannerComponent::reset()
 {
   local_constraint_solver_instance_->reset();
   trajectory_operator_instance_->reset();
+  temp_robot_trajectory_->clear();
   timer_->cancel();
   state_ = LocalPlannerState::AWAIT_GLOBAL_TRAJECTORY;
 }

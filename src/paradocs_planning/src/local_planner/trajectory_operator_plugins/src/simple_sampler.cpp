@@ -54,15 +54,56 @@ namespace moveit::hybrid_planning
   }
 
   moveit_msgs::action::LocalPlanner::Feedback
-  SimpleSampler::setTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory, bool replace)
+  SimpleSampler::setTrajectorySegment(const robot_trajectory::RobotTrajectory& new_trajectory, int type)
   {
+    // type 0
+    // replace the current trajectory with the new trajectory
+    // type 1
+    // append the new trajectory to the current trajectory
+    // type 2
+    // modify the current trajectory's last point to the new trajectory's last point
+
     // Reset trajectory operator to delete old reference trajectory
-    if (replace) {
+    if (type == 0) 
+    {
       reset();
       reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(new_trajectory);
-    } else {
+    } 
+    else if (type == 1) 
+    {
       // append
       reference_trajectory_->append(new_trajectory, 0.1);
+    }
+    else 
+    {
+      // modify
+      // reference_trajectory_->removeWayPoint(reference_trajectory_->getWayPointCount() - 1);
+      // reference_trajectory_->addSuffixWayPoint(new_trajectory.getLastWayPoint(), 0.1);
+
+      // Modify the last waypoint of the current trajectory
+      if (reference_trajectory_->getWayPointCount() > 0)
+      {
+          // Create a temporary copy of the current trajectory
+          auto temp_trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
+              reference_trajectory_->getRobotModel(), reference_trajectory_->getGroupName());
+
+          // Copy all but the last waypoint
+          for (size_t i = 0; i < reference_trajectory_->getWayPointCount() - 1; ++i)
+          {
+              temp_trajectory->addSuffixWayPoint(reference_trajectory_->getWayPoint(i), reference_trajectory_->getWayPointDurationFromPrevious(i));
+          }
+
+          // Add the last waypoint from the new trajectory
+          temp_trajectory->addSuffixWayPoint(new_trajectory.getLastWayPoint(), 0.1);
+
+          // Replace the reference trajectory with the modified one
+          reference_trajectory_ = temp_trajectory;
+      }
+      else
+      {
+          throw std::runtime_error("Current trajectory is empty, cannot modify the last waypoint.");
+      }
+
     }
 
     // Parametrize trajectory and calculate velocity and accelerations
