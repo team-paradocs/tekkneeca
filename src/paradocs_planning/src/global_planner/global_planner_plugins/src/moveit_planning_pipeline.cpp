@@ -208,13 +208,10 @@ namespace moveit::hybrid_planning
     // Create planning component
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
 
-        // create the moveit interface, and update the planning scene
+    // create the moveit interface, and update the planning scene
     auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
     auto planning_scene = planning_scene_monitor->getPlanningScene();
-        
-    // update planning scene with current state 
-    moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
-    
+
     planning_components->setStartStateToCurrentState();
     auto current_state = planning_scene->getCurrentStateNonConst();
     const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
@@ -243,9 +240,7 @@ namespace moveit::hybrid_planning
     box_pose.orientation.z = 0.0;
     position_constraint.constraint_region.primitives.emplace_back(box);
     position_constraint.constraint_region.primitive_poses.emplace_back(box_pose);
-    position_constraint.weight = 0.8; // Weight of the constraint
-
-
+    position_constraint.weight = 0.7; // Weight of the constraint
 
     // Create orientation constraint
     moveit_msgs::msg::OrientationConstraint orientation_constraint;
@@ -260,9 +255,9 @@ namespace moveit::hybrid_planning
     orientation_constraint.orientation.x = current_quat.x();
     orientation_constraint.orientation.y = current_quat.y();
     orientation_constraint.orientation.z = current_quat.z();
-    orientation_constraint.absolute_x_axis_tolerance = 0.4; // Tolerance values
-    orientation_constraint.absolute_y_axis_tolerance = 0.4;
-    orientation_constraint.absolute_z_axis_tolerance = 0.4;
+    orientation_constraint.absolute_x_axis_tolerance = 0.5; // Tolerance values
+    orientation_constraint.absolute_y_axis_tolerance = 0.5;
+    orientation_constraint.absolute_z_axis_tolerance = 0.5;
     orientation_constraint.weight = 0.5; // Weight of the constraint
 
 
@@ -294,7 +289,9 @@ namespace moveit::hybrid_planning
       RCLCPP_INFO(rclcpp::get_logger("planner"), "Start state is valid!");
     }
 
+    rclcpp::Clock clock(RCL_SYSTEM_TIME);  // Use system time (or RCL_ROS_TIME for simulation time)
 
+    rclcpp::Time last_call_time = clock.now();
 
     // Set the goal to be only the position of the end effector
     auto final_goal = motion_plan_req.goal_constraints;
@@ -315,7 +312,7 @@ namespace moveit::hybrid_planning
     goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
     for (size_t i = 0; i < joint_values.size(); ++i)
     {
-      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+      RCLCPP_WARN(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
     }
 
     // Convert joint values to RobotState
@@ -338,6 +335,15 @@ namespace moveit::hybrid_planning
       attempts++;
     }
 
+    // Get current time
+    rclcpp::Time current_time = clock.now();
+    
+    // Calculate the time difference in seconds
+    double time_difference = (current_time - last_call_time).seconds();
+
+    RCLCPP_WARN(LOGGER, "Position planning time since last call: %.6f seconds", time_difference);
+    last_call_time = clock.now();
+
     if (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
     {
       response.error_code = plan_solution.error_code;
@@ -353,7 +359,6 @@ namespace moveit::hybrid_planning
     // plan the second part of the trajectory.
     // Add the target orientation to the goal
     goal_pose.pose.orientation = final_goal[0].orientation_constraints[0].orientation;
-
     
     ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
     RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
@@ -382,18 +387,24 @@ namespace moveit::hybrid_planning
     auto second_plan_solution = planning_components->plan(plan_params);
     while (second_plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS && attempts < max_attempts)
     {
-      RCLCPP_WARN(LOGGER, "orientation Planning attempt %d failed with error code: %d. Retrying...", attempts + 1, plan_solution.error_code.val);
+      RCLCPP_WARN(LOGGER, "Orientation planning attempt %d failed with error code: %d. Retrying...", attempts + 1, plan_solution.error_code.val);
       second_plan_solution = planning_components->plan(plan_params);
       attempts++;
     }
 
+    current_time = clock.now();
+
+    // Calculate the time difference in seconds
+    time_difference = (current_time - last_call_time).seconds();
+
+    RCLCPP_WARN(LOGGER, "Orientation planning time since last call: %.6f seconds", time_difference);
+
     if (second_plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
     {
       response.error_code = second_plan_solution.error_code;
-      RCLCPP_ERROR(LOGGER, "Orientation Planning failed after %d attempts with error code: %d", attempts, plan_solution.error_code.val);
+      RCLCPP_ERROR(LOGGER, "Orientation planning failed after %d attempts with error code: %d", attempts, plan_solution.error_code.val);
       return response;
     }
-
 
     // Create a MotionPlanResponse for puiblishing the trajectory
     response.trajectory_start = plan_solution.start_state;
