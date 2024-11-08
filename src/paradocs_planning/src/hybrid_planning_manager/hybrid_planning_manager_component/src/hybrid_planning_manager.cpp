@@ -151,7 +151,7 @@ namespace moveit::hybrid_planning
 
     // Initialize tracking goal subscriber
     tracking_goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-        "tracking_goal", rclcpp::SystemDefaultsQoS(),
+        "tracked_pose", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
 
           // Threading is removed
@@ -243,8 +243,8 @@ namespace moveit::hybrid_planning
   void HybridPlanningManager::cancelHybridManagerGoals() noexcept
   {
     stop_hybrid_planning_ = true;
-    stopGlobalPlanner();
     stopLocalPlanner();
+    stopGlobalPlanner();
     RCLCPP_INFO(LOGGER, "cancelHybridManagerGoals finished");
   }
 
@@ -432,6 +432,24 @@ namespace moveit::hybrid_planning
     // goal_motion_request.goal_constraints.resize(1);
     // goal_motion_request.goal_constraints[0] =
     //     kinematic_constraints::constructGoalConstraints("link_tool", hybrid_planning_goal_handle_->pose);	
+
+    // std::map<std::string, double> tmp_values;
+    // std::vector<double> tmp_joint_values;
+
+    // // Get all joint names in the JointModelGroup
+    // const std::vector<std::string>& joint_names = joint_model_group_->getVariableNames();
+
+    // // Populate the map with joint values from goal_state_
+    // goal_state_->copyJointGroupPositions(joint_model_group_.get(), tmp_joint_values);  // Copy position to joint_position
+    // int j = 0;
+    // for (const std::string& joint_name : joint_names)
+    // {
+    //     tmp_values[joint_name] = tmp_joint_values[j];
+    //     j++;
+    // }
+
+    // // Add the default state to JointModelGroup
+    // joint_model_group_->addDefaultState("ik", tmp_values);
 
     bool success = goal_state_->setFromIK(joint_model_group_.get(), hybrid_planning_goal_handle_->pose);
     // TODO: check if this is necessary
