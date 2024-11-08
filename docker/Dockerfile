@@ -51,7 +51,8 @@ RUN apt-get install -y \
     ros-humble-control-toolbox \
     ros-humble-joint-state-publisher \
     ros-humble-rviz2 \
-    ros-humble-tf-transformations
+    ros-humble-tf-transformations \
+    ros-humble-graph-msgs
 
 # Install MoveIt and Gazebo ROS 2 control
 RUN apt-get install -y \
@@ -59,6 +60,7 @@ RUN apt-get install -y \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-ros-visualization \
     ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-visual-tools \
     ros-humble-gazebo-ros2-control \
     ros-humble-gazebo-ros-pkgs \
     ros-humble-pick-ik \

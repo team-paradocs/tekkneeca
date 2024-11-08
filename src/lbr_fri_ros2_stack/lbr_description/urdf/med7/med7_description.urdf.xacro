@@ -28,7 +28,7 @@
 
     <!-- robot as extracted via https://github.com/syuntoku14/fusion2urdf -->
     <xacro:macro name="med7"
-        params="robot_name:=^|lbr port_id:=^|30200 sim:=^|true initial_positions_file:=^|initial_positions.yaml">   
+        params="robot_name:=^|lbr port_id:=^|30200 sim:=^|true initial_positions_file:=^|initial_positions.yaml">
 
         <link name="link_0">
             <inertial>
