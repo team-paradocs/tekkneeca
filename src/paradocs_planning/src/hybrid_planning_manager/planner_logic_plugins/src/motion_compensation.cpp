@@ -162,22 +162,26 @@ namespace moveit::hybrid_planning
     if (first_time_)
     {
       // First time
-      // Start local planning
-      RCLCPP_INFO(LOGGER, "Local Planner not started yet, start Local Planner");
-      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
-      if (!clientActionSuccessfullySent)
-      {
-        // report failure
-        return false;
-      }
+      // hybrid_planning_manager_->stopLocalPlanner();
+
       // Start global planning
       RCLCPP_INFO(LOGGER, "Global Planner not started yet, start Global Planner");
-      clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
       if (!clientActionSuccessfullySent)
       {
         // report failure
         return false;
       }
+
+      // Start local planning
+      RCLCPP_INFO(LOGGER, "Local Planner not started yet, start Local Planner");
+      clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
+      if (!clientActionSuccessfullySent)
+      {
+        // report failure
+        return false;
+      }
+
       first_time_ = false;
     } 
     else 
