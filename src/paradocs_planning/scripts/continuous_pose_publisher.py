@@ -30,57 +30,28 @@ class PosePublisher(Node):
         self.cnt = 1
         self.diff = 0.05
         self.smallDiff = 0.02
-        self.cntMax = 10
-        timer_period = 15.0  # seconds
+        self.cntMax = 12
+        timer_period = 10.0  # seconds
         # timer_period = 0.2  # 5 Hz
 
         self.basePose = Pose()
         self.basePose.position.x = -0.4
-        self.basePose.position.y = 0.0
+        self.basePose.position.y = -0.3
         self.basePose.position.z = 0.36
         self.basePose.orientation.x = 0.0
         self.basePose.orientation.y = 1.0
         self.basePose.orientation.z = 0.0
         self.basePose.orientation.w = 0.0
 
-        Clock().sleep_for(rclpy.duration.Duration(seconds=10))
+        Clock().sleep_for(rclpy.duration.Duration(seconds=20))
         # call once and then start the timer
         self.timer_callback()
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
-    # def get_transform(self):
-    #     try:
-    #         # Get the transformation from 'link_0' to 'link_tool'
-    #         transform = self.tf_buffer.lookup_transform('lbr/link_0', 'lbr/link_tool', rclpy.time.Time())
-    #         return transform
-    #     except Exception as e:
-    #         self.get_logger().warn(f'Could not get transform: {str(e)}')
-
-    def timer_callback(self):
-        
-        if self.cnt <= self.cntMax:
-            self.cnt += 1
-        else:
-            return
-        
-        # Get the transform
-        # transform = self.get_transform()
+    def publish_pose(self, goalPose):
 
         now = self.get_clock().now()
         sec, nsec = now.seconds_nanoseconds()
-
-        goalPose = Pose()
-        goalPose.position.x = self.basePose.position.x
-        # if (self.cnt < 3):
-        goalPose.position.y = self.basePose.position.y + self.diff * self.cnt
-        # else:
-        #    msg.pose.position.y = self.basePose.position.y + self.diff * 3 + self.smallDiff * (self.cnt - 3)
-        goalPose.position.z = self.basePose.position.z
-        goalPose.orientation.x = self.basePose.orientation.x
-        goalPose.orientation.y = self.basePose.orientation.y
-        goalPose.orientation.z = self.basePose.orientation.z
-        goalPose.orientation.w = self.basePose.orientation.w
-
         self.get_logger().info(f'Publishing pose: {goalPose}')
 
         # for ocs2
@@ -115,6 +86,27 @@ class PosePublisher(Node):
         t.transform.translation.z = goalPose.position.z
         t.transform.rotation = goalPose.orientation
         self.tf_broadcaster.sendTransform(t)
+
+    def timer_callback(self):
+               
+        # Get the transform
+        # transform = self.get_transform()
+
+        goalPose = Pose()
+        goalPose.position.x = self.basePose.position.x
+        goalPose.position.y = self.basePose.position.y + self.diff * self.cnt
+        goalPose.position.z = self.basePose.position.z
+        goalPose.orientation.x = self.basePose.orientation.x
+        goalPose.orientation.y = self.basePose.orientation.y
+        goalPose.orientation.z = self.basePose.orientation.z
+        goalPose.orientation.w = self.basePose.orientation.w
+
+        if self.cnt <= self.cntMax:
+            self.cnt += 1
+        else:
+            return
+
+        self.publish_pose(goalPose)
 
 def main(args=None):
     rclpy.init(args=args)

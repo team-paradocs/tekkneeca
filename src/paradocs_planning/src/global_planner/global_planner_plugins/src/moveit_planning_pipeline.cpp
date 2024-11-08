@@ -174,6 +174,10 @@ namespace moveit::hybrid_planning
       const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>> global_goal_handle)
   {
 
+    // Use system time (or RCL_ROS_TIME for simulation time)
+    rclcpp::Clock clock(RCL_SYSTEM_TIME);
+    rclcpp::Time last_call_time = clock.now();
+
     moveit_msgs::msg::MotionPlanResponse response;
 
     if ((global_goal_handle->get_goal())->motion_sequence.items.empty())
@@ -311,7 +315,7 @@ namespace moveit::hybrid_planning
     goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
     for (size_t i = 0; i < joint_values.size(); ++i)
     {
-      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+      RCLCPP_WARN(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
     }
 
     // Convert joint values to RobotState
@@ -401,6 +405,14 @@ namespace moveit::hybrid_planning
     // Transform the combined solution into MotionPlanResponse and publish it
     plan_solution.trajectory->getRobotTrajectoryMsg(response.trajectory);
     response.error_code = plan_solution.error_code;
+
+    // Get current time
+    rclcpp::Time current_time = clock.now();
+
+    // Calculate the time difference in seconds
+    double time_difference = (current_time - last_call_time).seconds();
+
+    RCLCPP_WARN(LOGGER, "Global planning time since last call: %.6f seconds", time_difference);
 
     return response;
   }
