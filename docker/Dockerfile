@@ -92,7 +92,8 @@ RUN pip install open3d==0.18.0 \
     opencv-python==4.9.0.80 \
     transforms3d==0.4.2 \
     numpy==1.24.2 \
-    pyserial
+    pyserial \ 
+    imageio
 
 # Initialize rosdep
 RUN rosdep update
