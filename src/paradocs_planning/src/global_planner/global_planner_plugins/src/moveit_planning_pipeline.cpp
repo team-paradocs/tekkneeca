@@ -173,8 +173,6 @@ namespace moveit::hybrid_planning
   moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
       const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>> global_goal_handle)
   {
-    
-    RCLCPP_INFO(LOGGER, "In Global planner plan function");
 
     moveit_msgs::msg::MotionPlanResponse response;
 
@@ -210,10 +208,10 @@ namespace moveit::hybrid_planning
     // Create planning component
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
 
-    // create the moveit interface, and update the planning scene
+        // create the moveit interface, and update the planning scene
     auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
     auto planning_scene = planning_scene_monitor->getPlanningScene();
-    
+        
     // update planning scene with current state 
     moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
     
@@ -233,7 +231,7 @@ namespace moveit::hybrid_planning
     position_constraint.link_name = "link_tool"; 
     shape_msgs::msg::SolidPrimitive box;
     box.type = shape_msgs::msg::SolidPrimitive::BOX;
-    box.dimensions = {0.7, 0.8, 0.8};
+    box.dimensions = {0.7, 0.85, 0.8};
     geometry_msgs::msg::Pose box_pose;
     box_pose.position.x = -0.5; // Center of the box in X direction
     box_pose.position.y = 0; // Center of the box in Y direction
@@ -310,8 +308,23 @@ namespace moveit::hybrid_planning
     goal_pose.pose.orientation.y = current_quat.y();
     goal_pose.pose.orientation.z = current_quat.z();
 
+    bool ik_success;
+    ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
+    RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
+    std::vector<double> joint_values;
+    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    for (size_t i = 0; i < joint_values.size(); ++i)
+    {
+      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+    }
 
-    planning_components->setGoal(goal_pose, "link_tool");
+    // Convert joint values to RobotState
+    moveit::core::RobotState goal_robot_state(robot_model_);
+    goal_robot_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
+    goal_robot_state.update();
+
+    planning_components->setGoal(goal_robot_state);   
+    // planning_components->setGoal(goal_pose, "link_tool");
 
 
     // Plan first motion
@@ -332,23 +345,38 @@ namespace moveit::hybrid_planning
       return response;
     }
 
-
+    // Set the planning start state to the last point in the trajectory of plan_solution
+    moveit::core::RobotState last_state(robot_model_);
+    last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
+    planning_components->setStartState(last_state);
     
     // plan the second part of the trajectory.
     // Add the target orientation to the goal
     goal_pose.pose.orientation = final_goal[0].orientation_constraints[0].orientation;
-    planning_components->setGoal(goal_pose, "link_tool");
+
+    
+    ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
+    RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
+    // std::vector<double> joint_values;
+    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    // for (size_t i = 0; i < joint_values.size(); ++i)
+    // {
+    //   RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+    // }
+
+    // Convert joint values to RobotState
+    // moveit::core::RobotState goal_robot_state(robot_model_);
+    goal_robot_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
+    goal_robot_state.update();
+
+    planning_components->setGoal(goal_robot_state);   
+    // planning_components->setGoal(goal_pose, "link_tool");
 
 
     //update the constraints to only include the position constraint
     moveit_msgs::msg::Constraints new_constraints;
     new_constraints.position_constraints.emplace_back(position_constraint);
     planning_components->setPathConstraints(new_constraints);
-
-    // Set the planning start state to the last point in the trajectory of plan_solution
-    moveit::core::RobotState last_state(robot_model_);
-    last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
-    planning_components->setStartState(last_state);
 
     // Plan the second part of the trajectory
     auto second_plan_solution = planning_components->plan(plan_params);
