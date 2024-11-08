@@ -20,12 +20,13 @@ planning_scene_monitor_options:
   wait_for_initial_state_timeout: 10.0
 
 plan_request_params:
-  planner_id: "RRTstarkConfigDefault"
+  # planner_id: "RRTstarkConfigDefault"
+  planner_id: "RRTConnectkConfigDefault"
   planning_pipeline: ompl
   # planner_id: "LIN"
   # planning_pipeline: pilz_industrial_motion_planner
   planning_attempts: 5
-  planning_time: 10.0
+  planning_time: 5.0
   max_velocity_scaling_factor: 1.0
   max_acceleration_scaling_factor: 1.0
   cartesian_limits:

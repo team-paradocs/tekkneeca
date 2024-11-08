@@ -151,8 +151,23 @@ namespace moveit::hybrid_planning
     moveit_cpp::MoveItCpp::Options moveit_cpp_options(node);
     moveit_cpp_ = std::make_shared<moveit_cpp::MoveItCpp>(node, moveit_cpp_options);
 
+    RCLCPP_INFO(LOGGER, "MoveItCpp has been initialized");
+
+
+    // node->declare_parameter<std::string>("robot_description", "");
+    // std::string robot_description;
+    // node->get_parameter<std::string>("robot_description", robot_description);
+    // node->declare_parameter<std::string>("planning_group", "");
+    // std::string planning_group;
+    // node->get_parameter<std::string>("planning_group", planning_group);
+
+    RCLCPP_INFO(LOGGER, "Parameter declared");
+
+    // robot_model_loader::RobotModelLoader robot_model_loader(node->shared_from_this(), robot_description);
+
     // Get the robot model for IK
     robot_model_ = moveit_cpp_->getRobotModel();
+    // planning_group_ = planning_group;
     goal_state_ = std::make_shared<moveit::core::RobotState>(robot_model_);
     joint_model_group_ = std::shared_ptr<const moveit::core::JointModelGroup>(
         goal_state_->getJointModelGroup("arm"));
@@ -196,17 +211,18 @@ namespace moveit::hybrid_planning
     // Set parameters required by the planning component
     moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
     plan_params.planner_id = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planner_id").as_string();
-    RCLCPP_INFO(LOGGER, "Planner ID: %s", plan_params.planner_id.c_str());
+    RCLCPP_INFO(LOGGER, "Shivangi Planner ID: %s", plan_params.planner_id.c_str());
     plan_params.planning_pipeline = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_pipeline").as_string();
     plan_params.planning_attempts = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_attempts").as_int();
     plan_params.planning_time = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_time").as_double();
-    RCLCPP_INFO(LOGGER, "Planner time: %f", plan_params.planning_time);
+    RCLCPP_INFO(LOGGER, "Shivangi Planner time: %f", plan_params.planning_time);
 
     plan_params.max_velocity_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
     plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
     // Create planning component
     auto planning_components = std::make_shared<moveit_cpp::PlanningComponent>(group_name, moveit_cpp_);
+    RCLCPP_INFO(LOGGER, "Shivangi here");
 
         // create the moveit interface, and update the planning scene
     auto planning_scene_monitor = moveit_cpp_->getPlanningSceneMonitor();
@@ -214,7 +230,7 @@ namespace moveit::hybrid_planning
     planning_components->setStartStateToCurrentState();
     auto current_state = planning_scene->getCurrentStateNonConst();
     const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
+      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
                   link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
 
     // add position and orientation constraints
@@ -227,7 +243,7 @@ namespace moveit::hybrid_planning
     position_constraint.link_name = "link_tool"; 
     shape_msgs::msg::SolidPrimitive box;
     box.type = shape_msgs::msg::SolidPrimitive::BOX;
-    box.dimensions = {0.7, 0.85, 0.8};
+    box.dimensions = {0.7, 0.8, 0.8};
     geometry_msgs::msg::Pose box_pose;
     box_pose.position.x = -0.5; // Center of the box in X direction
     box_pose.position.y = 0; // Center of the box in Y direction
@@ -240,6 +256,7 @@ namespace moveit::hybrid_planning
     position_constraint.constraint_region.primitives.emplace_back(box);
     position_constraint.constraint_region.primitive_poses.emplace_back(box_pose);
     position_constraint.weight = 0.8; // Weight of the constraint
+
 
 
 
@@ -270,29 +287,91 @@ namespace moveit::hybrid_planning
     // Set the path constraints in the PlanningComponent
     planning_components->setPathConstraints(constraints); // TOGGLE CONSTRAINT
 
+   
 
-    // Check if the start state is valid as per the constraints
+    // Check if thhe states are valid as per the constraints
     bool is_valid = planning_scene->isStateValid(current_state, planning_components->getPlanningGroupName());
-    RCLCPP_INFO(LOGGER, "State validity: %s", is_valid ? "valid" : "invalid");
+    RCLCPP_INFO(LOGGER, "Shivangi State validity: %s", is_valid ? "valid" : "invalid");
     if (!is_valid)
     {
       // Print the Cartesian position of the current state
       const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
+      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
                   link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
-      RCLCPP_ERROR(rclcpp::get_logger("planner"), "Start state is invalid!");
+      RCLCPP_ERROR(rclcpp::get_logger("planner"), "Shivangi Start state is invalid!");
     }
     else
     {
       const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
+      RCLCPP_INFO(LOGGER, "Shivangi Current Cartesian Position - x: %f, y: %f, z: %f",
                   link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
-      RCLCPP_INFO(rclcpp::get_logger("planner"), "Start state is valid!");
+      RCLCPP_INFO(rclcpp::get_logger("planner"), "Shivangi Start state is valid!");
     }
 
 
 
-    // Set the goal to be only the position of the end effector
+    // split the motion into correct position + correct orientation.
+    // motion_plan_req.goal_constraints have the position and orientation constratins u want
+    // auto final_goal = motion_plan_req.goal_constraints;
+    // auto initial_goal = motion_plan_req.goal_constraints;
+
+    
+
+    // geometry_msgs::msg::Pose initial_goal_pose;
+
+    // initial_goal_pose.position.x = initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.x;
+    // initial_goal_pose.position.y = initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.y;
+    // initial_goal_pose.position.z = initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.z;
+
+    // RCLCPP_INFO(LOGGER, "Initial goal position: %f, %f, %f", initial_goal_pose.position.x, initial_goal_pose.position.y, initial_goal_pose.position.z);
+
+    // initial_goal_pose.orientation.w = current_quat.w();
+    // initial_goal_pose.orientation.x = current_quat.x();
+    // initial_goal_pose.orientation.y = current_quat.y();
+    // initial_goal_pose.orientation.z = current_quat.z();
+
+    // RCLCPP_INFO(LOGGER, "Initial goal orientation: %f, %f, %f, %f", initial_goal_pose.orientation.w, initial_goal_pose.orientation.x, initial_goal_pose.orientation.y, initial_goal_pose.orientation.z);
+
+
+    // //   initial_goal_pose.orientation = initial_goal[0].orientation_constraints[0].orientation;
+
+   
+    
+
+    // bool success = goal_state_->setFromIK(joint_model_group_.get(), initial_goal_pose);
+    // // TODO: check if this is necessary
+    // // goal_state_->update();
+    // RCLCPP_WARN(LOGGER, "IK success: %d", success);
+    // std::vector<double> joint_values;
+    // goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    // for (size_t i = 0; i < joint_values.size(); ++i)
+    // {
+    //   RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
+    // }
+    // initial_goal[0] = kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+    
+    // initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.w = current_quat.w();
+    // initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.x = current_quat.x();
+    // initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.y = current_quat.y();
+    // initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.z = current_quat.z();
+
+
+    // auto initial_goal = calculateIK(motion_plan_req.goal_constraints, "position");
+    // moveit_msgs::msg::MotionPlanRequest target_pose;
+    // target_pose.goal_constraints.resize(1);
+    // target_pose.goal_constraints[0].position_constraints.resize(1);
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses.resize(1);
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].position.x = initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.x;
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].position.y = initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.y;
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].position.z = initial_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.z;
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.w = current_quat.w();
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.x = current_quat.x();
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.y = current_quat.y();
+    // target_pose.goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].orientation.z = current_quat.z();
+    // target_pose.goal_constraints[0].position_constraints[0].link_name = "link_tool";
+    
+    // planning_components->setGoal(target_pose.goal_constraints);
+    // Set goal as a PoseStamped message
     auto final_goal = motion_plan_req.goal_constraints;
     geometry_msgs::msg::PoseStamped goal_pose;
     goal_pose.header.frame_id = "link_0";
@@ -304,26 +383,12 @@ namespace moveit::hybrid_planning
     goal_pose.pose.orientation.y = current_quat.y();
     goal_pose.pose.orientation.z = current_quat.z();
 
-    bool ik_success;
-    ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
-    RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
-    std::vector<double> joint_values;
-    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
-    for (size_t i = 0; i < joint_values.size(); ++i)
-    {
-      RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
-    }
 
-    // Convert joint values to RobotState
-    moveit::core::RobotState goal_robot_state(robot_model_);
-    goal_robot_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
-    goal_robot_state.update();
+    planning_components->setGoal(goal_pose, "link_tool");
+    // planning_components->setGoal(initial_goal);
+    // planning_components->setGoal(goal_state_);
 
-    planning_components->setGoal(goal_robot_state);   
-    // planning_components->setGoal(goal_pose, "link_tool");
-
-
-    // Plan first motion
+    // Plan motion
     auto plan_solution = planning_components->plan(plan_params);
     int max_attempts = 5;
     int attempts = 0;
@@ -341,41 +406,57 @@ namespace moveit::hybrid_planning
       return response;
     }
 
-    // Set the planning start state to the last point in the trajectory of plan_solution
-    moveit::core::RobotState last_state(robot_model_);
-    last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
-    planning_components->setStartState(last_state);
-    
-    // plan the second part of the trajectory.
-    // Add the target orientation to the goal
+
+     /// make another plan, with the same position, but different orientation
+
+    // final_goal_pose
+
+    // geometry_msgs::msg::Pose final_goal_pose;
+    // final_goal_pose.position.x = final_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.x;
+    // final_goal_pose.position.y = final_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.y;
+    // final_goal_pose.position.z = final_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.z;
+    // final_goal_pose.orientation = final_goal[0].orientation_constraints[0].orientation;
+
+    // bool success = goal_state_->setFromIK(joint_model_group_.get(), final_goal_pose);
+    // RCLCPP_WARN(LOGGER, "IK success: %d", success);
+    // std::vector<double> joint_values;
+    // goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    // // final_goal[0] = kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+
+    // auto final_goal = motion_plan_req.goal_constraints;
+    // geometry_msgs::msg::PoseStamped goal_pose;
+    // goal_pose.header.frame_id = "link_0";
+    // goal_pose.pose.position.x = final_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.x;
+    // goal_pose.pose.position.y = final_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.y;
+    // goal_pose.pose.position.z = final_goal[0].position_constraints[0].constraint_region.primitive_poses[0].position.z;
     goal_pose.pose.orientation = final_goal[0].orientation_constraints[0].orientation;
 
-    
-    ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
-    RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
-    // std::vector<double> joint_values;
-    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
-    // for (size_t i = 0; i < joint_values.size(); ++i)
-    // {
-    //   RCLCPP_WARN(LOGGER, "Joint %d: %f", i+1, joint_values[i]);
-    // }
 
-    // Convert joint values to RobotState
-    // moveit::core::RobotState goal_robot_state(robot_model_);
-    goal_robot_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
-    goal_robot_state.update();
+    planning_components->setGoal(goal_pose, "link_tool");
 
-    planning_components->setGoal(goal_robot_state);   
-    // planning_components->setGoal(goal_pose, "link_tool");
+    // planning_components->setGoal(final_goal);
 
-
-    //update the constraints to only include the position constraint
     moveit_msgs::msg::Constraints new_constraints;
     new_constraints.position_constraints.emplace_back(position_constraint);
     planning_components->setPathConstraints(new_constraints);
 
-    // Plan the second part of the trajectory
+    // Set the planning start state to the last point in the trajectory of plan_solution
+    moveit::core::RobotState last_state(robot_model_);
+    last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
+    planning_components->setStartState(last_state);
+
+
+    // moveit::core::RobotState intermediate_goal_state(robot_model_);
+    // intermediate_goal_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
+    // intermediate_goal_state.update();
+    // planning_components->setStartState(intermediate_goal_state);
+
+
+
+
     auto second_plan_solution = planning_components->plan(plan_params);
+    // int max_attempts = 15;
+    // int attempts = 0;
     while (second_plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS && attempts < max_attempts)
     {
       RCLCPP_WARN(LOGGER, "orientation Planning attempt %d failed with error code: %d. Retrying...", attempts + 1, plan_solution.error_code.val);
@@ -391,10 +472,9 @@ namespace moveit::hybrid_planning
     }
 
 
-    // Create a MotionPlanResponse for puiblishing the trajectory
+    // Transform solution into MotionPlanResponse and publish it
     response.trajectory_start = plan_solution.start_state;
     response.group_name = group_name;
-
     // Combine the first and second plan solutions
     plan_solution.trajectory->append(*second_plan_solution.trajectory, 0.0);
 
@@ -404,11 +484,43 @@ namespace moveit::hybrid_planning
 
     return response;
   }
-  
+  // moveit_msgs::msg::MotionPlanRequest calculateIK(moveit_msgs::msg::MotionPlanRequest goalRequest, string goal_type)
+  // {
+  //   goal_constraints = goalRequest.goal_constraints;
+  //   geometry_msgs::msg::Pose initial_goal_pose;
+  //   initial_goal_pose.position.x = goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].position.x;
+  //   initial_goal_pose.position.y = goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].position.y;
+  //   initial_goal_pose.position.z = goal_constraints[0].position_constraints[0].constraint_region.primitive_poses[0].position.z;
+  //   if (goal_type == "position")
+  //   {
+  //     initial_goal_pose.orientation.w = current_quat.w();
+  //     initial_goal_pose.orientation.x = current_quat.x();
+  //     initial_goal_pose.orientation.y = current_quat.y();
+  //     initial_goal_pose.orientation.z = current_quat.z();
+  //   }
+  //   else
+  //   {
+  //     initial_goal_pose.orientation = initial_goal[0].orientation_constraints[0].orientation;
+  //   }
+   
+    
+
+  //   bool success = goal_state_->setFromIK(joint_model_group_.get(), initial_goal_pose);
+  //   // TODO: check if this is necessary
+  //   // goal_state_->update();
+  //   RCLCPP_WARN(LOGGER, "IK success: %d", success);
+  //   std::vector<double> joint_values;
+  //   goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+  //   goal_constraints[0] = kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+
+  //   goalRequest.goal_constraints = goal_constraints;
+
+  //   return goalRequest;
+
+  // }
 } // namespace moveit::hybrid_planning
 
 
 #include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS(moveit::hybrid_planning::MoveItPlanningPipeline, moveit::hybrid_planning::GlobalPlannerInterface);
-
