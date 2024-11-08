@@ -47,8 +47,5 @@
         <xacro:gazebo_link_reference name="link_drillbit" />
         <xacro:gazebo_joint_reference name="joint_tool" />
         <xacro:gazebo_link_reference name="link_tool" />
-
-        <xacro:gazebo_joint_reference name="world_plank_joint" />
-        <xacro:gazebo_link_reference name="plank" />
     </xacro:macro>
 </robot>

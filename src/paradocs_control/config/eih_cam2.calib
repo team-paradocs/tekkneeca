@@ -1,0 +1,22 @@
+parameters:
+  name: eih_cam2
+  calibration_type: eye_in_hand
+  robot_base_frame: lbr/link_0
+  robot_effector_frame: lbr/link_0
+  tracking_base_frame: D435_link
+  tracking_marker_frame: marker_2_frame
+  freehand_robot_movement: true
+  move_group_namespace: /
+  move_group: manipulator
+transform:
+  translation:
+    x: -0.67418241  
+    y: 0.44508785  
+    z: 0.787584
+  rotation:
+    x:  0.25672131  
+    y: 0.3736895  
+    z: -0.50258736 
+    w: 0.73610887
+
+         

@@ -11,8 +11,8 @@ parameters:
 transform:
   translation:
     x: 0.045043
-    y: -0.007943
-    z: 0.1763430
+    y: -0.00705
+    z: 0.17073
   rotation:
     x: -0.705247
     y: 0.001393
