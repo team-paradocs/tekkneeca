@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /PoseArray1
       Splitter Ratio: 0.5
-    Tree Height: 170
+    Tree Height: 434
   - Class: rviz_common/Help
     Name: Help
   - Class: rviz_common/Views
@@ -14,6 +14,16 @@ Panels:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
+  - Class: custom_panel/SurgeonUI
+    Name: SurgeonUI
+    PushButton: ~
+  - Class: rviz_common/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 465
 Visualization Manager:
   Class: ""
   Displays:
@@ -282,15 +292,7 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        camera_color_frame:
-          Value: false
-        camera_color_optical_frame:
-          Value: false
-        camera_depth_frame:
-          Value: false
-        camera_depth_optical_frame:
-          Value: false
-        camera_link:
+        command:
           Value: true
         lbr/link_0:
           Value: true
@@ -329,6 +331,8 @@ Visualization Manager:
         world:
           lbr/world:
             lbr/link_0:
+              command:
+                {}
               lbr/link_1:
                 lbr/link_2:
                   lbr/link_3:
@@ -337,13 +341,6 @@ Visualization Manager:
                         lbr/link_6:
                           lbr/link_7:
                             lbr/link_ee:
-                              camera_link:
-                                camera_color_frame:
-                                  camera_color_optical_frame:
-                                    {}
-                                camera_depth_frame:
-                                  camera_depth_optical_frame:
-                                    {}
                               lbr/link_drillbit:
                                 lbr/link_tool:
                                   {}
@@ -472,7 +469,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000036700000349fc0200000006fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004700fffffffb0000000a0049006d0061006700650100000044000001a10000002c00fffffffb000000100044006900730070006c00610079007300000000fa000000eb000000eb00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001ec000001a1000001a100fffffffb0000000800480065006c0070000000029a0000006e0000008100fffffffb0000000a005600690065007700730000000339000000bd000000b900ffffff000004120000034900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000002000000000000024e00000343fc0200000006fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004d00fffffffb0000000a0049006d00610067006501000000470000017f0000002f00fffffffb000000100044006900730070006c00610079007300000000fa000000eb000000f100fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001cd000001bd000001bd00fffffffb0000000800480065006c0070000000029a0000006e0000008400fffffffb0000000a005600690065007700730000000339000000bd000000c200ffffff000000010000021d00000343fc0200000002fb000000100044006900730070006c006100790073010000004700000218000000f100fffffffb0000001200530075007200670065006f006e005500490100000266000001240000001900ffffff000003070000034300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  SurgeonUI:
+    collapsed: false
   Views:
     collapsed: false
   Width: 1920
