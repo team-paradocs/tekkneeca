@@ -145,31 +145,31 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     }
 
     // Detect if the local solver is stuck
-    if (!prev_waypoint_target_)
-    {
-      // RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False prev_waypoint_target_");
-      // Just initialize if this is the first iteration
-      prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
-    }
-    else
-    {
-      // Check if we don't move for a while
-      if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
-      {
-        RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Smaller than STUCK_THRESHOLD_RAD");
-        ++num_iterations_stuck_;
-        if (num_iterations_stuck_ > STUCK_ITERATIONS_THRESHOLD)
-        {
-          RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Exceed STUCK_ITERATIONS_THRESHOLD");
-          num_iterations_stuck_ = 0;
-          prev_waypoint_target_ = nullptr;
-          feedback_result.feedback = toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK);
-          path_invalidation_event_send_ = true;  // Set feedback flag
-          RCLCPP_INFO(LOGGER, "The local planner has been stuck for several iterations. Aborting.");
-        }
-      }
-      prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
-    }
+    // if (!prev_waypoint_target_)
+    // {
+    //   // RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "False prev_waypoint_target_");
+    //   // Just initialize if this is the first iteration
+    //   prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
+    // }
+    // else
+    // {
+    //   // Check if we don't move for a while
+    //   if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
+    //   {
+    //     RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Smaller than STUCK_THRESHOLD_RAD");
+    //     ++num_iterations_stuck_;
+    //     if (num_iterations_stuck_ > STUCK_ITERATIONS_THRESHOLD)
+    //     {
+    //       RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "Exceed STUCK_ITERATIONS_THRESHOLD");
+    //       num_iterations_stuck_ = 0;
+    //       prev_waypoint_target_ = nullptr;
+    //       feedback_result.feedback = toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK);
+    //       path_invalidation_event_send_ = true;  // Set feedback flag
+    //       RCLCPP_INFO(LOGGER, "The local planner has been stuck for several iterations. Aborting.");
+    //     }
+    //   }
+    //   prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
+    // }
   }
 
   // Transform robot trajectory into joint_trajectory message
