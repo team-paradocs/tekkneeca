@@ -134,11 +134,20 @@ class PCDRegPipe(Node):
                                             front=[0.086126891594714566, 0.27099417737370496, -0.9587201439282379],
                                             lookat=[-0.11521162012853672, -0.39411284983247913, 1.8123871758649917],
                                             up=[-0.0069065635673039305, -0.96211034045195976, -0.27257291166787834])
+            
+    def add_depth(self,annotated_points):
+        new_annotated_points = []
+        for point in annotated_points:
+            x,y = point
+            depth = self.last_depth[int(y),int(x)]
+            new_annotated_points.append([x,y,depth])
+        return new_annotated_points
 
     def process_point_cloud(self):
         """Processes the last received point cloud with Open3D."""
-        if self.last_cloud is not None and self.last_image is not None:
+        if self.last_cloud is not None and self.last_image is not None and self.last_depth is not None:
             mask, annotated_points, mask_points = self.sam_clicker.register(self.last_image)
+            annotated_points = self.add_depth(annotated_points)
             self.pcd_center = self.last_cloud.get_center()
             raw_cloud = self.last_cloud
             mask_cloud = self.lean_pipe.unproject_mask(mask,raw_cloud.points)
@@ -162,12 +171,9 @@ class PCDRegPipe(Node):
 
             # Publish the annotated point
             annotated_point = Point()
-            depth_at_annotated_point = self.last_depth[
-                int(annotated_points[0][1]), int(annotated_points[0][0])
-            ]
             annotated_point.x = float(annotated_points[0][0])
             annotated_point.y = float(annotated_points[0][1])
-            annotated_point.z = float(depth_at_annotated_point)
+            annotated_point.z = float(annotated_points[0][2])
             self.annotated_point_publisher.publish(annotated_point)
 
             if_publish = input("Do you want to publish (y/n)?")

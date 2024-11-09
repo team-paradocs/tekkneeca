@@ -74,12 +74,11 @@ class LeanPipeline:
         translation_back[0:3, 3] = target_center
 
         # Get Distance of Femur Point to Target Center
-        px, py = annotated_points[0]
+        px, py, pz = annotated_points[0]
         fx, fy = self.intrinsics[0,0], self.intrinsics[1,1]
         cx, cy = self.intrinsics[0,2], self.intrinsics[1,2]
-        z = 0.404 # Temporary hardcoding of depth
-        X = (px - cx) *z / fx
-        Y = (py - cy) *z / fy
+        X = (px - cx) *pz / fx
+        Y = (py - cy) *pz / fy
         print(f"Femur Point X: {X}, Y: {Y}")
         # Get distance vector to target center
         distance_vector = target_center - np.array([X,Y,0])
