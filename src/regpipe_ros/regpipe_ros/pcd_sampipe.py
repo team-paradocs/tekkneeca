@@ -56,6 +56,9 @@ class PCDRegPipe(Node):
         self.estimator = registration.Estimator('centroid')
         self.refiner = registration.Refiner('ransac_icp')
 
+        # Initialize SAM2 clicker
+        self.sam_clicker = RegistrationUI(size='large')
+
         self.last_cloud = None
         self.last_image = None
         self.last_depth = None
@@ -66,9 +69,6 @@ class PCDRegPipe(Node):
         self.input_thread = threading.Thread(target=self.wait_for_input)
         self.input_thread.daemon = True
         self.input_thread.start()
-
-        # Initialize SAM2 clicker
-        self.sam_clicker = RegistrationUI(size='large')
 
     def callback(self, msg):
         """Callback function for the subscriber.
