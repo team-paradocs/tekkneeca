@@ -16,30 +16,34 @@ class LeanPipeline:
             [0,  0,  1]
         ])
 
-    def unproject_mask(self,mask,points):
+    def unproject_mask(self, mask, points):
         mask = np.fliplr(mask)
-        colors = []
-        new_points = []
-        for i,point in enumerate(points):
-            x,y,z = point
-            u = mask.shape[1] - 1 - int((x * self.intrinsics[0, 0] / z) + self.intrinsics[0, 2])
-            v = int((y * self.intrinsics[1, 1] / z) + self.intrinsics[1, 2])   
-            if 0 <= u < mask.shape[1] and 0 <= v < mask.shape[0]:
-                if mask[v,u]:
-                    # colors[i] = [1,0,0]
-                    new_points.append(point)
-                    colors.append(points[i])
+        points = np.asarray(points)
+        x = points[:, 0]
+        y = points[:, 1]
+        z = points[:, 2]
+        u = mask.shape[1] - 1 - ((x * self.fx / z) + self.cx).astype(int)
+        v = ((y * self.fy / z) + self.cy).astype(int)
+
+        valid = (u >= 0) & (u < mask.shape[1]) & (v >= 0) & (v < mask.shape[0])
+
+        u_valid = u[valid]
+        v_valid = v[valid]
+        points_valid = points[valid]
+
+        mask_values = mask[v_valid, u_valid]
+        final_points = points_valid[mask_values]
 
         mask_pcd = o3d.geometry.PointCloud()
-        mask_pcd.points = o3d.utility.Vector3dVector(new_points)
-        mask_pcd.colors = o3d.utility.Vector3dVector(colors)
+        mask_pcd.points = o3d.utility.Vector3dVector(final_points)
+
         return mask_pcd
-    
+
     def filter_pcd(self,pcd,nb_neighbors=20,radius=0.01):
         # Use radius outlier removal
         cl, ind = pcd.remove_radius_outlier(nb_points=nb_neighbors, radius=radius)
         return pcd.select_by_index(ind)
-    
+
     def global_registration(self, source, target, annotated_points, mask_points):
         '''
         Centroid-based transformation estimation
@@ -69,7 +73,6 @@ class LeanPipeline:
         translation_back = np.eye(4)
         translation_back[0:3, 3] = target_center
 
-        
         # Get Distance of Femur Point to Target Center
         px, py = annotated_points[0]
         fx, fy = self.intrinsics[0,0], self.intrinsics[1,1]
@@ -87,7 +90,7 @@ class LeanPipeline:
         transformation = translation_back @ rotation_4x4 @ translation_to_origin
 
         return transformation
-    
+
     def ransac_icp(self, source, target, initial_transformation, trials=300):
         '''
         RANSAC ICP
@@ -102,8 +105,7 @@ class LeanPipeline:
             search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
         target.estimate_normals(
             search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
-        
-        
+
         loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
         p2l = o3d.pipelines.registration.TransformationEstimationPointToPlane(loss)
 
