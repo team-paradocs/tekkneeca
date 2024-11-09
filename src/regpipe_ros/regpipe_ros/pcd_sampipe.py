@@ -135,19 +135,20 @@ class PCDRegPipe(Node):
                                             lookat=[-0.11521162012853672, -0.39411284983247913, 1.8123871758649917],
                                             up=[-0.0069065635673039305, -0.96211034045195976, -0.27257291166787834])
             
-    def add_depth(self,annotated_points):
-        new_annotated_points = []
-        for point in annotated_points:
+    def add_depth(self,points):
+        new_points = []
+        for point in points:
             x,y = point
             depth = self.last_depth[int(y),int(x)]
-            new_annotated_points.append([x,y,depth])
-        return new_annotated_points
+            new_points.append([x,y,depth])
+        return new_points
 
     def process_point_cloud(self):
         """Processes the last received point cloud with Open3D."""
         if self.last_cloud is not None and self.last_image is not None and self.last_depth is not None:
             mask, annotated_points, mask_points = self.sam_clicker.register(self.last_image)
             annotated_points = self.add_depth(annotated_points)
+            mask_points = self.add_depth(mask_points)
             self.pcd_center = self.last_cloud.get_center()
             raw_cloud = self.last_cloud
             mask_cloud = self.lean_pipe.unproject_mask(mask,raw_cloud.points)

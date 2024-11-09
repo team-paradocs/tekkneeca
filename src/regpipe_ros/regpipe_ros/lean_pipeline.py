@@ -56,15 +56,15 @@ class LeanPipeline:
         translation_to_origin[0:3, 3] = -source_center
 
         # Create a rotation matrix
-        # Mask Points are 2 points (x,y) of a vector that is the direction of the femur
-        # It is a list of 2 int tuples (x,y)
+        # Mask Points are 2 points (x,y,z) of a vector that is the direction of the femur
         # Get Yaw from the vector if provided else default to 180
         yaw_deg = 180
+        pitch_deg = 0
         if mask_points is not None:
-            yaw_deg = np.degrees(np.arctan2(mask_points[1][1] - mask_points[0][1], mask_points[1][0] - mask_points[0][0]))
+            yaw_deg = -np.degrees(np.arctan2(mask_points[1][1] - mask_points[0][1], mask_points[1][0] - mask_points[0][0]))
             yaw_deg += 90
             print(f"Yaw: {yaw_deg}")
-        roll, pitch, yaw = np.radians([180, 0, yaw_deg])  # Convert degrees to radians
+        roll, pitch, yaw = np.radians([180, pitch_deg, yaw_deg])  # Convert degrees to radians
         rotation = o3d.geometry.get_rotation_matrix_from_xyz((roll, pitch, yaw))
         rotation_4x4 = np.eye(4)  # Expand to 4x4 matrix
         rotation_4x4[0:3, 0:3] = rotation  # Set the top-left 3x3 to the rotation matrix
@@ -83,7 +83,7 @@ class LeanPipeline:
         # Get distance vector to target center
         distance_vector = target_center - np.array([X,Y,0])
         print(f"Distance Vector: {distance_vector}")
-        translation_back[0:3, 3] = np.array([X,Y,target_center[2]])
+        translation_back[0:3, 3] = np.array([X,Y,pz])
 
         # Combine transformations
         transformation = translation_back @ rotation_4x4 @ translation_to_origin
