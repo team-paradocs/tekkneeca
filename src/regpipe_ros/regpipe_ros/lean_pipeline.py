@@ -63,32 +63,42 @@ class LeanPipeline:
         if mask_points is not None:
             yaw_deg = -np.degrees(np.arctan2(mask_points[1][1] - mask_points[0][1], mask_points[1][0] - mask_points[0][0]))
             yaw_deg += 90
-            print(f"Yaw: {yaw_deg}")
         roll, pitch, yaw = np.radians([180, pitch_deg, yaw_deg])  # Convert degrees to radians
         rotation = o3d.geometry.get_rotation_matrix_from_xyz((roll, pitch, yaw))
         rotation_4x4 = np.eye(4)  # Expand to 4x4 matrix
         rotation_4x4[0:3, 0:3] = rotation  # Set the top-left 3x3 to the rotation matrix
 
-        # Translate back to target's position
-        translation_back = np.eye(4)
-        translation_back[0:3, 3] = target_center
-
-        # Get Distance of Femur Point to Target Center
         px, py, pz = annotated_points[0]
         fx, fy = self.intrinsics[0,0], self.intrinsics[1,1]
         cx, cy = self.intrinsics[0,2], self.intrinsics[1,2]
         X = (px - cx) *pz / fx
         Y = (py - cy) *pz / fy
-        print(f"Femur Point X: {X}, Y: {Y}")
-        # Get distance vector to target center
-        distance_vector = target_center - np.array([X,Y,0])
-        print(f"Distance Vector: {distance_vector}")
-        translation_back[0:3, 3] = np.array([X,Y,pz])
+        translation = np.eye(4)
+        translation[0:3, 3] = np.array([X,Y,pz])
 
         # Combine transformations
-        transformation = translation_back @ rotation_4x4 @ translation_to_origin
+        transformation = translation @ rotation_4x4 @ translation_to_origin
 
         return transformation
+    
+    def icp(self, source, target, initial_transformation):
+        threshold = 0.01
+        max_iter = 50
+        source.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        target.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        
+        loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
+        p2l = o3d.pipelines.registration.TransformationEstimationPointToPlane(loss)
+
+        reg_result = o3d.pipelines.registration.registration_icp(
+            source, target, threshold, initial_transformation,
+            p2l,
+            o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=max_iter)
+        )
+        print(f"ICP Fitness: {reg_result.fitness}")
+        return reg_result.transformation
 
     def ransac_icp(self, source, target, initial_transformation, trials=300):
         '''

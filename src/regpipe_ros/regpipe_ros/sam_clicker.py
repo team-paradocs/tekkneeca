@@ -64,20 +64,15 @@ class RegistrationUI:
                     <= self.button_position[1] + self.button_size[1]
                 ):
                     pass
-                    # self.handle_registration()
-                    # cv2.destroyAllWindows()
-                    # exit()
 
             # If femur point is not selected, select it
             if self.femur_point is None:
                 self.femur_point = (x, y)
                 self.update_image_with_points()
-                print(f"Femur point selected at: {self.femur_point}")
             # If femur is selected but tibia is not, select tibia
             elif self.tibia_point is None:
                 self.tibia_point = (x, y)
                 self.update_image_with_points()
-                print(f"Tibia point selected at: {self.tibia_point}")
                 self.show_register_button()  # Show the button after tibia is selected
 
     def update_prompt(self, text):
@@ -228,9 +223,6 @@ class RegistrationUI:
         cv2.imshow("Image", self.image)
 
     def generate_mask(self):
-        print(
-            f"Generating mask for points: Femur: {self.femur_point}, Tibia: {self.tibia_point}"
-        )
         input_point = np.array([self.femur_point, self.tibia_point])
         input_label = np.array([1, 0])
 
@@ -240,7 +232,6 @@ class RegistrationUI:
             point_coords=input_point, point_labels=input_label, multimask_output=False
         )
         print(f"Mask generation completed in {time.time() - t0:.2f} seconds.")
-        print(f"Masks: {masks.shape}, Scores: {scores.shape}, Logits: {logits.shape}")
 
         mask = masks[0]
         # Remove noise from the mask
@@ -251,11 +242,6 @@ class RegistrationUI:
         self.update_image_with_mask(mask)
         self.update_image_with_annotations(mask, [self.femur_point, self.tibia_point])
         self.mask = mask
-
-    def handle_registration(self):
-        print(
-            f"Processing completed with points: Femur: {self.femur_point}, Tibia: {self.tibia_point}"
-        )
 
     def register(self, image):
         self.original_image = image.copy()
@@ -323,9 +309,8 @@ def main():
     # Create the UI object
     ui = RegistrationUI()
 
-    # Run the registration (Phase 1)
+    # Run the registration
     mask, points, mask_points = ui.register(image)
-    print
 
 
 if __name__ == "__main__":
