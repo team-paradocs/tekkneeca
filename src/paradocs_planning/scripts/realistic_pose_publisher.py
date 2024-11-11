@@ -24,7 +24,7 @@ class PosePublisher(Node):
         # self.start_publishing = False
 
         self.marker_publisher_ = self.create_publisher(InteractiveMarkerFeedback, 'simple_marker/feedback', 10)
-        self.tracking_goal_publisher_ = self.create_publisher(PoseStamped, 'tracking_goal', 10)
+        self.tracking_goal_publisher_ = self.create_publisher(PoseStamped, 'tracked_pose', 10)
         self.relative_to_frame = 'lbr/link_0'
 
         self.tf_broadcaster = TransformBroadcaster(self)
