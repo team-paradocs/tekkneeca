@@ -123,6 +123,8 @@ add_executable(hybrid_planning_demo src/test/hybrid_planning_demo_node.cpp)
 ament_target_dependencies(hybrid_planning_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
 add_executable(continuous_motion_demo src/test/continuous_motion_demo.cpp)
 ament_target_dependencies(continuous_motion_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
+add_executable(robot_motion_planning src/robot_motion_planning.cpp)
+ament_target_dependencies(robot_motion_planning rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
 
 # Install Cpp executables
 install(TARGETS
@@ -130,6 +132,7 @@ install(TARGETS
   listener
   hybrid_planning_demo
   continuous_motion_demo
+  robot_motion_planning
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -140,6 +143,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/publisher_member_function.py
   scripts/subscriber_member_function.py
+  scripts/rosbag_tf_broadcaster.py
   scripts/continuous_pose_publisher.py
   scripts/drill_pose_publisher.py
   scripts/realistic_pose_publisher.py
