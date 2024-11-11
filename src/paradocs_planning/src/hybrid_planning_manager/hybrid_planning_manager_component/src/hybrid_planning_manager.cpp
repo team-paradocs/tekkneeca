@@ -151,7 +151,7 @@ namespace moveit::hybrid_planning
 
     // Initialize tracking goal subscriber
     tracking_goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-        "tracked_pose", rclcpp::SystemDefaultsQoS(),
+        "lbr/moveit_goal", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
 
           // Threading is removed
