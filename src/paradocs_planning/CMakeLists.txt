@@ -124,7 +124,7 @@ ament_target_dependencies(hybrid_planning_demo rclcpp std_msgs moveit_core movei
 add_executable(continuous_motion_demo src/test/continuous_motion_demo.cpp)
 ament_target_dependencies(continuous_motion_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
 add_executable(robot_motion_planning src/robot_motion_planning.cpp)
-ament_target_dependencies(robot_motion_planning rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
+ament_target_dependencies(robot_motion_planning rclcpp std_msgs control_msgs moveit_msgs moveit_core moveit_ros_planning_interface)
 
 # Install Cpp executables
 install(TARGETS
