@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'hello_world = parasight.hello_world:main'
+            'host = parasight.host:main',
+            'cli = parasight.cli_client:main'
         ],
     },
 )
