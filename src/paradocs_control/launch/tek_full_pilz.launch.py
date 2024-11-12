@@ -65,7 +65,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
 
     # for planning scene
-    robot_description = LBRDescriptionMixin.param_robot_description(sim=True)
+    robot_description = LBRDescriptionMixin.param_robot_description(sim=False)
     
     robot_description_semantic = {
         "robot_description_semantic": load_file("med7_moveit_config", "config/med7.srdf")
@@ -110,7 +110,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 def generate_launch_description() -> LaunchDescription:
 
     ld = LaunchDescription()
-    # ld.add_action(LBRDescriptionMixin.arg_model())
     ld.add_action(DeclareLaunchArgument(
             name="model",
             default_value="med7",
@@ -131,7 +130,6 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
     
-    # Gazebo loads controller configuration through lbr_description/gazebo/*.xacro from lbr_ros2_control/config/lbr_controllers.yaml
     ld.add_action(
         LBRROS2ControlMixin.arg_ctrl()
     )

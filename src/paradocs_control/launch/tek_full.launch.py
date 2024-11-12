@@ -7,7 +7,6 @@ from launch.actions import (
     IncludeLaunchDescription,
 )
 from launch_ros.actions import (
-    Node,
     ComposableNodeContainer
 )
 
@@ -68,7 +67,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
 
     # for planning scene
-    robot_description = LBRDescriptionMixin.param_robot_description(sim=True)
+    robot_description = LBRDescriptionMixin.param_robot_description(sim=False)
     
     robot_description_semantic = {
         "robot_description_semantic": load_file("med7_moveit_config", "config/med7.srdf")
@@ -91,7 +90,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
 
     # Generate launch description with multiple components
-    # TODO: might need to remap to lbr namespace
     container = ComposableNodeContainer(
         name="hybrid_planning_container",
         namespace="/lbr",
@@ -105,11 +103,9 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 parameters=[
                     common_hybrid_planning_param,
                     global_planner_param,
-                    # moveit_config.to_dict(),
                     robot_description,
                     robot_description_semantic,
-                    # kinematics_yaml,                    
-                    # # moveit_controllers,
+
                 ],
                 remappings=[
                     ("lbr/attached_collision_object", "/attached_collision_object"),
@@ -130,7 +126,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     local_planner_param,
                     robot_description,
                     robot_description_semantic,
-                    # kinematics_yaml,
                 ],
                 remappings=[
                     ("/joint_trajectory_controller/joint_trajectory", "/lbr/joint_trajectory_controller/joint_trajectory"),
@@ -145,14 +140,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 name="hybrid_planning_manager",
                 parameters=[
                     common_hybrid_planning_param,
-                    # hybrid_planning_manager_param,
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("paradocs_planning"),
-                            "config",
-                            "hybrid_planning_manager.yaml",
-                        ]
-                    ),
+                    hybrid_planning_manager_param,
                     robot_description,
                 ],
                 extra_arguments=[
@@ -167,23 +155,12 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     ld.add_action(container)
 
-    # pose_publisher = Node(
-    #     package="paradocs_planning",
-    #     executable="realistic_pose_publisher.py",
-    #     name="realistic_pose_publisher",
-    #     namespace="",
-    #     output="screen",
-    # )
-
-    # ld.add_action(pose_publisher)
-
     return ld.entities
 
 
 def generate_launch_description() -> LaunchDescription:
 
     ld = LaunchDescription()
-    # ld.add_action(LBRDescriptionMixin.arg_model())
     ld.add_action(DeclareLaunchArgument(
             name="model",
             default_value="med7",
@@ -204,7 +181,6 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
     
-    # Gazebo loads controller configuration through lbr_description/gazebo/*.xacro from lbr_ros2_control/config/lbr_controllers.yaml
     ld.add_action(
         LBRROS2ControlMixin.arg_ctrl()
     )
