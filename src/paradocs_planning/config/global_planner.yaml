@@ -23,8 +23,6 @@ plan_request_params:
   # planner_id: "RRTstarkConfigDefault"
   planner_id: "RRTConnectkConfigDefault"
   planning_pipeline: ompl
-  # planner_id: "LIN"
-  # planning_pipeline: pilz_industrial_motion_planner
   planning_attempts: 5
   planning_time: 10.0
   max_velocity_scaling_factor: 1.0
@@ -245,6 +243,156 @@ robot_description_planning:
     max_trans_acc: 2.25
     max_trans_dec: -5.0
     max_trans_vel: 1.0
+  default_acceleration_scaling_factor: 0.1
+  default_velocity_scaling_factor: 0.1
+  joint_limits:
+    A1:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 2.96555555556
+      max_velocity: 1.710422666954443
+      min_position: -2.96555555556
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
+    A2:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 2.09333333333
+      max_velocity: 1.710422666954443
+      min_position: -2.09333333333
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
+    A3:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 2.96555555556
+      max_velocity: 1.7453292519943295
+      min_position: -2.96555555556
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
+    A4:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 2.09333333333
+      max_velocity: 2.2689280275926285
+      min_position: -2.09333333333
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
+    A5:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 2.96555555556
+      max_velocity: 2.443460952792061
+      min_position: -2.96555555556
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
+    A6:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 2.09333333333
+      max_velocity: 3.141592653589793
+      min_position: -2.09333333333
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
+    A7:
+      angle_wraparound: false
+      has_acceleration_limits: true
+      has_deceleration_limits: true
+      has_effort_limits: true
+      # has_jerk_limits: null
+      has_position_limits: true
+      has_soft_limits: false
+      has_velocity_limits: true
+      k_position: .nan
+      k_velocity: .nan
+      max_acceleration: 10.0
+      max_deceleration: -10.0          
+      max_effort: 200.0
+      max_jerk: .nan
+      max_position: 3.05277777778
+      max_velocity: 3.141592653589793
+      min_position: -3.05277777778
+      min_velocity: .nan
+      soft_lower_limit: .nan
+      soft_upper_limit: .nan
 
 moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
 moveit_manage_controllers: true
@@ -264,24 +412,6 @@ moveit_simple_controller_manager:
     - A7
     type: FollowJointTrajectory
 
-# move_group params, can be deleted
-# publish_geometry_updates: true
-# publish_planning_scene: true
-# capabilities: ''
-# disable_capabilities: ''
-# publish_robot_description: false
-# publish_robot_description_semantic: true
-# publish_state_updates: true
-# allow_trajectory_execution: true
-# monitor_dynamics: false
-# publish_transforms_updates: true
-
-# can be deleted
-# arm:
-#   kinematics_solver: null
-# default_planning_pipeline: ompl
-# planning_plugin: ompl_interface/OMPLPlanner
-
 robot_description_kinematics:
   arm:
     kinematics_solver: pick_ik/PickIkPlugin
@@ -295,147 +425,3 @@ robot_description_kinematics:
     cost_threshold: 0.001
     minimal_displacement_weight: 0.0
     gd_step_size: 0.0001
-
-  default_acceleration_scaling_factor: 0.1
-  default_velocity_scaling_factor: 0.1
-  joint_limits:
-    A1:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 1.710422666954443
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
-    A2:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 1.710422666954443
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
-    A3:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 1.7453292519943295
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
-    A4:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 2.2689280275926285
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
-    A5:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 2.443460952792061
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
-    A6:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 3.141592653589793
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
-    A7:
-      angle_wraparound: false
-      has_acceleration_limits: true
-      has_deceleration_limits: false
-      has_effort_limits: false
-      # has_jerk_limits: null
-      has_position_limits: false
-      has_soft_limits: false
-      has_velocity_limits: true
-      k_position: .nan
-      k_velocity: .nan
-      max_acceleration: 10.0
-      max_effort: .nan
-      max_jerk: .nan
-      # max_position: null
-      max_velocity: 3.141592653589793
-      # min_position: null
-      min_velocity: .nan
-      soft_lower_limit: .nan
-      soft_upper_limit: .nan
