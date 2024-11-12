@@ -455,12 +455,12 @@ namespace moveit::hybrid_planning
     // TODO: check if this is necessary
     // goal_state_->update();
     RCLCPP_INFO(LOGGER, "IK success: %d", success);
-    std::vector<double> joint_values;
-    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
-    for (size_t i = 0; i < joint_values.size(); ++i)
-    {
-      RCLCPP_INFO(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
-    }
+    // std::vector<double> joint_values;
+    // goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    // for (size_t i = 0; i < joint_values.size(); ++i)
+    // {
+    //   RCLCPP_INFO(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
+    // }
     return success;
   }
 

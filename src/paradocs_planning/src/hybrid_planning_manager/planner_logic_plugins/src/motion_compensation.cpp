@@ -191,6 +191,12 @@ namespace moveit::hybrid_planning
       double orientation_difference = calculateOrientationDifference(previous_goal_->pose, currentGoalHandle->pose);
       std::cout << "Position difference: " << position_difference << ", Orientation difference: " << orientation_difference << std::endl;
 
+      // if (position_difference < compensation_position_threshold_) 
+      // {
+      //   RCLCPP_INFO(LOGGER, "Subtle motion detected, not compensating");
+      //   return true;
+      // }
+
       if (position_difference > position_threshold_ || orientation_difference > orientation_threshold_) 
       {
         RCLCPP_INFO(LOGGER, "Large motion detected");
