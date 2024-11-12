@@ -33,14 +33,17 @@
  *********************************************************************/
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/moveit_cpp/moveit_cpp.h>
 #include <moveit/moveit_cpp/planning_component.h>
 #include <std_msgs/msg/int32.hpp>
+#include "control_msgs/action/follow_joint_trajectory.hpp"
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
-class MoveItPlanningNode : public rclcpp::Node
+class MoveItPlanningNode : public rclcpp::Node 
 {
 public:
   MoveItPlanningNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions()
@@ -48,7 +51,7 @@ public:
       .allow_undeclared_parameters(true))
     : Node("robot_motion_planning", options)
   {
-    RCLCPP_WARN(LOGGER, "Auto declare %d", Node::get_node_options().automatically_declare_parameters_from_overrides());
+    RCLCPP_INFO(LOGGER, "Auto declare %d", Node::get_node_options().automatically_declare_parameters_from_overrides());
   }
 
 
@@ -86,12 +89,59 @@ public:
           RCLCPP_INFO(LOGGER, "Planning flag received: %d", msg->data);
           if (msg->data == 1)
             stop_execution_ = false;
-          else if (msg->data == 0)
+            // execution(true);
+          else if (msg->data == 0) {
             stop_execution_ = true;
+            joint_trajectory_action_client_->async_cancel_all_goals();
+          }
           else
             RCLCPP_ERROR(LOGGER, "Invalid planning flag received: %d", msg->data);
         }
     );
+
+    // Local solution publisher is defined by the local constraint solver plugin
+    joint_trajectory_action_client_ = 
+      rclcpp_action::create_client<control_msgs::action::FollowJointTrajectory>(this, "joint_trajectory_controller/follow_joint_trajectory");
+    // Wait until the action server is available
+    while (!joint_trajectory_action_client_->wait_for_action_server(std::chrono::seconds(5))) {
+      RCLCPP_INFO_THROTTLE(LOGGER, *this->get_clock(), 5000 /* ms */, 
+        "Waiting for FollowJointTrajectory action server to be available...");
+    }
+    RCLCPP_INFO(LOGGER, "FollowJointTrajectory Action server available.");
+
+    goal_options_ = rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions();
+
+    goal_options_.goal_response_callback = 
+      [this](const rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr& goal_handle) {
+        // auto goal_handle = goalHandle.get();
+        if (!goal_handle) {
+            RCLCPP_ERROR(LOGGER, "Goal was rejected by the joint trajectory controller action server.");
+        } else {
+            // RCLCPP_INFO(LOGGER, "Goal accepted by the joint trajectory controller action server, executing...");
+        }
+      };        
+
+    goal_options_.feedback_callback = [this](rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::SharedPtr /*unused*/,
+                                            const std::shared_ptr<const control_msgs::action::FollowJointTrajectory::Feedback> /*unused*/) {
+        // RCLCPP_INFO(LOGGER, "Received feedback: %f", feedback->desired.positions[0]);  // Access feedback values
+    };
+
+    goal_options_.result_callback = [this](const rclcpp_action::ClientGoalHandle<control_msgs::action::FollowJointTrajectory>::WrappedResult &result) {
+        switch (result.code) {
+            case rclcpp_action::ResultCode::SUCCEEDED:
+                // RCLCPP_INFO(LOGGER, "Goal to the joint trajectory controller action server succeeded!");
+                break;
+            case rclcpp_action::ResultCode::ABORTED:
+                // RCLCPP_ERROR(LOGGER, "Goal to the joint trajectory controller action server aborted.");
+                break;
+            case rclcpp_action::ResultCode::CANCELED:
+                // RCLCPP_ERROR(LOGGER, "Goal to the joint trajectory controller action server canceled.");
+                break;
+            default:
+                // RCLCPP_ERROR(LOGGER, "Goal to the joint trajectory controller action server results unknown result code.");
+                break;
+        }
+    };
 
   }
 
@@ -151,12 +201,28 @@ public:
     if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
     {
       RCLCPP_INFO(LOGGER, "Planning succeeded");
-      // true/false: isblocking or not
       if (!stop_execution_)
       {
         // execute the global plan
-        RCLCPP_INFO(LOGGER, "Executing the plan");
-        planning_component_->execute(false);
+        // RCLCPP_INFO(LOGGER, "Executing the plan");
+        // true/false: isblocking or not
+        // planning_component_->execute(false);
+
+        // Local solution publisher is defined by the local constraint solver plugin
+        auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
+
+        moveit_msgs::msg::RobotTrajectory robot_trajectory_msg;
+        time_parameterization_.computeTimeStamps(*plan_solution.trajectory, 
+          plan_params.max_velocity_scaling_factor,
+          plan_params.max_acceleration_scaling_factor);
+
+        plan_solution.trajectory->getRobotTrajectoryMsg(robot_trajectory_msg);
+
+        // Extract the JointTrajectory part
+        goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
+
+        joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
+
       }
     }
     else
@@ -193,7 +259,13 @@ private:
   std::shared_ptr<moveit_cpp::PlanningComponent> planning_component_;
 
   // Flag to avoid publishing the global plan
-  std::atomic<bool> stop_execution_{false};
+  std::atomic<bool> stop_execution_{true};
+
+  // Local solution action client
+  rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr joint_trajectory_action_client_;
+  rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions goal_options_;
+
+  trajectory_processing::TimeOptimalTrajectoryGeneration time_parameterization_;
 
 };
 
