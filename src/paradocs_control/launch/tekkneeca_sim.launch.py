@@ -59,7 +59,7 @@ def generate_launch_description() -> LaunchDescription:
     depth_optical_tf_publisher_d435 = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments=['0', '0', '0', '-1.5708', '0', '-1.5708', 'D435_link', 'camera_depth_optical_frame'],
+        arguments=['0', '0', '0', '-1.5708', '0', '-1.5708', 'D435_link', 'D435_depth_optical_frame'],
     )
     ld.add_action(depth_optical_tf_publisher_d435) 
 
