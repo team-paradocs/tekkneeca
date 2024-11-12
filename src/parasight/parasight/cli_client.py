@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty
 
+
 class ParaSightNode(Node):
     def __init__(self):
         super().__init__('parasight_cli_node')

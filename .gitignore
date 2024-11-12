@@ -57,3 +57,8 @@ CATKIN_IGNORE
 
 # Model Checkpoints
 *.pt
+
+# Accidental builds within src
+src/build/
+src/install/
+src/log/

@@ -1,15 +1,10 @@
-import cv2
 import time
-import torch
+
+import cv2
 import numpy as np
+import torch
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
-
-class SAMData:
-    def __init__(self, mask, points, mask_points):
-        self.mask = mask # Femur Mask
-        self.points = points # Femur and Tibia annotated points
-        self.mask_points = mask_points # Femur Mask points (First is Center, Second is Edge)
 
 
 class SegmentAnythingUI:
@@ -228,9 +223,9 @@ class SegmentAnythingUI:
         self.update_prompt("Esc to reset | Enter to register")
         cv2.imshow("Image", self.image)
 
-    def generate_mask(self):
-        input_point = np.array([self.femur_point, self.tibia_point])
-        input_label = np.array([1, 0])
+    def generate_mask(self,femur_point,tibia_point):
+        input_point = np.array([femur_point, tibia_point])
+        input_label = np.array([1, 0]) # Extracts Femur Mask
 
         self.predictor.set_image(self.original_image)
         t0 = time.time()
@@ -246,10 +241,10 @@ class SegmentAnythingUI:
         mask = cv2.erode(mask.astype(np.uint8), kernel, iterations=1)
         mask = cv2.dilate(mask, kernel, iterations=1).astype(bool)
         self.update_image_with_mask(mask)
-        self.update_image_with_annotations(mask, [self.femur_point, self.tibia_point])
+        self.update_image_with_annotations(mask, [femur_point, tibia_point])
         self.mask = mask
 
-    def segment(self, image):
+    def segment_using_ui(self, image):
         self.original_image = image.copy()
         self.update_prompt("Click a point on the Femur")
 
@@ -274,7 +269,7 @@ class SegmentAnythingUI:
 
             if self.femur_point is not None and self.tibia_point is not None:
                 if not self.mask_generated:
-                    self.generate_mask()
+                    self.generate_mask(self.femur_point, self.tibia_point)
                     self.mask_generated = True
 
             # Press 'Enter' to register
@@ -292,8 +287,23 @@ class SegmentAnythingUI:
         )
         
         # Reset instance variables
+        self.reset()
+        return result
+    
+    def segment_using_points(self, image, femur_point, tibia_point):
+        self.original_image = image
+        self.generate_mask(femur_point, tibia_point)
+        result = (
+            self.mask,
+            [femur_point, tibia_point],
+            [self.mask_pointA, self.mask_pointB]
+        )
+        self.reset()
+        return result
+    
+    def reset(self):
         self.mask = None
         self.femur_point = self.tibia_point = None
         self.mask_pointA = self.mask_pointB = None
         self.mask_generated = False
-        return result
+        self.button_shown = False

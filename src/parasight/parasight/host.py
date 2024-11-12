@@ -1,20 +1,22 @@
-from transitions import Machine
+import cv2
 import rclpy
+from cv_bridge import CvBridge
 from rclpy.node import Node
+from sensor_msgs.msg import Image
+from std_msgs.msg import Empty
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-from std_msgs.msg import Empty
+from transitions import Machine
+
+from parasight.sam_ui import SegmentAnythingUI
+
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
 
     def __init__(self):
         super().__init__('parasight_host')
-        
-        # Set up tf listener
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
         
         # Create state machine
         self.machine = Machine(model=self, states=ParaSightHost.states, initial='waiting',
@@ -32,17 +34,41 @@ class ParaSightHost(Node):
 
         self.machine.add_transition(trigger='hard_reset', source='*', dest='waiting')
 
-        # Subscribers
-        self.subscription = self.create_subscription(
+        # State Data
+        self.last_rgb_image = None
+        self.last_depth_image = None
+
+        # Set up tf listener
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+        # Trigger Subscribers
+        self.ui_trigger_subscription = self.create_subscription(
             Empty,
             '/trigger_host_ui',
             self.ui_trigger_callback,
             10)
-        self.subscription = self.create_subscription(
+        self.hard_reset_subscription = self.create_subscription(
             Empty,
             '/hard_reset_host',
             self.hard_reset_callback,
             10)
+        
+        # Data Subscribers
+        self.rgb_image_subscription = self.create_subscription(
+            Image,
+            '/camera/color/image_rect_raw',
+            self.rgb_image_callback,
+            10)
+        self.depth_image_subscription = self.create_subscription(
+            Image,
+            '/camera/aligned_depth_to_color/image_raw',
+            self.depth_image_callback,
+            10)
+        
+
+        self.segmentation_ui = SegmentAnythingUI()
+        self.bridge = CvBridge()
 
         # Create timer to check systems
         self.create_timer(1.0, self.check_all_systems)
@@ -75,11 +101,25 @@ class ParaSightHost(Node):
 
     def ui_trigger_callback(self, msg):
         self.get_logger().info('UI trigger received')
-        self.trigger('start_parasight')
+        if self.state == 'ready':
+            self.trigger('start_parasight')
+            self.segmentation_ui.segment_using_ui(self.last_rgb_image) # Blocking call
+            self.trigger('input_received')
+        else:
+            self.get_logger().warn('UI trigger received but not in ready state')
 
     def hard_reset_callback(self, msg):
         self.get_logger().info('Hard reset received')
         self.trigger('hard_reset')
+
+    def rgb_image_callback(self, msg):
+        rgb_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        self.last_rgb_image = rgb_image
+
+    def depth_image_callback(self, msg):
+        depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1") / 1000.0
+        self.last_depth_image = depth_image
 
 
 def main(args=None):
