@@ -38,6 +38,7 @@ set(LIBRARIES
   # Plugins
   forward_trajectory_plugin
   motion_planning_pipeline_plugin
+  pilz_planning_pipeline_plugin
   simple_sampler_plugin
   motion_compensation_plugin
 )
@@ -105,6 +106,7 @@ install(DIRECTORY ${THIS_PACKAGE_INCLUDE_DIRS} DESTINATION include)
 # install(DIRECTORY test/config DESTINATION share/${PROJECT_NAME})
 
 pluginlib_export_plugin_description_file(paradocs_planning plugins/moveit_planning_pipeline_plugin.xml)
+pluginlib_export_plugin_description_file(paradocs_planning plugins/pilz_planning_pipeline_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/simple_sampler_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/motion_compensation_plugin.xml)
 pluginlib_export_plugin_description_file(paradocs_planning plugins/forward_trajectory_plugin.xml)
