@@ -119,10 +119,10 @@ namespace moveit::hybrid_planning
     node->declare_parameter<std::vector<std::string>>("pilz_industrial_motion_planner.planning_plugins", std::vector<std::string>({UNDEFINED}));
     node->declare_parameter<std::string>("pilz_industrial_motion_planner.planning_plugin", UNDEFINED);
     node->declare_parameter<std::string>("pilz_industrial_motion_planner.request_adapters", UNDEFINED);
-    node->declare_parameter<double>("pilz_industrial_motion_planner.cartesian_limits.max_trans_vel", 1.0);
-    node->declare_parameter<double>("pilz_industrial_motion_planner.cartesian_limits.max_trans_acc", 2.25);
-    node->declare_parameter<double>("pilz_industrial_motion_planner.cartesian_limits.max_trans_dec", -5.0);
-    node->declare_parameter<double>("pilz_industrial_motion_planner.cartesian_limits.max_rot_vel", 1.57);
+    node->declare_parameter<double>("robot_description_planning.cartesian_limits.max_trans_vel", 1.0);
+    node->declare_parameter<double>("robot_description_planning.cartesian_limits.max_trans_acc", 2.25);
+    node->declare_parameter<double>("robot_description_planning.cartesian_limits.max_trans_dec", -5.0);
+    node->declare_parameter<double>("robot_description_planning.cartesian_limits.max_rot_vel", 1.57);
 
     node->declare_parameter<std::string>(PLAN_REQUEST_PARAM_NS + "planner_id", UNDEFINED);
     node->declare_parameter<std::string>(PLAN_REQUEST_PARAM_NS + "planning_pipeline", UNDEFINED);
@@ -221,7 +221,6 @@ namespace moveit::hybrid_planning
     // add position and orientation constraints
     moveit_msgs::msg::Constraints constraints;
 
-
     // Create position constraint for Cartesian bounds (loaded from YAML)
     moveit_msgs::msg::PositionConstraint position_constraint;
     position_constraint.header.frame_id = "link_0";
@@ -249,7 +248,7 @@ namespace moveit::hybrid_planning
     // Get the current orientation of the end effector
     const auto &current_orientation = link_state.rotation();
     Eigen::Quaterniond current_quat(current_orientation);
-     RCLCPP_INFO(LOGGER, "Current orientation: %f, %f, %f, %f\n", current_quat.w(), current_quat.x(), current_quat.y(), current_quat.z());
+    RCLCPP_INFO(LOGGER, "Current orientation: %f, %f, %f, %f\n", current_quat.w(), current_quat.x(), current_quat.y(), current_quat.z());
     // Set the orientation constraint to the current orientation
     orientation_constraint.orientation.w = current_quat.w();
     orientation_constraint.orientation.x = current_quat.x();
@@ -260,15 +259,12 @@ namespace moveit::hybrid_planning
     orientation_constraint.absolute_z_axis_tolerance = 0.5;
     orientation_constraint.weight = 0.5; // Weight of the constraint
 
-
     // push the constraints into the constraints object
     constraints.orientation_constraints.push_back(orientation_constraint); // TOGGLE ORIENTATION CONSTRAINT
     constraints.position_constraints.emplace_back(position_constraint); // TOGGLE POSITION CONSTRAINT
 
-
     // Set the path constraints in the PlanningComponent
     planning_components->setPathConstraints(constraints); // TOGGLE CONSTRAINT
-
 
     // Check if the start state is valid as per the constraints
     bool is_valid = planning_scene->isStateValid(current_state, planning_components->getPlanningGroupName());
@@ -307,13 +303,13 @@ namespace moveit::hybrid_planning
 
     bool ik_success;
     ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
-    RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
-    std::vector<double> joint_values;
-    goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
-    for (size_t i = 0; i < joint_values.size(); ++i)
-    {
-      RCLCPP_WARN(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
-    }
+    RCLCPP_INFO(LOGGER, "IK success: %d", ik_success);
+    // std::vector<double> joint_values;
+    // goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
+    // for (size_t i = 0; i < joint_values.size(); ++i)
+    // {
+    //   RCLCPP_WARN(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
+    // }
 
     // Convert joint values to RobotState
     moveit::core::RobotState goal_robot_state(robot_model_);
@@ -322,7 +318,6 @@ namespace moveit::hybrid_planning
 
     planning_components->setGoal(goal_robot_state);   
     // planning_components->setGoal(goal_pose, "link_tool");
-
 
     // Plan first motion
     auto plan_solution = planning_components->plan(plan_params);
@@ -356,12 +351,12 @@ namespace moveit::hybrid_planning
     last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
     planning_components->setStartState(last_state);
     
-    // plan the second part of the trajectory.
+    // Plan the second part of the trajectory.
     // Add the target orientation to the goal
     goal_pose.pose.orientation = final_goal[0].orientation_constraints[0].orientation;
     
     ik_success = goal_state_->setFromIK(joint_model_group_.get(), goal_pose.pose);
-    RCLCPP_WARN(LOGGER, "IK success: %d", ik_success);
+    RCLCPP_INFO(LOGGER, "IK success: %d", ik_success);
     // std::vector<double> joint_values;
     goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
     // for (size_t i = 0; i < joint_values.size(); ++i)
@@ -376,7 +371,6 @@ namespace moveit::hybrid_planning
 
     planning_components->setGoal(goal_robot_state);   
     // planning_components->setGoal(goal_pose, "link_tool");
-
 
     //update the constraints to only include the position constraint
     moveit_msgs::msg::Constraints new_constraints;
