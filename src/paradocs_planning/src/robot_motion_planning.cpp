@@ -60,6 +60,7 @@ public:
     return std::static_pointer_cast<MoveItPlanningNode>(Node::shared_from_this());
   }
 
+
   void initialize()
   {
 
@@ -99,7 +100,6 @@ public:
         }
     );
 
-    // Local solution publisher is defined by the local constraint solver plugin
     joint_trajectory_action_client_ = 
       rclcpp_action::create_client<control_msgs::action::FollowJointTrajectory>(this, "joint_trajectory_controller/follow_joint_trajectory");
     // Wait until the action server is available
@@ -224,6 +224,7 @@ public:
         joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
 
       }
+
     }
     else
     {
