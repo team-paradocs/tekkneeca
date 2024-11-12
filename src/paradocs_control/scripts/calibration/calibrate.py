@@ -8,7 +8,7 @@ import cv2
 
 
 def main():
-    ground_truth, ee_transform, camera_point = read_data(4, 3)
+    ground_truth, ee_transform, camera_point = read_data(9, 3)
 
     x_offset = 0.000
     y_offset = 0.000
@@ -50,28 +50,36 @@ def main():
     print("z_error:", (one_value[2] - ground_truth[point_index][2])*1000)
 
     
+    
     # output_iterative = solve_matrix_least_squares_iterative(ground_truth, ee_transform, camera_point, camera_extrinsic_matrix_estimate)
     # print("Iterative solution:")
     # print(output_iterative[0])
     # print("Error:", output_iterative[1])
     # print("Iterations:", output_iterative[2])
+    # plot(ee_transform, camera_point, ground_truth, output_iterative[0])
 
     # output_direct = solve_matrix_least_squares_direct(ground_truth, ee_transform, camera_point)
     # calculated_matrix = output_direct[0]
     # print("Direct solution:")
     # print(output_direct[0])
     # print("Error:", output_direct[1])
-
-    # output_als = solve_als_with_regularization(ground_truth, ee_transform, camera_point)
+    # plot(ee_transform, camera_point, ground_truth, calculated_matrix)
+    # output_als = solve_als_with_regularization(ground_truth, ee_transform, camera_point, camera_extrinsic_matrix_estimate)
     # print("ALS solution:")
     # print(output_als[0])
     # print("Error:", output_als[1])
+    # plot(ee_transform, camera_point, ground_truth, output_als[0])
+    
 
     # calculated_matrix = last_try(ground_truth, ee_transform, camera_point, camera_extrinsic_matrix_estimate)
     # print("Last try solution:")
     # print(calculated_matrix)
+    # error = evaluate_error(ground_truth, ee_transform, camera_point, calculated_matrix)
+    # print("Error:", error)
+    # plot(ee_transform, camera_point, ground_truth, calculated_matrix)
 
-    # calculated_matrix = try_pnp(ground_truth, camera_point, ee_transform)
+    calculated_matrix = try_pnp(ground_truth, camera_point, ee_transform)
+    # plot(ee_transform, camera_point, ground_truth, calculated_matrix)
 
     # one_value = ee_transform[0] @ calculated_matrix @ camera_point[0]
     # # one_value = one_value / one_value[3]
@@ -358,7 +366,7 @@ def plot( ee_transform, camera_point, ground_truth, result):
     plt.show()
 
 def last_try(ground_truth, ee_transform, camera_point, initial_guess):
-    plot(ee_transform, camera_point, ground_truth, initial_guess)
+    # plot(ee_transform, camera_point, ground_truth, initial_guess)
 
     # initial_guess = np.eye(4).flatten()  # Start with an identity matrix for the extrinsic matrix
     initial_guess = initial_guess[:3, :4].flatten() 
@@ -371,16 +379,18 @@ def last_try(ground_truth, ee_transform, camera_point, initial_guess):
 
     # Reconstruct the full 4x4 camera extrinsic matrix with the last row fixed as [0, 0, 0, 1]
     camera_extrinsic_matrix_optimal = np.vstack([result.x.reshape(3, 4), [0, 0, 0, 1]])
-    plot(ee_transform, camera_point, ground_truth, camera_extrinsic_matrix_optimal)
+    # plot(ee_transform, camera_point, ground_truth, camera_extrinsic_matrix_optimal)
     #plot with initial guess
     
     return camera_extrinsic_matrix_optimal
 
     
 
-def solve_als_with_regularization(A_list, B_list, C_list, max_iterations=100, tolerance=1e-6, lambda_reg=0.1):
+def solve_als_with_regularization(A_list, B_list, C_list, estimate, max_iterations=100, tolerance=1e-6, lambda_reg=0.1):
+
     n = len(A_list)
     X = np.random.rand(4, 4)  # Random initial guess
+    X = estimate
     
     for iteration in range(max_iterations):
         X_prev = X.copy()
@@ -401,6 +411,9 @@ def solve_als_with_regularization(A_list, B_list, C_list, max_iterations=100, to
     
     # Calculate final error
     error = np.mean([np.sum((A - B @ X @ C.T)**2) for A, B, C in zip(A_list, B_list, C_list)])
+
+    X = X/X[3,3]
+
     
     return X, error, iteration + 1
 
