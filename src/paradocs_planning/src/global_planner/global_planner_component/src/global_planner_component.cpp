@@ -49,7 +49,6 @@ const auto JOIN_THREAD_TIMEOUT = std::chrono::seconds(1);
 namespace moveit::hybrid_planning
 {
 using namespace std::chrono_literals;
-const std::string UNDEFINED = "<undefined>";
 
 GlobalPlannerComponent::GlobalPlannerComponent(const rclcpp::NodeOptions& options)
   : node_{ std::make_shared<rclcpp::Node>("global_planner_component", options) }
@@ -62,9 +61,11 @@ GlobalPlannerComponent::GlobalPlannerComponent(const rclcpp::NodeOptions& option
 
 bool GlobalPlannerComponent::initializeGlobalPlanner()
 {
+
+  declareParams(node_);
+
   // Initialize global planning request action server
   std::string global_planning_action_name = "";
-  node_->declare_parameter("global_planning_action_name", "");
   node_->get_parameter<std::string>("global_planning_action_name", global_planning_action_name);
   if (global_planning_action_name.empty())
   {
@@ -120,8 +121,7 @@ bool GlobalPlannerComponent::initializeGlobalPlanner()
   global_trajectory_pub_ = node_->create_publisher<moveit_msgs::msg::MotionPlanResponse>("global_trajectory", 1);
 
   // Load global planner plugin
-  planner_plugin_name_ = node_->declare_parameter<std::string>("global_planner_name", UNDEFINED);
-
+  node_->get_parameter<std::string>("global_planner_name", planner_plugin_name_);
   try
   {
     global_planner_plugin_loader_ = std::make_unique<pluginlib::ClassLoader<GlobalPlannerInterface>>(
