@@ -2,7 +2,8 @@ import cv2
 import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, PointCloud2
+from geometry_msgs.msg import PoseArray
 from std_msgs.msg import Empty
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
@@ -10,7 +11,7 @@ from tf2_ros.transform_listener import TransformListener
 from transitions import Machine
 
 from parasight.sam_ui import SegmentAnythingUI
-
+from parasight.utils import *
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
@@ -37,6 +38,7 @@ class ParaSightHost(Node):
         # State Data
         self.last_rgb_image = None
         self.last_depth_image = None
+        self.last_cloud = None
 
         # Set up tf listener
         self.tf_buffer = Buffer()
@@ -65,8 +67,17 @@ class ParaSightHost(Node):
             '/camera/aligned_depth_to_color/image_raw',
             self.depth_image_callback,
             10)
+        self.pcd_subscription = self.create_subscription(
+            PointCloud2,
+            '/camera/depth/color/points',
+            self.pcd_callback,
+            10)
         
-
+        # Publishers
+        self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
+        self.pose_array_publisher = self.create_publisher(PoseArray, '/localized_pose_array', 10)
+        
+        # Interfaces
         self.segmentation_ui = SegmentAnythingUI()
         self.bridge = CvBridge()
 
@@ -120,6 +131,10 @@ class ParaSightHost(Node):
     def depth_image_callback(self, msg):
         depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1") / 1000.0
         self.last_depth_image = depth_image
+
+    def pcd_callback(self, msg):
+        cloud = from_msg(msg)
+        self.last_cloud = cloud
 
 
 def main(args=None):
