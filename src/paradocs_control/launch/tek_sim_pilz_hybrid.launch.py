@@ -65,14 +65,14 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
         )
     )
 
-    # for planning scene
+    #  ========= hybrid_planning part =========
+
     robot_description = LBRDescriptionMixin.param_robot_description(sim=True)
     
     robot_description_semantic = {
         "robot_description_semantic": load_file("med7_moveit_config", "config/med7.srdf")
     }
-    #  ========= hybrid_planning part =========
-
+    
     # Any parameters that are unique to your plugins go here
     common_hybrid_planning_param = load_yaml(
         "paradocs_planning", "config/common_hybrid_planning_params.yaml"
@@ -101,11 +101,8 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 parameters=[
                     common_hybrid_planning_param,
                     global_planner_param,
-                    # moveit_config.to_dict(),
                     robot_description,
                     robot_description_semantic,
-                    # kinematics_yaml,                    
-                    # # moveit_controllers,
                 ],
                 remappings=[
                     ("lbr/attached_collision_object", "/attached_collision_object"),
@@ -126,7 +123,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     local_planner_param,
                     robot_description,
                     robot_description_semantic,
-                    # kinematics_yaml,
                 ],
                 remappings=[
                     ("/joint_trajectory_controller/joint_trajectory", "/lbr/joint_trajectory_controller/joint_trajectory"),
@@ -144,11 +140,11 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     hybrid_planning_manager_param,
                     robot_description,
                 ],
-                extra_arguments=[
-                    {"use_intra_process_comms": True},
-                    {'automatically_declare_parameters_from_overrides': True},
-                    {'allow_undeclared_parameters': True}
-                ],
+                # extra_arguments=[
+                #     {"use_intra_process_comms": True},
+                #     {'automatically_declare_parameters_from_overrides': True},
+                #     {'allow_undeclared_parameters': True}
+                # ],
             ),
         ],
         output="screen",

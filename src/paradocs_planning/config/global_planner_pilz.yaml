@@ -26,13 +26,6 @@ plan_request_params:
   planning_time: 10.0
   max_velocity_scaling_factor: 1.0
   max_acceleration_scaling_factor: 1.0
-  cartesian_limits:
-    x_min: -100.0
-    x_max: 100.0
-    y_min: -100.0
-    y_max: 100.0
-    z_min: -100.0
-    z_max: 100.0
 
 planning_pipelines:
   #namespace: "moveit_cpp"  # optional, default is ~
@@ -75,129 +68,125 @@ ompl:
     enforce_constrained_state_space: true
   planner_configs:
     BFMTkConfigDefault:
-      balanced: 0
-      cache_cc: 1
-      extended_fmt: 1
-      heuristics: 1
-      nearest_k: 1
-      num_samples: 1000
-      optimality: 1
-      radius_multiplier: 1.0
+      # balanced: 0
+      # cache_cc: 1
+      # extended_fmt: 1
+      # heuristics: 1
+      # nearest_k: 1
+      # num_samples: 1000
+      # optimality: 1
+      # radius_multiplier: 1.0
       type: geometric::BFMT
     BKPIECEkConfigDefault:
-      border_fraction: 0.9
-      failed_expansion_score_factor: 0.5
-      min_valid_path_fraction: 0.5
-      range: 0.0
+      # border_fraction: 0.9
+      # failed_expansion_score_factor: 0.5
+      # min_valid_path_fraction: 0.5
+      # range: 0.0
       type: geometric::BKPIECE
     BiESTkConfigDefault:
-      range: 0.0
+      # range: 0.0
       type: geometric::BiEST
     BiTRRTkConfigDefault:
-      cost_threshold: 1.0e+300
-      frountier_node_ratio: 0.1
-      frountier_threshold: 0.0
-      init_temperature: 100
-      range: 0.0
-      temp_change_factor: 0.1
+      # cost_threshold: 1.0e+300
+      # frountier_node_ratio: 0.1
+      # frountier_threshold: 0.0
+      # init_temperature: 100
+      # range: 0.0
+      # temp_change_factor: 0.1
       type: geometric::BiTRRT
     ESTkConfigDefault:
-      goal_bias: 0.05
-      range: 0.0
+      # goal_bias: 0.05
+      # range: 0.0
       type: geometric::EST
     FMTkConfigDefault:
-      cache_cc: 1
-      extended_fmt: 1
-      heuristics: 0
-      nearest_k: 1
-      num_samples: 1000
-      radius_multiplier: 1.1
+      # cache_cc: 1
+      # extended_fmt: 1
+      # heuristics: 0
+      # nearest_k: 1
+      # num_samples: 1000
+      # radius_multiplier: 1.1
       type: geometric::FMT
     KPIECEkConfigDefault:
-      border_fraction: 0.9
-      failed_expansion_score_factor: 0.5
-      goal_bias: 0.05
-      min_valid_path_fraction: 0.5
-      range: 0.0
+      # border_fraction: 0.9
+      # failed_expansion_score_factor: 0.5
+      # goal_bias: 0.05
+      # min_valid_path_fraction: 0.5
+      # range: 0.0
       type: geometric::KPIECE
     LBKPIECEkConfigDefault:
-      border_fraction: 0.9
-      min_valid_path_fraction: 0.5
-      range: 0.0
+      # border_fraction: 0.9
+      # min_valid_path_fraction: 0.5
+      # range: 0.0
       type: geometric::LBKPIECE
     LBTRRTkConfigDefault:
-      epsilon: 0.4
-      goal_bias: 0.05
-      range: 0.0
+      # epsilon: 0.4
+      # goal_bias: 0.05
+      # range: 0.0
       type: geometric::LBTRRT
     LazyPRMkConfigDefault:
-      range: 0.0
+      # range: 0.0
       type: geometric::LazyPRM
     LazyPRMstarkConfigDefault:
       type: geometric::LazyPRMstar
     PDSTkConfigDefault:
       type: geometric::PDST
     PRMkConfigDefault:
-      max_nearest_neighbors: 10
+      # max_nearest_neighbors: 10
       type: geometric::PRM
     PRMstarkConfigDefault:
       type: geometric::PRMstar
     ProjESTkConfigDefault:
-      goal_bias: 0.05
-      range: 0.0
+      # goal_bias: 0.05
+      # range: 0.0
       type: geometric::ProjEST
     RRTConnectkConfigDefault:
-      range: 0.0
+      # range: 0.0
       type: geometric::RRTConnect
-      # bounds:
-      #   cartesian_limits: [-1, 1, -1, 1, -1, 1]
     RRTkConfigDefault:
-      goal_bias: 0.05
-      range: 0.0
+      # goal_bias: 0.05
+      # range: 0.0
       type: geometric::RRT
     RRTstarkConfigDefault:
-      delay_collision_checking: 1
-      goal_bias: 0.1
-      range: 0.0
+      # delay_collision_checking: 1
+      # goal_bias: 0.1
+      # range: 0.0
       type: geometric::RRTstar
-      # bounds:
-      #   cartesian_limits: [-1, 1, -1, 1, 0, 0.4]
     SBLkConfigDefault:
-      range: 0.0
+      # range: 0.0
       type: geometric::SBL
     SPARSkConfigDefault:
-      dense_delta_fraction: 0.001
-      max_failures: 1000
-      sparse_delta_fraction: 0.25
-      stretch_factor: 3.0
+      # dense_delta_fraction: 0.001
+      # max_failures: 1000
+      # sparse_delta_fraction: 0.25
+      # stretch_factor: 3.0
       type: geometric::SPARS
     SPARStwokConfigDefault:
-      dense_delta_fraction: 0.001
-      max_failures: 5000
-      sparse_delta_fraction: 0.25
-      stretch_factor: 3.0
+      # dense_delta_fraction: 0.001
+      # max_failures: 5000
+      # sparse_delta_fraction: 0.25
+      # stretch_factor: 3.0
       type: geometric::SPARStwo
     STRIDEkConfigDefault:
-      degree: 16
-      estimated_dimension: 0.0
-      goal_bias: 0.05
-      max_degree: 18
-      max_pts_per_leaf: 6
-      min_degree: 12
-      min_valid_path_fraction: 0.2
-      range: 0.0
+      # degree: 16
+      # estimated_dimension: 0.0
+      # goal_bias: 0.05
+      # max_degree: 18
+      # max_pts_per_leaf: 6
+      # min_degree: 12
+      # min_valid_path_fraction: 0.2
+      # range: 0.0
       type: geometric::STRIDE
-      use_projected_distance: 0
+      # use_projected_distance: 0
     TRRTkConfigDefault:
-      frountierNodeRatio: 0.1
-      frountier_threshold: 0.0
-      goal_bias: 0.05
-      init_temperature: 1.0e-05
-      k_constant: 0.0
-      max_states_failed: 10
-      min_temperature: 1.0e-09
-      range: 0.0
-      temp_change_factor: 2.0
+      # frountierNodeRatio: 0.1
+      # frountier_threshold: 0.0
+      # goal_bias: 0.05
+      # init_temperature: 1.0e-05
+      # k_constant: 0.0
+      # max_states_failed: 10
+      # min_temperature: 1.0e-09
+      # range: 0.0
+      # temp_change_factor: 2.0
       type: geometric::TRRT
     TrajOptDefault:
       type: geometric::TrajOpt
@@ -211,9 +200,8 @@ ompl:
     default_planner_request_adapters/ResolveConstraintFrames 
     default_planner_request_adapters/FixWorkspaceBounds
     default_planner_request_adapters/FixStartStateBounds 
-  # default_planner_request_adapters/FixStartStateCollision
-  # default_planner_request_adapters/FixStartStatePathConstraints
-
+    default_planner_request_adapters/FixStartStateCollision
+    default_planner_request_adapters/FixStartStatePathConstraints
   # can be either a vector of strings or a single string
   response_adapters: >-
     default_planning_response_adapters/AddTimeOptimalParameterization
@@ -230,11 +218,19 @@ pilz_industrial_motion_planner:
   planning_plugins:
   - pilz_industrial_motion_planner/CommandPlanner
   request_adapters: >-
+    default_planner_request_adapters/AddTimeOptimalParameterization
     default_planner_request_adapters/ResolveConstraintFrames
     default_planner_request_adapters/FixWorkspaceBounds 
     default_planner_request_adapters/FixStartStateBounds
     default_planner_request_adapters/FixStartStateCollision 
     default_planner_request_adapters/FixStartStatePathConstraints
+  # can be either a vector of strings or a single string
+  response_adapters: >-
+    default_planning_response_adapters/AddTimeOptimalParameterization
+    default_planning_response_adapters/ValidateSolution
+    default_planning_response_adapters/DisplayMotionPath
+  start_state_max_bounds_error: 0.1
+
 # part of pilz_industrial_motion_planner
 robot_description_planning:
   cartesian_limits:

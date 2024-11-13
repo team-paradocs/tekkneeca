@@ -106,11 +106,11 @@ namespace moveit::hybrid_planning
     // Set parameters required by the planning component
     moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
     plan_params.planner_id = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planner_id").as_string();
-    RCLCPP_INFO(LOGGER, "Planner ID: %s", plan_params.planner_id.c_str());
+    // RCLCPP_INFO(LOGGER, "Planner ID: %s", plan_params.planner_id.c_str());
     plan_params.planning_pipeline = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_pipeline").as_string();
     plan_params.planning_attempts = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_attempts").as_int();
     plan_params.planning_time = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_time").as_double();
-    RCLCPP_INFO(LOGGER, "Planner time: %f", plan_params.planning_time);
+    // RCLCPP_INFO(LOGGER, "Planner time: %f", plan_params.planning_time);
 
     plan_params.max_velocity_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
     plan_params.max_acceleration_scaling_factor = node_ptr_->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
@@ -125,15 +125,17 @@ namespace moveit::hybrid_planning
     // Set start state to current state
     planning_components->setStartStateToCurrentState();
     auto current_state = planning_scene->getCurrentStateNonConst();
-    const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-      RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
-                  link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
+    // const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
+    // RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
+    //             link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
 
     // Plan the trajectory using pilz
 
     // Fix Pilz bug
-    motion_plan_req.goal_constraints[0].position_constraints[0].header.frame_id = "world";
-    motion_plan_req.goal_constraints[0].orientation_constraints[0].header.frame_id = "world";
+    // motion_plan_req.goal_constraints[0].position_constraints[0].header.frame_id = "world";
+    // motion_plan_req.goal_constraints[0].orientation_constraints[0].header.frame_id = "world";
+
+    // RCLCPP_INFO(LOGGER, "Passed");
 
     planning_components->setGoal(motion_plan_req.goal_constraints);
 
@@ -154,7 +156,7 @@ namespace moveit::hybrid_planning
     
     // Calculate the time difference in seconds
     double time_difference = (current_time - last_call_time).seconds();
-    RCLCPP_WARN(LOGGER, "Planning time since last call: %.6f seconds", time_difference);
+    RCLCPP_INFO(LOGGER, "Planning time since last call: %.6f seconds", time_difference);
 
     // Transform solution into MotionPlanResponse and publish it
     response.trajectory_start = plan_solution.start_state;

@@ -52,6 +52,7 @@ public:
     : Node("robot_motion_planning", options)
   {
     RCLCPP_INFO(LOGGER, "Auto declare %d", Node::get_node_options().automatically_declare_parameters_from_overrides());
+    RCLCPP_INFO(LOGGER, "Allow undeclare %d", Node::get_node_options().allow_undeclared_parameters());
   }
 
 

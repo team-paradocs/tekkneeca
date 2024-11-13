@@ -51,8 +51,10 @@ namespace moveit::hybrid_planning
 using namespace std::chrono_literals;
 
 GlobalPlannerComponent::GlobalPlannerComponent(const rclcpp::NodeOptions& options)
-  : node_{ std::make_shared<rclcpp::Node>("global_planner_component", options) }
+  : node_{std::make_shared<rclcpp::Node>("global_planner_component", options)}
 {
+  RCLCPP_INFO(LOGGER, "Auto declare %d", node_->get_node_options().automatically_declare_parameters_from_overrides());
+  RCLCPP_INFO(LOGGER, "Allow undeclare %d", node_->get_node_options().allow_undeclared_parameters());
   if (!initializeGlobalPlanner())
   {
     throw std::runtime_error("Failed to initialize Global Planner Component");

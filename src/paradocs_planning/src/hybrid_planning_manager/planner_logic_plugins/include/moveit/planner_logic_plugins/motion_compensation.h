@@ -62,7 +62,7 @@ private:
   double calculatePositionDifference(const geometry_msgs::msg::Pose& pose1, const geometry_msgs::msg::Pose& pose2);
 
   // threshold for the position difference (m)
-  // double compensation_position_threshold_ = 0.01;
+  double compensation_position_threshold_ = 0.001;
   // threshold for the orientation difference (deg)
   // double compensation_orientation_threshold_ = 0.01;
 

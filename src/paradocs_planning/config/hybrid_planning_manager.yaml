@@ -1,5 +1,5 @@
 planner_logic_plugin_name: "moveit_hybrid_planning/MotionCompensation"
-robot_description: "robot_description"
+robot_description_name: "robot_description"
 planning_group: "arm"
 
 robot_description_kinematics:

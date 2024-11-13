@@ -69,17 +69,11 @@ namespace moveit::hybrid_planning
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_SUCCESSFUL:
-        // Activate local planner once global solution is available
-        // ensure the local planner is not started twice
-        // if (!local_planner_started_)
-        // {
-          // Start local planning
-        // if (!hybrid_planning_manager_->sendLocalPlannerAction(false))
-        // {
-        //   return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
-        // }
-          // local_planner_started_ = true;
-        // }
+        // Start local planning
+        if (!hybrid_planning_manager_->sendLocalPlannerAction(1))
+        {
+          return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
+        }
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_CANCELED:
@@ -129,7 +123,7 @@ namespace moveit::hybrid_planning
         return ReactionResult(event, "Failed to sendGlobalPlannerAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
       }
       // start local
-      clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
+      clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(1);
       if (!clientActionSuccessfullySent)
       {
         // report failure
@@ -155,7 +149,7 @@ namespace moveit::hybrid_planning
 
   bool MotionCompensation::checkMotionXsendAction()
   {
-    RCLCPP_INFO(LOGGER, "In checkMotionXsendAction function");
+    // RCLCPP_INFO(LOGGER, "In checkMotionXsendAction function");
 
     auto currentGoalHandle = hybrid_planning_manager_->getHybridPlanningGoalHandle();
 
@@ -165,7 +159,7 @@ namespace moveit::hybrid_planning
       // hybrid_planning_manager_->stopLocalPlanner();
 
       // Start global planning
-      RCLCPP_INFO(LOGGER, "Global Planner not started yet, start Global Planner");
+      // RCLCPP_INFO(LOGGER, "Global Planner not started yet, start Global Planner");
       bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
       if (!clientActionSuccessfullySent)
       {
@@ -173,14 +167,14 @@ namespace moveit::hybrid_planning
         return false;
       }
 
-      // Start local planning
-      RCLCPP_INFO(LOGGER, "Local Planner not started yet, start Local Planner");
-      clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
-      if (!clientActionSuccessfullySent)
-      {
-        // report failure
-        return false;
-      }
+      // Start local planning (already started the execution loop in initialize (or through exe sub))
+      // RCLCPP_INFO(LOGGER, "Local Planner not started yet, start Local Planner");
+      // clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(1);
+      // if (!clientActionSuccessfullySent)
+      // {
+      //   // report failure
+      //   return false;
+      // }
 
       first_time_ = false;
     } 
@@ -189,11 +183,11 @@ namespace moveit::hybrid_planning
 
       double position_difference = calculatePositionDifference(previous_goal_->pose, currentGoalHandle->pose);
       double orientation_difference = calculateOrientationDifference(previous_goal_->pose, currentGoalHandle->pose);
-      std::cout << "Position difference: " << position_difference << ", Orientation difference: " << orientation_difference << std::endl;
+      // std::cout << "Position difference: " << position_difference << ", Orientation difference: " << orientation_difference << std::endl;
 
       // if (position_difference < compensation_position_threshold_) 
       // {
-      //   RCLCPP_INFO(LOGGER, "Subtle motion detected, not compensating");
+      //   // RCLCPP_INFO(LOGGER, "Subtle motion detected, not compensating");
       //   return true;
       // }
 
@@ -210,8 +204,8 @@ namespace moveit::hybrid_planning
           // report failure
           return false;
         }
-        // start execution
-        clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(false);
+        // await global
+        clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(1);
         if (!clientActionSuccessfullySent)
         {
           // report failure
@@ -221,7 +215,7 @@ namespace moveit::hybrid_planning
       else 
       {
         RCLCPP_INFO(LOGGER, "Small motion detected");
-        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(true);
+        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendLocalPlannerAction(2);
         if (!clientActionSuccessfullySent)
         {
           // report failure

@@ -41,7 +41,7 @@ namespace moveit::hybrid_planning
   namespace
   {
     const rclcpp::Logger LOGGER = rclcpp::get_logger("local_planner_component");
-    constexpr double WAYPOINT_RADIAN_TOLERANCE = 0.2;  // rad: L1-norm sum for all joints
+    constexpr double WAYPOINT_RADIAN_TOLERANCE = 0.1;  // rad: L1-norm sum for all joints
   }  // namespace
 
   bool SimpleSampler::initialize([[maybe_unused]] const rclcpp::Node::SharedPtr& node,
@@ -83,25 +83,26 @@ namespace moveit::hybrid_planning
       // Modify the last waypoint of the current trajectory
       if (reference_trajectory_->getWayPointCount() > 0)
       {
-          // Create a temporary copy of the current trajectory
-          auto temp_trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
-              reference_trajectory_->getRobotModel(), reference_trajectory_->getGroupName());
+        // Create a temporary copy of the current trajectory
+        auto temp_trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(
+            reference_trajectory_->getRobotModel(), reference_trajectory_->getGroupName());
 
-          // Copy all but the last waypoint
-          for (size_t i = 0; i < reference_trajectory_->getWayPointCount() - 1; ++i)
-          {
-              temp_trajectory->addSuffixWayPoint(reference_trajectory_->getWayPoint(i), reference_trajectory_->getWayPointDurationFromPrevious(i));
-          }
+        // Copy all but the last waypoint
+        for (size_t i = 0; i < reference_trajectory_->getWayPointCount() - 1; ++i)
+        {
+            temp_trajectory->addSuffixWayPoint(reference_trajectory_->getWayPoint(i), reference_trajectory_->getWayPointDurationFromPrevious(i));
+        }
 
-          // Add the last waypoint from the new trajectory
-          temp_trajectory->addSuffixWayPoint(new_trajectory.getLastWayPoint(), 0.1);
+        // Add the last waypoint from the new trajectory
+        temp_trajectory->addSuffixWayPoint(new_trajectory.getLastWayPoint(), 0.1);
 
-          // Replace the reference trajectory with the modified one
-          reference_trajectory_ = temp_trajectory;
+        // Replace the reference trajectory with the modified one
+        reference_trajectory_ = temp_trajectory;
       }
       else
       {
-          throw std::runtime_error("Current trajectory is empty, cannot modify the last waypoint.");
+        // throw std::runtime_error("Current trajectory is empty, cannot modify the last waypoint.");
+        
       }
 
     }
@@ -142,7 +143,8 @@ namespace moveit::hybrid_planning
     //             next_desired_goal_state.distance(current_state, joint_group_));
     if (next_desired_goal_state.distance(current_state, joint_group_) <= WAYPOINT_RADIAN_TOLERANCE)
     {
-      // Update index (and thus desired robot state)
+      // Update index (and thus desired robot state
+      // RCLCPP_INFO(LOGGER, "update index");
       next_waypoint_index_ = std::min(next_waypoint_index_ + 1, reference_trajectory_->getWayPointCount() - 1);
     }
 
@@ -162,6 +164,11 @@ namespace moveit::hybrid_planning
       return 1.0;
     }
     return 0.0;
+    // if (reference_trajectory_->getLastWayPoint().distance(current_state, joint_group_) <= WAYPOINT_RADIAN_TOLERANCE)
+    // {
+    //   return 1.0;
+    // }
+    // return 0.0;
   }
 }  // namespace moveit::hybrid_planning
 
