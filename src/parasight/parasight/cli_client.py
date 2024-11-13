@@ -10,6 +10,7 @@ class ParaSightNode(Node):
         # Publishers for the topics
         self.start_publisher = self.create_publisher(Empty, 'trigger_host_ui', 10)
         self.stop_publisher = self.create_publisher(Empty, 'hard_reset_host', 10)
+        self.drill_publisher = self.create_publisher(Empty, 'trigger_drill', 10)
 
     def publish_start(self):
         # Publish an empty message to start topic
@@ -20,6 +21,10 @@ class ParaSightNode(Node):
         # Publish an empty message to stop topic
         self.stop_publisher.publish(Empty())
         self.get_logger().info("Published Stop message on 'hard_reset_host'")
+
+    def publish_drill(self):
+        self.drill_publisher.publish(Empty())
+        self.get_logger().info("Published Drill message on 'trigger_drill'")
 
 class ParaSightCLI:
     def __init__(self):
@@ -34,15 +39,18 @@ class ParaSightCLI:
                 "Select an option:",
                 choices=[
                     "Start ParaSight",
-                    "Stop ParaSight",
+                    "Reset ParaSight",
+                    "Drill",
                     "Exit"
                 ]
             ).ask()
 
             if choice == "Start ParaSight":
                 self.node.publish_start()
-            elif choice == "Stop ParaSight":
+            elif choice == "Reset ParaSight":
                 self.node.publish_stop()
+            elif choice == "Drill":
+                self.node.publish_drill()
             elif choice == "Exit":
                 print("Exiting...")
                 break

@@ -14,7 +14,9 @@ from parasight.sam_ui import SegmentAnythingUI
 from parasight.utils import *
 
 from parasight_interfaces.srv import StartTracking
+from parasight_interfaces.msg import TrackedPoints
 from std_srvs.srv import Empty as EmptySrv
+from functools import partial
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
@@ -76,6 +78,11 @@ class ParaSightHost(Node):
             '/camera/depth/color/points',
             self.pcd_callback,
             10)
+        self.tracked_points_subscription = self.create_subscription(
+            TrackedPoints,
+            '/tracked_points',
+            self.tracked_points_callback,
+            10)
         
         # Publishers
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
@@ -130,17 +137,49 @@ class ParaSightHost(Node):
 
     def on_enter_tracker_active(self):
         assert self.annotated_points is not None
-        self.get_logger().info(f"Current state: {self.state}")
         # Convert points to geometry_msgs/Point
         ros_points = [Point(x=float(p[0]), y=float(p[1]), z=0.0) for p in self.annotated_points]
-        response = self.start_tracking_client.call(StartTracking.Request(points=ros_points))
-        if not response.success:
-            self.get_logger().error("Failed to start tracking")
-        else:
-            self.get_logger().info("Tracking started")
+        
+        # Prepare the request
+        request = StartTracking.Request(points=ros_points)
+        
+        # Call asynchronously to avoid blocking
+        self.start_tracking_client.wait_for_service()
+        self.future = self.start_tracking_client.call_async(request)
+        self.future.add_done_callback(partial(self.tracking_response_callback))
+
+    def tracking_response_callback(self, future):
+        try:
+            response = future.result()
+            if not response.success:
+                self.get_logger().error("Failed to start tracking")
+            else:
+                self.get_logger().info("Tracking started")
+        except Exception as e:
+            self.get_logger().error(f"Service call failed: {e}")
 
     def hard_reset_callback(self, msg):
-        self.get_logger().info('Hard reset received')
+        self.get_logger().info('Hard reset received, attempting to stop tracking...')
+        
+        # Create an empty request for the stop_tracking service
+        stop_tracking_request = EmptySrv.Request()
+        
+        # Call stop_tracking service asynchronously
+        self.stop_tracking_client.wait_for_service()
+        future = self.stop_tracking_client.call_async(stop_tracking_request)
+        
+        # Add a callback to handle after stopping tracking
+        future.add_done_callback(partial(self.after_stop_tracking))
+
+    def after_stop_tracking(self, future):
+        try:
+            # Check if the service call was successful
+            future.result()  # This will raise an exception if the service failed
+            self.get_logger().info("Tracking successfully stopped, proceeding with reset.")
+        except Exception as e:
+            self.get_logger().error(f"Failed to stop tracking: {e}")
+        
+        # Now, trigger the state machine reset
         self.trigger('hard_reset')
 
     def rgb_image_callback(self, msg):
@@ -155,6 +194,9 @@ class ParaSightHost(Node):
     def pcd_callback(self, msg):
         cloud = from_msg(msg)
         self.last_cloud = cloud
+
+    def tracked_points_callback(self, msg):
+        self.annotated_points = [(p.x, p.y) for p in msg.points]
 
 
 def main(args=None):

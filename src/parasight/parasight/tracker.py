@@ -59,8 +59,9 @@ class Tracker(Node):
     def stop_tracking_callback(self, request, response):
         self.tracking_enabled = False
         self.queries = None
+        self.buffer = []
+        self.is_first_step = True
         self.logger.info("Stopping tracking")
-        response.success = True
         return response
 
 
