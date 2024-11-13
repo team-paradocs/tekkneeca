@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'host = parasight.host:main',
-            'cli = parasight.cli_client:main'
+            'cli = parasight.cli_client:main',
+            'tracker = parasight.tracker:main'
         ],
     },
 )
