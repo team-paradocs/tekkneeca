@@ -1,14 +1,10 @@
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 
-from launch.conditions import IfCondition, UnlessCondition
-from launch.event_handlers import OnIncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
-
-from lbr_description import LBRDescriptionMixin, RVizMixin
 
 def generate_launch_description() -> LaunchDescription:
     ld = LaunchDescription()
@@ -53,20 +49,6 @@ def generate_launch_description() -> LaunchDescription:
 
     ld.add_action(arg_name_d435)
     ld.add_action(handeye_publisher_d435) 
-
-    # ld.add_action(
-    #     IncludeLaunchDescription(
-    #         PythonLaunchDescriptionSource(
-    #             PathJoinSubstitution(
-    #                 [
-    #                     FindPackageShare("paradocs_control"),
-    #                     "launch",
-    #                     "static_obstacles.launch.py",
-    #                 ]
-    #             )
-    #         ),
-    #     )
-    # )
 
     ld.add_action(
         IncludeLaunchDescription(

@@ -250,7 +250,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -259,7 +259,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 2.96555555556
           max_velocity: 1.710422666954443
@@ -271,7 +271,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -280,7 +280,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 2.09333333333
           max_velocity: 1.710422666954443
@@ -292,7 +292,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -301,7 +301,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 2.96555555556
           max_velocity: 1.7453292519943295
@@ -313,7 +313,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -322,7 +322,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 2.09333333333
           max_velocity: 2.2689280275926285
@@ -334,7 +334,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -343,7 +343,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 2.96555555556
           max_velocity: 2.443460952792061
@@ -355,7 +355,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -364,7 +364,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 2.09333333333
           max_velocity: 3.141592653589793
@@ -376,7 +376,7 @@
           angle_wraparound: false
           has_acceleration_limits: true
           has_deceleration_limits: true
-          has_effort_limits: false
+          has_effort_limits: true
           # has_jerk_limits: null
           has_position_limits: true
           has_soft_limits: false
@@ -385,7 +385,7 @@
           k_velocity: .nan
           max_acceleration: 10.0
           max_deceleration: -10.0          
-          max_effort: .nan
+          max_effort: 200.0
           max_jerk: .nan
           max_position: 3.05277777778
           max_velocity: 3.141592653589793

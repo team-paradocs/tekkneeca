@@ -7,7 +7,6 @@ from launch.actions import (
     IncludeLaunchDescription,
 )
 from launch_ros.actions import (
-    Node,
     ComposableNodeContainer
 )
 
@@ -21,7 +20,6 @@ from ament_index_python.packages import get_package_share_directory
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from moveit_configs_utils import MoveItConfigsBuilder
 
 from lbr_description import LBRDescriptionMixin
 from lbr_ros2_control import LBRROS2ControlMixin
@@ -91,7 +89,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     )
 
     # Generate launch description with multiple components
-    # TODO: might need to remap to lbr namespace
     container = ComposableNodeContainer(
         name="hybrid_planning_container",
         namespace="/lbr",
@@ -105,11 +102,8 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 parameters=[
                     common_hybrid_planning_param,
                     global_planner_param,
-                    # moveit_config.to_dict(),
                     robot_description,
                     robot_description_semantic,
-                    # kinematics_yaml,                    
-                    # # moveit_controllers,
                 ],
                 remappings=[
                     ("lbr/attached_collision_object", "/attached_collision_object"),
@@ -130,7 +124,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                     local_planner_param,
                     robot_description,
                     robot_description_semantic,
-                    # kinematics_yaml,
                 ],
                 remappings=[
                     ("/joint_trajectory_controller/joint_trajectory", "/lbr/joint_trajectory_controller/joint_trajectory"),
@@ -145,14 +138,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 name="hybrid_planning_manager",
                 parameters=[
                     common_hybrid_planning_param,
-                    # hybrid_planning_manager_param,
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("paradocs_planning"),
-                            "config",
-                            "hybrid_planning_manager.yaml",
-                        ]
-                    ),
+                    hybrid_planning_manager_param,
                     robot_description,
                 ],
                 extra_arguments=[
@@ -173,7 +159,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 def generate_launch_description() -> LaunchDescription:
 
     ld = LaunchDescription()
-    # ld.add_action(LBRDescriptionMixin.arg_model())
     ld.add_action(DeclareLaunchArgument(
             name="model",
             default_value="med7",

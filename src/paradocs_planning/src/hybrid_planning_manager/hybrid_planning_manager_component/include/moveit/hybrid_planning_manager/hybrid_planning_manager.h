@@ -42,12 +42,17 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 
 #include <std_msgs/msg/int32.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <moveit_msgs/action/local_planner.hpp>
 #include <moveit_msgs/action/global_planner.hpp>
 #include <moveit_msgs/action/hybrid_planner.hpp>
+#include <moveit_msgs/msg/robot_trajectory.hpp>
+
+#include <moveit/robot_state/conversions.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/hybrid_planning_manager/planner_logic_interface.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 
 #include <pluginlib/class_loader.hpp>
 
@@ -116,7 +121,7 @@ namespace moveit::hybrid_planning
     * Send local planning request to local planner component
     * @return Local planner successfully started yes/no
     */
-    bool sendLocalPlannerAction(bool isCompensation);
+    bool sendLocalPlannerAction(int type);
 
     /**
     * Calculate IK
@@ -129,6 +134,34 @@ namespace moveit::hybrid_planning
       }
 
   private:
+
+    void declareParams()
+    {
+      const double UNDEFINEDDOUBLE = std::numeric_limits<double>::quiet_NaN();
+      const int UNDEFINEDINT = -1;
+      const std::string UNDEFINED = "<undefined>";
+
+      this->declare_parameter<std::string>("planner_logic_plugin_name", UNDEFINED);
+      this->declare_parameter<std::string>("local_planning_action_name", UNDEFINED);
+      this->declare_parameter<std::string>("global_planning_action_name", UNDEFINED);
+
+      // For IK calculation
+      this->declare_parameter<std::string>("robot_description_kinematics.arm.kinematics_solver", UNDEFINED);
+      this->declare_parameter<double>("robot_description_kinematics.arm.kinematics_solver_timeout", UNDEFINEDDOUBLE);
+      this->declare_parameter<int>("robot_description_kinematics.arm.kinematics_solver_attempts", UNDEFINEDINT);
+      this->declare_parameter<std::string>("robot_description_kinematics.arm.mode", UNDEFINED);
+      this->declare_parameter<double>("robot_description_kinematics.arm.position_scale", UNDEFINEDDOUBLE); 
+      this->declare_parameter<double>("robot_description_kinematics.arm.rotation_scale", UNDEFINEDDOUBLE);
+      this->declare_parameter<double>("robot_description_kinematics.arm.position_threshold", UNDEFINEDDOUBLE);
+      this->declare_parameter<double>("robot_description_kinematics.arm.orientation_threshold", UNDEFINEDDOUBLE);
+      this->declare_parameter<double>("robot_description_kinematics.arm.cost_threshold", UNDEFINEDDOUBLE);
+      this->declare_parameter<double>("robot_description_kinematics.arm.minimal_displacement_weight", UNDEFINEDDOUBLE);
+      this->declare_parameter<double>("robot_description_kinematics.arm.gd_step_size", UNDEFINEDDOUBLE);
+
+      this->declare_parameter<std::string>("robot_description_name", UNDEFINED);
+      this->declare_parameter<std::string>("planning_group", UNDEFINED);
+    }
+
     // Planner logic plugin loader
     std::unique_ptr<pluginlib::ClassLoader<PlannerLogicInterface>> planner_logic_plugin_loader_;
 
@@ -147,13 +180,16 @@ namespace moveit::hybrid_planning
     // Goal from IK calculation
     std::shared_ptr<moveit::core::RobotState> goal_state_;
 
+    std::shared_ptr<robot_trajectory::RobotTrajectory> cache_global_trajectory_;
+
     std::shared_ptr<const moveit::core::JointModelGroup> joint_model_group_;
 
     // Flag that indicates whether the manager is initialized
     bool initialized_;
 
     // Flag that indicates hybrid planning has been canceled
-    std::atomic<bool> stop_hybrid_planning_;
+    std::atomic<int> planner_state_;
+    std::atomic<bool> dill_started_ = false;
 
     // Shared hybrid planning goal handle
     std::shared_ptr<const geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
@@ -162,11 +198,14 @@ namespace moveit::hybrid_planning
     rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;
     rclcpp_action::Client<moveit_msgs::action::GlobalPlanner>::SharedPtr global_planner_action_client_;
 
+    // Stop execution publisher
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_execution_publisher_;
+
     // Hybrid planning request action server
     rclcpp_action::Server<moveit_msgs::action::HybridPlanner>::SharedPtr hybrid_planning_request_server_;
 
     // Global solution subscriber
-    // rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
+    rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_sub_;
 
     // Tracking goal subscriber
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr tracking_goal_sub_;

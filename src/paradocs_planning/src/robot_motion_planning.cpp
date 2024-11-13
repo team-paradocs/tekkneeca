@@ -52,6 +52,7 @@ public:
     : Node("robot_motion_planning", options)
   {
     RCLCPP_INFO(LOGGER, "Auto declare %d", Node::get_node_options().automatically_declare_parameters_from_overrides());
+    RCLCPP_INFO(LOGGER, "Allow undeclare %d", Node::get_node_options().allow_undeclared_parameters());
   }
 
 
@@ -79,7 +80,25 @@ public:
     tracking_goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
         "tracked_pose", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
-          planMotionXexecutePlan(msg);
+          if (planner_state_ == 0) {
+            // not planning
+          }
+          else if (planner_state_ == 1)
+          {
+            planMotionXexecutePlan(msg);
+          } 
+          else if (planner_state_ == 2)
+          {
+            if (!dill_started_) {
+              dill_started_ = true;
+              drillingMotion(msg);
+            }
+          }
+          else
+          {
+            RCLCPP_ERROR(LOGGER, "Invalid planner state: %d", planner_state_.load());
+          }
+          
         }
     );
 
@@ -88,12 +107,15 @@ public:
         "/lbr/plan_flag", rclcpp::SystemDefaultsQoS(),
         [this](const std_msgs::msg::Int32::ConstSharedPtr& msg) {
           RCLCPP_INFO(LOGGER, "Planning flag received: %d", msg->data);
-          if (msg->data == 1)
-            stop_execution_ = false;
-            // execution(true);
+          if (msg->data == 1) {
+            planner_state_ = 1;
+          }
           else if (msg->data == 0) {
-            stop_execution_ = true;
+            planner_state_ = 0;
             joint_trajectory_action_client_->async_cancel_all_goals();
+          }
+          else if (msg->data == 2) {
+            planner_state_ = 2;
           }
           else
             RCLCPP_ERROR(LOGGER, "Invalid planning flag received: %d", msg->data);
@@ -148,14 +170,12 @@ public:
   void planMotionXexecutePlan(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& goalPose)
   {
 
-    RCLCPP_INFO(LOGGER, "Goal Pose Position: x: %f, y: %f, z: %f", goalPose->pose.position.x, goalPose->pose.position.y,
-                goalPose->pose.position.z);
+    // RCLCPP_INFO(LOGGER, "Goal Pose Position: x: %f, y: %f, z: %f", goalPose->pose.position.x, goalPose->pose.position.y,
+    //             goalPose->pose.position.z);
 
-    RCLCPP_INFO(LOGGER, "Goal Pose Orientation: x: %f, y: %f, z: %f, w: %f", goalPose->pose.orientation.x,
-                goalPose->pose.orientation.y, goalPose->pose.orientation.z, goalPose->pose.orientation.w);
+    // RCLCPP_INFO(LOGGER, "Goal Pose Orientation: x: %f, y: %f, z: %f, w: %f", goalPose->pose.orientation.x,
+    //             goalPose->pose.orientation.y, goalPose->pose.orientation.z, goalPose->pose.orientation.w);
 
-    geometry_msgs::msg::PoseStamped mutableGoalPose = *goalPose;
-    mutableGoalPose.header.frame_id = "world";
 
     // Set parameters required by the planning component
     moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
@@ -168,32 +188,14 @@ public:
     plan_params.max_acceleration_scaling_factor =
         this->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
+    geometry_msgs::msg::PoseStamped mutableGoalPose = *goalPose;
+    mutableGoalPose.header.frame_id = "world";
     // update planning scene with current state
     moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
-
     // Set start state to current state
     planning_component_->setStartStateToCurrentState();
-
-    // bool ik_success = goal_state_->setFromIK(joint_model_group_.get(), goalPose.pose);
-
-    // RCLCPP_INFO(LOGGER, "IK success: %d", ik_success);
-    
-    // if (!ik_success)
-    // {
-    //   response->success = false;
-    //   return;
-    // }
-
-    // std::vector<double> joint_values;
-    // goal_state_->copyJointGroupPositions(joint_model_group_.get(), joint_values);
-    // for (size_t i = 0; i < joint_values.size(); ++i)
-    // {
-    //   RCLCPP_INFO(LOGGER, "Joint %ld: %f", i+1, joint_values[i]);
-    // }
-
     moveit_msgs::msg::Constraints goal_constraints =
         kinematic_constraints::constructGoalConstraints("link_tool", mutableGoalPose);
-
     planning_component_->setGoal({goal_constraints});
 
     // Plan motion
@@ -201,7 +203,7 @@ public:
     if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
     {
       RCLCPP_INFO(LOGGER, "Planning succeeded");
-      if (!stop_execution_)
+      if (!planner_state_==0)
       {
         // execute the global plan
         // RCLCPP_INFO(LOGGER, "Executing the plan");
@@ -220,7 +222,6 @@ public:
 
         // Extract the JointTrajectory part
         goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
-
         joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
 
       }
@@ -231,6 +232,150 @@ public:
       RCLCPP_ERROR(LOGGER, "Planning failed");
     }
   }
+
+  geometry_msgs::msg::PoseStamped computeOffsetPose(const geometry_msgs::msg::PoseStamped targtPose, float offset = 0.02)
+  {
+    float x_hard_coded_offset = 0.00;
+    float y_hard_coded_offset = 0.00;
+
+    // Calculate the final drill position
+    // Convert the quaternion to a rotation matrix
+    Eigen::Quaterniond quat(targtPose.pose.orientation.w,
+                            targtPose.pose.orientation.x,
+                            targtPose.pose.orientation.y,
+                            targtPose.pose.orientation.z);
+    Eigen::Matrix3d rotation_matrix = quat.toRotationMatrix();
+
+    // Create a vector representing the direction to move in
+    Eigen::Vector3d direction(0, 0, offset);
+
+    // Multiply the rotation matrix by the direction vector
+    Eigen::Vector3d result = rotation_matrix * direction;
+
+    // Add the result to the original position to get the new position
+    geometry_msgs::msg::PoseStamped newPose;
+    newPose.pose.position.x = targtPose.pose.position.x + result(0) + x_hard_coded_offset;
+    newPose.pose.position.y = targtPose.pose.position.y + result(1) + y_hard_coded_offset;
+    newPose.pose.position.z = targtPose.pose.position.z + result(2);
+
+    // The orientation remains the same
+    newPose.pose.orientation = targtPose.pose.orientation;
+
+    newPose.header.frame_id = targtPose.header.frame_id;
+    newPose.header.stamp = targtPose.header.stamp;
+
+    return newPose;
+  }
+
+  void drillingMotion(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& goalPose)
+  {
+    RCLCPP_INFO(LOGGER, "Drilling motion");
+
+    geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(*(goalPose.get()), -0.001);
+
+    // cartesian planning parameters
+    // const double jump_threshold = 0.0;
+    // const double eef_step = 0.01;
+    moveit_msgs::msg::RobotTrajectory drillTrajectory;
+    std::vector<moveit_msgs::msg::Constraints> drillWayPointConstraints;
+    moveit_msgs::msg::Constraints touch_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
+
+    drillWayPointConstraints.push_back(touch_constraints);
+
+    int drillPoints = 25;
+
+    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(*(goalPose.get()), 0.015);
+    // Interpolate drill_points number of points between start and end pose
+    std::stack<moveit_msgs::msg::Constraints> interpolatedConstraintsStack;
+
+    //drill in
+    for (int i = 0; i <= drillPoints; i++) {
+      geometry_msgs::msg::PoseStamped interpolatedPose;
+      float ratio = static_cast<float>(i) / drillPoints;
+      // Interpolate position
+      interpolatedPose.pose.position.x = touchPose.pose.position.x + ratio * (endPose.pose.position.x - touchPose.pose.position.x);
+      interpolatedPose.pose.position.y = touchPose.pose.position.y + ratio * (endPose.pose.position.y - touchPose.pose.position.y);
+      interpolatedPose.pose.position.z = touchPose.pose.position.z + ratio * (endPose.pose.position.z - touchPose.pose.position.z);
+      // Orientation remains the same
+      interpolatedPose.pose.orientation = touchPose.pose.orientation;
+      // Copy header
+      interpolatedPose.header.frame_id = touchPose.header.frame_id;
+      interpolatedPose.header.stamp = touchPose.header.stamp;
+
+      moveit_msgs::msg::Constraints interpolatedConstraints =
+        kinematic_constraints::constructGoalConstraints("link_tool", interpolatedPose);
+
+      interpolatedConstraintsStack.push(interpolatedConstraints);
+      drillWayPointConstraints.push_back(interpolatedConstraints);
+    }
+
+    //drill out 
+    while (!interpolatedConstraintsStack.empty()) {
+      drillWayPointConstraints.push_back(interpolatedConstraintsStack.top());
+      interpolatedConstraintsStack.pop();
+    }
+
+    // Set parameters required by the planning component
+    moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
+    plan_params.planner_id = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planner_id").as_string();
+    plan_params.planning_pipeline = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_pipeline").as_string();
+    plan_params.planning_attempts = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_attempts").as_int();
+    plan_params.planning_time = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_time").as_double();
+    plan_params.max_velocity_scaling_factor =
+        this->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
+    plan_params.max_acceleration_scaling_factor =
+        this->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
+
+
+    for (auto& constraints : drillWayPointConstraints)
+    {
+      // RCLCPP_INFO(LOGGER, "Drill waypoint constraints: %s", constraint.name.c_str());
+
+      // update planning scene with current state
+        moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
+        // Set start state to current state
+        planning_component_->setStartStateToCurrentState();
+        planning_component_->setGoal({constraints});
+
+        // Plan motion
+        auto plan_solution = planning_component_->plan(plan_params);
+        if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+        {
+          // RCLCPP_INFO(LOGGER, "Planning succeeded");
+          if (!planner_state_==0)
+          {
+            // execute the global plan
+            // RCLCPP_INFO(LOGGER, "Executing the plan");
+            // true/false: isblocking or not
+            planning_component_->execute(true);
+            // // Local solution publisher is defined by the local constraint solver plugin
+            // auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
+
+            // moveit_msgs::msg::RobotTrajectory robot_trajectory_msg;
+            // time_parameterization_.computeTimeStamps(*plan_solution.trajectory, 
+            //   plan_params.max_velocity_scaling_factor,
+            //   plan_params.max_acceleration_scaling_factor);
+
+            // plan_solution.trajectory->getRobotTrajectoryMsg(robot_trajectory_msg);
+
+            // // Extract the JointTrajectory part
+            // goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
+
+            // joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
+          }
+        }
+        else
+        {
+          RCLCPP_ERROR(LOGGER, "Planning failed");
+        }
+    }
+
+  }
+
+
+
+
 
 private:
   const rclcpp::Logger LOGGER = rclcpp::get_logger("robot_motion_planning");
@@ -260,13 +405,15 @@ private:
   std::shared_ptr<moveit_cpp::PlanningComponent> planning_component_;
 
   // Flag to avoid publishing the global plan
-  std::atomic<bool> stop_execution_{true};
+  std::atomic<int> planner_state_{0};
 
   // Local solution action client
   rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr joint_trajectory_action_client_;
   rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SendGoalOptions goal_options_;
 
   trajectory_processing::TimeOptimalTrajectoryGeneration time_parameterization_;
+
+  std::atomic<bool> dill_started_ = false;
 
 };
 

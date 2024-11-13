@@ -52,6 +52,7 @@
 
 #include <std_msgs/msg/float64.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 #include <trajectory_msgs/msg/joint_trajectory.hpp>
 
@@ -91,12 +92,14 @@ void declareOrGetParam(const std::string& param_name, T& output_value, const T& 
 /// TODO(sjahr) Use lifecycle node?
 enum class LocalPlannerState : int8_t
 {
-  ABORT = -1,
   ERROR = 0,
   UNCONFIGURED = 1,
+  // can only get out of this state by receiving a new global trajectory
   AWAIT_GLOBAL_TRAJECTORY = 2,
+  // when in active state, we can set flag to not pub the joint_cmd, this flag can be from hybrid_planning_manager
   LOCAL_PLANNING_ACTIVE = 3,
-  LOCAL_PLANNING_PAUSE = 4
+  // when in pause state, wait for new goal (can be from large or small motion) to jump to other state
+  LOCAL_PLANNING_PAUSE = 4,
 };
 
 /**
@@ -192,6 +195,8 @@ private:
   // Current planner state. Must be thread-safe
   std::atomic<LocalPlannerState> state_;
 
+  std::atomic<bool> stop_execution_;
+
   // Timer to periodically call executeIteration()
   rclcpp::TimerBase::SharedPtr timer_;
 
@@ -209,7 +214,10 @@ private:
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   // Global solution listener
-  rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_subscriber_;
+  // rclcpp::Subscription<moveit_msgs::msg::MotionPlanResponse>::SharedPtr global_solution_subscriber_;
+
+  // Stop execution listener
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stop_execution_subscriber_;
 
   // Local planning request action server
   rclcpp_action::Server<moveit_msgs::action::LocalPlanner>::SharedPtr local_planning_request_server_;

@@ -46,5 +46,7 @@
     <paradocs_planning plugin="${prefix}/plugins/simple_sampler_plugin.xml"/>
     <paradocs_planning plugin="${prefix}/plugins/forward_trajectory_plugin.xml"/>
     <paradocs_planning plugin="${prefix}/plugins/motion_compensation_plugin.xml"/>
+    <paradocs_planning plugin="${prefix}/plugins/pilz_planning_pipeline_plugin.xml"/>
+    <paradocs_planning plugin="${prefix}/plugins/moveit_planning_pipeline_plugin.xml"/>
   </export>
 </package>

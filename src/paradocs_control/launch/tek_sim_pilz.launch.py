@@ -111,7 +111,6 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 def generate_launch_description() -> LaunchDescription:
 
     ld = LaunchDescription()
-    # ld.add_action(LBRDescriptionMixin.arg_model())
     ld.add_action(DeclareLaunchArgument(
             name="model",
             default_value="med7",

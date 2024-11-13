@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2020, PickNik Inc.
+ *  Copyright (c) 2021, PickNik Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,48 +33,40 @@
  *********************************************************************/
 
 /* Author: Sebastian Jahr
-   Description: This planner logic plugin runs the global planner once and starts executing the global solution
-    with the local planner.
- */
+   Description: Global planner plugin that utilizes MoveIt's planning pipeline accessed via the MoveItCpp API*/
 
-#include <moveit/hybrid_planning_manager/planner_logic_interface.h>
-#include <moveit/hybrid_planning_manager/hybrid_planning_manager.h>
-#include <moveit/local_planner/feedback_types.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <cmath>
+#pragma once
+
+#include <rclcpp/rclcpp.hpp>
+#include <moveit/global_planner/global_planner_interface.h>
+
+// MoveitCpp
+#include <moveit/moveit_cpp/moveit_cpp.h>
+#include <moveit/moveit_cpp/planning_component.h>
+#include <moveit/kinematic_constraints/utils.h>
 
 namespace moveit::hybrid_planning
 {
-class MotionCompensation : public PlannerLogicInterface
+class PilzPlanningPipeline : public GlobalPlannerInterface
 {
 public:
-  MotionCompensation() = default;
-  ~MotionCompensation() override = default;
-  bool initialize(const std::shared_ptr<HybridPlanningManager>& hybrid_planning_manager) override;
-  ReactionResult react(const HybridPlanningEvent& event) override;
-  ReactionResult react(const std::string& event) override;
-  void reset();
+  PilzPlanningPipeline() = default;
+  ~PilzPlanningPipeline() override = default;
+  bool initialize(const rclcpp::Node::SharedPtr& node) override;
+  bool reset() noexcept override;
+  moveit_msgs::msg::MotionPlanResponse
+  plan(const std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::GlobalPlanner>> global_goal_handle)
+      override;
 
 private:
-  bool checkMotionXsendAction();
-  double calculateOrientationDifference(const geometry_msgs::msg::Pose& pose1, const geometry_msgs::msg::Pose& pose2); 
-  double calculatePositionDifference(const geometry_msgs::msg::Pose& pose1, const geometry_msgs::msg::Pose& pose2);
+  rclcpp::Node::SharedPtr node_ptr_;
+  std::shared_ptr<moveit_cpp::MoveItCpp> moveit_cpp_;
 
-  // threshold for the position difference (m)
-  double compensation_position_threshold_ = 0.001;
-  // threshold for the orientation difference (deg)
-  // double compensation_orientation_threshold_ = 0.01;
+  // Goal from IK calculation
+  std::shared_ptr<moveit::core::RobotState> goal_state_;
 
-  // threshold for the position difference (m)
-  double position_threshold_ = 0.07;
-  // threshold for the orientation difference (deg)
-  double orientation_threshold_ = 90.0;
+  std::shared_ptr<const moveit::core::JointModelGroup> joint_model_group_;
 
-  // Previous goal
-  std::shared_ptr<const geometry_msgs::msg::PoseStamped> previous_goal_ = nullptr;
-
-  // bool local_planner_started_ = false;
-  bool first_time_ = true;
+  std::shared_ptr<const moveit::core::RobotModel> robot_model_;
 };
 }  // namespace moveit::hybrid_planning
