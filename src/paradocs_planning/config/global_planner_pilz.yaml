@@ -24,8 +24,10 @@ plan_request_params:
   planning_pipeline: pilz_industrial_motion_planner
   planning_attempts: 5
   planning_time: 10.0
-  max_velocity_scaling_factor: 1.0
-  max_acceleration_scaling_factor: 1.0
+  # 1.0 allow the planner to move the manipulator at full speed
+  # which might cause planning failures
+  max_velocity_scaling_factor: 0.5
+  max_acceleration_scaling_factor: 0.5
 
 planning_pipelines:
   #namespace: "moveit_cpp"  # optional, default is ~
@@ -238,8 +240,8 @@ robot_description_planning:
     max_trans_acc: 2.25
     max_trans_dec: -5.0
     max_trans_vel: 1.0
-  default_acceleration_scaling_factor: 0.1
-  default_velocity_scaling_factor: 0.1
+  default_acceleration_scaling_factor: 0.5
+  default_velocity_scaling_factor: 0.5
   joint_limits:
     A1:
       angle_wraparound: false
