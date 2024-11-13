@@ -107,7 +107,7 @@ class RegistrationPipeline:
         return reg_result.transformation
 
     def multi_icp(self, source, target, initial_transformation, max_trials=5):
-        min_fitness = 0.8
+        min_fitness = 0.9
         max_iter = 50
         threshold = 0.01
         source.estimate_normals(

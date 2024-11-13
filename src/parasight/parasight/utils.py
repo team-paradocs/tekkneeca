@@ -8,9 +8,9 @@ from std_msgs.msg import Header
 import yaml
 
 
-def load_plan_points(self, plan_name):
+def load_plan_points(plan_path, plan_name):
     holes = {}
-    with open(self.plan_path, 'r') as file:
+    with open(plan_path, 'r') as file:
         data = yaml.safe_load(file)  # Using safe_load to prevent arbitrary code execution
         plan_data = data.get(plan_name, {})
 
@@ -28,40 +28,11 @@ def load_plan_points(self, plan_name):
                     p3 = point
 
             # Only add to `holes` if p1, p2, and p3 are all defined
-            if all([p1, p2, p3]):
+            if p1 is not None and p2 is not None and p3 is not None:
                 holes[hole_name] = [p1, p2, p3]
 
     return holes
 
-
-    # def pixel_to_3d(self, x, y):
-    #     z = self.last_depth_image[y, x]
-    #     x = (x - self.cx) * z / self.fx
-    #     y = (y - self.cy) * z / self.fy
-
-    #     point_3d = PointStamped()
-    #     point_3d.header.frame_id = "camera_color_optical_frame"
-    #     point_3d.point.x = x
-    #     point_3d.point.y = y
-    #     point_3d.point.z = z
-
-    #     transform = self.tf_buffer.lookup_transform("world", "camera_color_optical_frame", rclpy.time.Time())
-    #     point_3d = tf2_geometry_msgs.do_transform_point(point_3d, transform)
-
-    #     pose = PoseStamped()
-    #     hover_offset = 0.15
-    #     pose.header.frame_id = "world"
-    #     pose.pose.position.x = point_3d.point.x
-    #     pose.pose.position.y = point_3d.point.y
-    #     pose.pose.position.z = point_3d.point.z + hover_offset
-
-    #     # Fixed Orientation
-    #     pose.pose.orientation.x = 0.0
-    #     pose.pose.orientation.y = 1.0
-    #     pose.pose.orientation.z = 0.0
-    #     pose.pose.orientation.w = 0.0
-
-    #     return pose
 
 
 # The data structure of each point in ros PointCloud2: 16 bits = x + y + z + rgb

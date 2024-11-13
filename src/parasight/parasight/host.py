@@ -3,11 +3,12 @@ import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import PoseArray, Point
+from geometry_msgs.msg import PoseArray, Point, Pose, PoseStamped, PointStamped
 from std_msgs.msg import Empty
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
+from tf2_geometry_msgs import do_transform_pose, do_transform_point
 from transitions import Machine
 import open3d as o3d
 
@@ -23,6 +24,8 @@ from std_srvs.srv import Empty as EmptySrv
 from functools import partial
 
 from ament_index_python.packages import get_package_share_directory
+from scipy.spatial.transform import Rotation as R
+
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
@@ -52,11 +55,19 @@ class ParaSightHost(Node):
         self.last_cloud = None
         self.annotated_points = None
         self.need_to_register = True
+        
+        # D405 Intrinsics
+        self.fx = 425.19189453125
+        self.fy = 424.6562805175781
+        self.cx = 422.978515625
+        self.cy = 242.1155242919922
+
 
         # Set up tf listener
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-
+        self.camera_frame = 'camera_depth_optical_frame'
+        self.base_frame = 'lbr/link_0'
         # Trigger Subscribers
         self.ui_trigger_subscription = self.create_subscription(
             Empty,
@@ -93,7 +104,8 @@ class ParaSightHost(Node):
         
         # Publishers
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
-        self.pose_array_publisher = self.create_publisher(PoseArray, '/localized_pose_array', 10)
+        self.tracked_pose_publisher = self.create_publisher(PoseStamped, '/tracked_pose', 10)
+        self.pose_array_publisher = self.create_publisher(PoseArray, '/surgical_drill_pose', 10)
 
         # Service Clients
         self.start_tracking_client = self.create_client(StartTracking, '/start_tracking')
@@ -221,7 +233,14 @@ class ParaSightHost(Node):
         if not self.state == 'tracker_active':
             return
         
-        if not msg.stable or not msg.all_visible:
+        if not msg.all_visible:
+            self.get_logger().info('Not all points are visible')
+            return
+        
+        tracked_3d_pose = self.pixel_to_3d(msg.points[0].x, msg.points[0].y)
+        self.tracked_pose_publisher.publish(tracked_3d_pose)
+        
+        if not msg.stable:
             self.need_to_register = True
             return # Wait for tracking to stabilize
         elif self.need_to_register:
@@ -239,11 +258,102 @@ class ParaSightHost(Node):
             source_cloud.transform(transform)
             source_cloud.paint_uniform_color([1, 0, 0])
             self.publish_point_cloud(source_cloud)
+
+            drill_pose_array = self.compute_plan(transform)
+            self.pose_array_publisher.publish(drill_pose_array)
+
             self.need_to_register = False
 
     def publish_point_cloud(self, cloud):
-        cloud_msg = to_msg(cloud,frame_id='camera_depth_optical_frame')
+        cloud_msg = to_msg(cloud,frame_id=self.camera_frame)
         self.pcd_publisher.publish(cloud_msg)
+
+    def compute_plan(self, transform,theta=-np.pi/2):
+        """Computes the surgical drill point by transforming the default point with the given transform."""
+
+        drill_pose_array = PoseArray()
+        drill_pose_array.header.frame_id = self.base_frame
+        drill_pose_array.header.stamp = self.get_clock().now().to_msg()
+
+        holes = load_plan_points(self.plan_path, self.plan)
+        for hole_name, hole in holes.items():
+            p1, p2, p3 = hole
+
+            mesh = o3d.geometry.TriangleMesh()
+            mesh.vertices = o3d.utility.Vector3dVector([p1, p2, p3])
+            mesh.triangles = o3d.utility.Vector3iVector([[0, 1, 2]])
+            mesh.compute_vertex_normals()
+            normal =  np.asarray(mesh.vertex_normals)[0]
+            actual_normal = -normal
+            z_axis = np.array([0, 0, 1])
+            rotation_axis = np.cross(z_axis, actual_normal)
+            rotation_axis /= np.linalg.norm(rotation_axis)
+            angle = np.arccos(np.dot(z_axis, actual_normal) / (np.linalg.norm(z_axis) * np.linalg.norm(actual_normal)))
+            Rot = o3d.geometry.get_rotation_matrix_from_axis_angle(rotation_axis * angle)
+
+            T = np.eye(4)
+            T[:3, :3] = Rot
+            T[:3, 3] = p3
+
+            default_plan = T
+            default_plan_rotated = np.copy(default_plan)
+            default_plan_rotated[:3, :3] = np.matmul(default_plan_rotated[:3, :3], R.from_euler('z', theta).as_matrix())
+
+            T = np.matmul(transform, default_plan_rotated)
+
+            # Convert R to a quaternion
+            Rot = T[:3, :3]
+            r = R.from_matrix(Rot)
+            quat = r.as_quat()  # Returns (x, y, z, w)
+
+            p = T[:3, 3]
+
+            pose = Pose()
+            pose.position.x = p[0]
+            pose.position.y = p[1]
+            pose.position.z = p[2]
+
+            pose.orientation.x = quat[0]
+            pose.orientation.y = quat[1]
+            pose.orientation.z = quat[2]
+            pose.orientation.w = quat[3]
+
+            base_transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rclpy.time.Time())
+            pose = do_transform_pose(pose, base_transform)
+
+            # self.get_logger().info(f"Drill point: {p}")
+            drill_pose_array.poses.append(pose)
+
+        return drill_pose_array
+    
+    def pixel_to_3d(self, x, y):
+        z = self.last_depth_image[int(y), int(x)]
+        x = (x - self.cx) * z / self.fx
+        y = (y - self.cy) * z / self.fy
+
+        point_3d = PointStamped()
+        point_3d.header.frame_id = self.camera_frame
+        point_3d.point.x = x
+        point_3d.point.y = y
+        point_3d.point.z = z
+
+        transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rclpy.time.Time())
+        point_3d = do_transform_point(point_3d, transform)
+
+        pose = PoseStamped()
+        hover_offset = 0.15
+        pose.header.frame_id = self.base_frame
+        pose.pose.position.x = point_3d.point.x
+        pose.pose.position.y = point_3d.point.y
+        pose.pose.position.z = point_3d.point.z + hover_offset
+
+        # Fixed Orientation
+        pose.pose.orientation.x = 0.0
+        pose.pose.orientation.y = 1.0
+        pose.pose.orientation.z = 0.0
+        pose.pose.orientation.w = 0.0
+
+        return pose
 
 
 
