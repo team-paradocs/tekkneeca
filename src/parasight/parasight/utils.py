@@ -42,6 +42,34 @@ def load_plan_points(self, plan_name):
 
     return holes
 
+    # def pixel_to_3d(self, x, y):
+    #     z = self.last_depth_image[y, x]
+    #     x = (x - self.cx) * z / self.fx
+    #     y = (y - self.cy) * z / self.fy
+
+    #     point_3d = PointStamped()
+    #     point_3d.header.frame_id = "camera_color_optical_frame"
+    #     point_3d.point.x = x
+    #     point_3d.point.y = y
+    #     point_3d.point.z = z
+
+    #     transform = self.tf_buffer.lookup_transform("world", "camera_color_optical_frame", rclpy.time.Time())
+    #     point_3d = tf2_geometry_msgs.do_transform_point(point_3d, transform)
+
+    #     pose = PoseStamped()
+    #     hover_offset = 0.15
+    #     pose.header.frame_id = "world"
+    #     pose.pose.position.x = point_3d.point.x
+    #     pose.pose.position.y = point_3d.point.y
+    #     pose.pose.position.z = point_3d.point.z + hover_offset
+
+    #     # Fixed Orientation
+    #     pose.pose.orientation.x = 0.0
+    #     pose.pose.orientation.y = 1.0
+    #     pose.pose.orientation.z = 0.0
+    #     pose.pose.orientation.w = 0.0
+
+    #     return pose
 
 
 # The data structure of each point in ros PointCloud2: 16 bits = x + y + z + rgb

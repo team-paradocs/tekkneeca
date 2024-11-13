@@ -3,7 +3,7 @@ import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import PoseArray
+from geometry_msgs.msg import PoseArray, Point
 from std_msgs.msg import Empty
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
@@ -12,6 +12,9 @@ from transitions import Machine
 
 from parasight.sam_ui import SegmentAnythingUI
 from parasight.utils import *
+
+from parasight_interfaces.srv import StartTracking
+from std_srvs.srv import Empty as EmptySrv
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
@@ -39,6 +42,7 @@ class ParaSightHost(Node):
         self.last_rgb_image = None
         self.last_depth_image = None
         self.last_cloud = None
+        self.annotated_points = None
 
         # Set up tf listener
         self.tf_buffer = Buffer()
@@ -76,7 +80,11 @@ class ParaSightHost(Node):
         # Publishers
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
         self.pose_array_publisher = self.create_publisher(PoseArray, '/localized_pose_array', 10)
-        
+
+        # Service Clients
+        self.start_tracking_client = self.create_client(StartTracking, '/start_tracking')
+        self.stop_tracking_client = self.create_client(EmptySrv, '/stop_tracking')
+
         # Interfaces
         self.segmentation_ui = SegmentAnythingUI()
         self.bridge = CvBridge()
@@ -114,10 +122,22 @@ class ParaSightHost(Node):
         self.get_logger().info('UI trigger received')
         if self.state == 'ready':
             self.trigger('start_parasight')
-            self.segmentation_ui.segment_using_ui(self.last_rgb_image) # Blocking call
+            mask, annotated_points, mask_points = self.segmentation_ui.segment_using_ui(self.last_rgb_image) # Blocking call
+            self.annotated_points = annotated_points
             self.trigger('input_received')
         else:
             self.get_logger().warn('UI trigger received but not in ready state')
+
+    def on_enter_tracker_active(self):
+        assert self.annotated_points is not None
+        self.get_logger().info(f"Current state: {self.state}")
+        # Convert points to geometry_msgs/Point
+        ros_points = [Point(x=float(p[0]), y=float(p[1]), z=0.0) for p in self.annotated_points]
+        response = self.start_tracking_client.call(StartTracking.Request(points=ros_points))
+        if not response.success:
+            self.get_logger().error("Failed to start tracking")
+        else:
+            self.get_logger().info("Tracking started")
 
     def hard_reset_callback(self, msg):
         self.get_logger().info('Hard reset received')
