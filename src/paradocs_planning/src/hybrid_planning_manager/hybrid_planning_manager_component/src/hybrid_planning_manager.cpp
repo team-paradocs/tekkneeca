@@ -164,20 +164,13 @@ namespace moveit::hybrid_planning
         "tracked_pose", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
 
-          if (planner_state_ == 0) {
+          if (planner_state_ == 0 || planner_state_ == 2) {
             // not planning
           }
-          else if (planner_state_ == 1 || planner_state_ == 2)
+          else if (planner_state_ == 1)
           {
             // planning, the execution or not is taken care by stop_execution_publisher_
             executeHybridPlannerGoal(msg);
-          } 
-          else if (planner_state_ == 3)
-          {
-            if (!dill_started_) {
-              dill_started_ = true;
-              // drillingMotion(msg);
-            }
           }
           else
           {
@@ -192,7 +185,7 @@ namespace moveit::hybrid_planning
         [this](const std_msgs::msg::Int32::ConstSharedPtr& msg) {
           RCLCPP_INFO(LOGGER, "Planning flag received: %d", msg->data);
           if (msg->data == 1) {
-            // only planning mode
+            // planning + execution mode for now
             planner_state_ = 1;
             // auto message = std_msgs::msg::Bool();
             // message.data = true;
@@ -207,13 +200,23 @@ namespace moveit::hybrid_planning
             // message.data = true;
             // // stop execution
             // stop_execution_publisher_->publish(message);
-            // should reset previous goal, but set global_planner_started_ to false in reset is the same effect
-            // planner_logic_instance_->previous_goal_;
+            // reset previous goal, first_time_
             planner_logic_instance_->reset();
           }
           else if (msg->data == 2) {
-            // start execution mode
+            // start drill motion
             planner_state_ = 2;
+
+            if (!dill_started_) {
+              dill_started_ = true;
+              // TODO: change it to reg result, for now just use tracking result
+              drill_pose_goal_handle_ = std::move(hybrid_planning_goal_handle_);
+              ReactionResult reaction_result = planner_logic_instance_->react(HybridPlanningEvent::DRILLING_REQUEST_RECEIVED);
+              if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) 
+              {
+                RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to " << reaction_result.event << " with error: " << reaction_result.error_message);
+              }
+            }
             // auto message = std_msgs::msg::Bool();
             // message.data = false;
             // // start execution
@@ -237,6 +240,7 @@ namespace moveit::hybrid_planning
     joint_model_group_ = std::shared_ptr<const moveit::core::JointModelGroup>(
         goal_state_->getJointModelGroup(planning_group_));
     cache_global_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model_);
+    drillWayPointConstraints = std::vector<moveit_msgs::msg::Constraints>();
 
     return true;
   }
@@ -279,11 +283,10 @@ namespace moveit::hybrid_planning
     }
   }
 
-  bool HybridPlanningManager::sendGlobalPlannerAction()
+  bool HybridPlanningManager::sendGlobalPlannerAction(bool is_drill)
   {
 
     auto global_goal_options = rclcpp_action::Client<moveit_msgs::action::GlobalPlanner>::SendGoalOptions();
-
     // Add goal response callback
     global_goal_options.goal_response_callback =
         [this](const rclcpp_action::ClientGoalHandle<moveit_msgs::action::GlobalPlanner>::SharedPtr& goal_handle) {
@@ -319,20 +322,21 @@ namespace moveit::hybrid_planning
             RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to " << reaction_result.event << " with error: " << reaction_result.error_message);
           }
         };
-
     // Fill in the global planning goal
     auto global_goal_msg = moveit_msgs::action::GlobalPlanner::Goal();
-          
     // Create desired motion goal
     moveit_msgs::msg::MotionPlanRequest goal_motion_request;
 
-    goal_motion_request.goal_constraints.resize(1);
-    goal_motion_request.goal_constraints[0] =
-        kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+    if (is_drill) {
+      
+      goal_motion_request.goal_constraints.resize(drillWayPointConstraints.size());
+      goal_motion_request.goal_constraints = drillWayPointConstraints;
 
-    // goal_motion_request.goal_constraints.resize(1);
-    // goal_motion_request.goal_constraints[0] =
-    //   kinematic_constraints::constructGoalConstraints("link_tool", *(hybrid_planning_goal_handle_.get()));	
+    } else {
+      goal_motion_request.goal_constraints.resize(1);
+      goal_motion_request.goal_constraints[0] =
+          kinematic_constraints::constructGoalConstraints(*(goal_state_.get()), joint_model_group_.get());
+    }
 
     moveit_msgs::msg::MotionSequenceItem sequence_item;
     sequence_item.req = goal_motion_request;
@@ -340,15 +344,12 @@ namespace moveit::hybrid_planning
     sequence_item.blend_radius = 0.0;
     moveit_msgs::msg::MotionSequenceRequest sequence_request;
     sequence_request.items.push_back(sequence_item);
-
     global_goal_msg.motion_sequence = sequence_request;
     global_goal_msg.planning_group = planning_group_;
-
     if (planner_state_ == 0)
     {
       return false;
     }
-
     // Send global planning goal asynchronously
     auto goal_handle_future = global_planner_action_client_->async_send_goal(global_goal_msg, global_goal_options);
     return true;
@@ -358,8 +359,8 @@ namespace moveit::hybrid_planning
   {
     RCLCPP_INFO(LOGGER, "In sendLocalPlannerAction function, type: %d", type);
     // 0: start the execution loop
-    // 1: global don't start loop just chage state
-    // 2: compensate don't start loop just chage state
+    // 1: global traj, don't start exe loop just chage state
+    // 2: compensate traj, don't start exe loop just chage state
 
     auto local_goal_options = rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SendGoalOptions();
     // rclcpp_action::ClientGoalHandle<moveit_msgs::action::LocalPlanner>::SharedPtr goal_handle;
@@ -504,112 +505,96 @@ namespace moveit::hybrid_planning
     // }
     return success;
   }
+  const geometry_msgs::msg::PoseStamped HybridPlanningManager::computeOffsetPose(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& targetPose, float offset = 0.02)
+  {
+    float x_hard_coded_offset = 0.00;
+    float y_hard_coded_offset = 0.00;
 
-  // void HybridPlanningManager::drillingMotion(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& goalPose)
-  // {
-    // RCLCPP_INFO(LOGGER, "Drilling motion");
+    // Calculate the final drill position
+    // Convert the quaternion to a rotation matrix
+    Eigen::Quaterniond quat(targetPose->pose.orientation.w,
+                            targetPose->pose.orientation.x,
+                            targetPose->pose.orientation.y,
+                            targetPose->pose.orientation.z);
+    Eigen::Matrix3d rotation_matrix = quat.toRotationMatrix();
 
-    // geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(*(goalPose.get()), -0.001);
+    // Create a vector representing the direction to move in
+    Eigen::Vector3d direction(0, 0, offset);
 
-    // // cartesian planning parameters
-    // // const double jump_threshold = 0.0;
-    // // const double eef_step = 0.01;
-    // moveit_msgs::msg::RobotTrajectory drillTrajectory;
-    // std::vector<moveit_msgs::msg::Constraints> drillWayPointConstraints;
-    // moveit_msgs::msg::Constraints touch_constraints =
-    //   kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
+    // Multiply the rotation matrix by the direction vector
+    Eigen::Vector3d result = rotation_matrix * direction;
 
-    // drillWayPointConstraints.push_back(touch_constraints);
+    // Add the result to the original position to get the new position
+    geometry_msgs::msg::PoseStamped newPose;
+    newPose.pose.position.x = targetPose->pose.position.x + result(0) + x_hard_coded_offset;
+    newPose.pose.position.y = targetPose->pose.position.y + result(1) + y_hard_coded_offset;
+    newPose.pose.position.z = targetPose->pose.position.z + result(2);
 
-    // int drillPoints = 25;
+    // The orientation remains the same
+    newPose.pose.orientation = targetPose->pose.orientation;
 
-    // geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(*(goalPose.get()), 0.015);
-    // // Interpolate drill_points number of points between start and end pose
-    // std::stack<moveit_msgs::msg::Constraints> interpolatedConstraintsStack;
+    newPose.header.frame_id = targetPose->header.frame_id;
+    newPose.header.stamp = targetPose->header.stamp;
 
-    // //drill in
-    // for (int i = 0; i <= drillPoints; i++) {
-    //   geometry_msgs::msg::PoseStamped interpolatedPose;
-    //   float ratio = static_cast<float>(i) / drillPoints;
-    //   // Interpolate position
-    //   interpolatedPose.pose.position.x = touchPose.pose.position.x + ratio * (endPose.pose.position.x - touchPose.pose.position.x);
-    //   interpolatedPose.pose.position.y = touchPose.pose.position.y + ratio * (endPose.pose.position.y - touchPose.pose.position.y);
-    //   interpolatedPose.pose.position.z = touchPose.pose.position.z + ratio * (endPose.pose.position.z - touchPose.pose.position.z);
-    //   // Orientation remains the same
-    //   interpolatedPose.pose.orientation = touchPose.pose.orientation;
-    //   // Copy header
-    //   interpolatedPose.header.frame_id = touchPose.header.frame_id;
-    //   interpolatedPose.header.stamp = touchPose.header.stamp;
+    return newPose;
+  }
 
-    //   moveit_msgs::msg::Constraints interpolatedConstraints =
-    //     kinematic_constraints::constructGoalConstraints("link_tool", interpolatedPose);
+  void HybridPlanningManager::drillMotion()
+  {
+    RCLCPP_INFO(LOGGER, "In function drillMotion");
 
-    //   interpolatedConstraintsStack.push(interpolatedConstraints);
-    //   drillWayPointConstraints.push_back(interpolatedConstraints);
-    // }
+    const geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.1);
 
-    // //drill out 
-    // while (!interpolatedConstraintsStack.empty()) {
-    //   drillWayPointConstraints.push_back(interpolatedConstraintsStack.top());
-    //   interpolatedConstraintsStack.pop();
-    // }
+    const geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(drill_pose_goal_handle_, -0.01);
 
-    // // Set parameters required by the planning component
-    // moveit_cpp::PlanningComponent::PlanRequestParameters plan_params;
-    // plan_params.planner_id = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planner_id").as_string();
-    // plan_params.planning_pipeline = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_pipeline").as_string();
-    // plan_params.planning_attempts = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_attempts").as_int();
-    // plan_params.planning_time = this->get_parameter(PLAN_REQUEST_PARAM_NS + "planning_time").as_double();
-    // plan_params.max_velocity_scaling_factor =
-    //     this->get_parameter(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor").as_double();
-    // plan_params.max_acceleration_scaling_factor =
-    //     this->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
+    // cartesian planning parameters
+    // const double jump_threshold = 0.0;
+    // const double eef_step = 0.01;
 
+    moveit_msgs::msg::Constraints touch_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
 
-    // for (auto& constraints : drillWayPointConstraints)
-    // {
-    //   // RCLCPP_INFO(LOGGER, "Drill waypoint constraints: %s", constraint.name.c_str());
+    drillWayPointConstraints.clear();
+    drillWayPointConstraints.push_back(touch_constraints);
 
-    //   // update planning scene with current state
-    //     moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
-    //     // Set start state to current state
-    //     planning_component_->setStartStateToCurrentState();
-    //     planning_component_->setGoal({constraints});
+    int drillPoints = 25;
 
-    //     // Plan motion
-    //     auto plan_solution = planning_component_->plan(plan_params);
-    //     if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
-    //     {
-    //       // RCLCPP_INFO(LOGGER, "Planning succeeded");
-    //       if (!planner_state_==0)
-    //       {
-    //         // execute the global plan
-    //         // RCLCPP_INFO(LOGGER, "Executing the plan");
-    //         // true/false: isblocking or not
-    //         planning_component_->execute(true);
-    //         // // Local solution publisher is defined by the local constraint solver plugin
-    //         // auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
+    const geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.15);
+    // Interpolate drill_points number of points between start and end pose
+    std::stack<moveit_msgs::msg::Constraints> interpolatedConstraintsStack;
 
-    //         // moveit_msgs::msg::RobotTrajectory robot_trajectory_msg;
-    //         // time_parameterization_.computeTimeStamps(*plan_solution.trajectory, 
-    //         //   plan_params.max_velocity_scaling_factor,
-    //         //   plan_params.max_acceleration_scaling_factor);
+    //drill in
+    for (int i = 0; i <= drillPoints; i++) {
+      geometry_msgs::msg::PoseStamped interpolatedPose;
+      float ratio = static_cast<float>(i) / drillPoints;
+      // Interpolate position
+      interpolatedPose.pose.position.x = touchPose.pose.position.x + ratio * (endPose.pose.position.x - touchPose.pose.position.x);
+      interpolatedPose.pose.position.y = touchPose.pose.position.y + ratio * (endPose.pose.position.y - touchPose.pose.position.y);
+      interpolatedPose.pose.position.z = touchPose.pose.position.z + ratio * (endPose.pose.position.z - touchPose.pose.position.z);
+      // Orientation remains the same
+      interpolatedPose.pose.orientation = touchPose.pose.orientation;
+      // Copy header
+      interpolatedPose.header.frame_id = touchPose.header.frame_id;
+      interpolatedPose.header.stamp = touchPose.header.stamp;
 
-    //         // plan_solution.trajectory->getRobotTrajectoryMsg(robot_trajectory_msg);
+      moveit_msgs::msg::Constraints interpolatedConstraints =
+        kinematic_constraints::constructGoalConstraints("link_tool", interpolatedPose);
 
-    //         // // Extract the JointTrajectory part
-    //         // goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
+      interpolatedConstraintsStack.push(interpolatedConstraints);
+      drillWayPointConstraints.push_back(interpolatedConstraints);
+    }
 
-    //         // joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
-    //       }
-    //     }
-    //     else
-    //     {
-    //       RCLCPP_ERROR(LOGGER, "Planning failed");
-    //     }
-    // }
+    //drill out 
+    while (!interpolatedConstraintsStack.empty()) {
+      drillWayPointConstraints.push_back(interpolatedConstraintsStack.top());
+      interpolatedConstraintsStack.pop();
+    }
 
-  // }
+    RCLCPP_INFO(LOGGER, "drillWayPointConstraints.size() %ld", drillWayPointConstraints.size());
+
+    sendGlobalPlannerAction(true);
+
+  }
 
 }  // namespace moveit::hybrid_planning
 

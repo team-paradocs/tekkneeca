@@ -63,11 +63,16 @@ namespace moveit::hybrid_planning
         } else {
           return ReactionResult(event, "Failed to calculate IK", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
         }
+
+      case HybridPlanningEvent::DRILLING_REQUEST_RECEIVED:
+        // Handle new drilling request
+        // Do nothing since we wait for the drilling action to finish
+        hybrid_planning_manager_->drillMotion();
+        return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       case HybridPlanningEvent::GLOBAL_SOLUTION_AVAILABLE:
         // this event can be deleted
         // Do nothing since we wait for the global planning action to finish
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
-      
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_SUCCESSFUL:
         // Start local planning
         if (!hybrid_planning_manager_->sendLocalPlannerAction(1))
@@ -75,24 +80,21 @@ namespace moveit::hybrid_planning
           return ReactionResult(event, "Failed to sendAction", moveit_msgs::msg::MoveItErrorCodes::FAILURE);
         }
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
-
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_CANCELED:
         return ReactionResult(event, "Global planner actoin canceled",
                       moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
-
       case HybridPlanningEvent::GLOBAL_PLANNING_ACTION_ABORTED:
         // Abort hybrid planning if no global solution is found
         return ReactionResult(event, "Global planner failed to find a solution",
                               moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED);
 
+
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_SUCCESSFUL:
         // Finish hybrid planning action successfully because local planning action succeeded
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
-
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:
         return ReactionResult(event, "Local planner actoin canceled",
                       moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
-
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_ABORTED:
         // Local planning failed so abort hybrid planning
         return ReactionResult(event, "Local planner failed to find a solution",
@@ -116,7 +118,7 @@ namespace moveit::hybrid_planning
       // stop executing the local plan
       hybrid_planning_manager_->stopLocalPlanner();
 
-      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction(false);
       if (!clientActionSuccessfullySent)
       {
         // report failure
@@ -141,7 +143,6 @@ namespace moveit::hybrid_planning
 
   void MotionCompensation::reset()
   {
-    // local_planner_started_ = false;
     first_time_ = true;
     previous_goal_ = nullptr;
   }
@@ -160,7 +161,7 @@ namespace moveit::hybrid_planning
 
       // Start global planning
       // RCLCPP_INFO(LOGGER, "Global Planner not started yet, start Global Planner");
-      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+      bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction(false);
       if (!clientActionSuccessfullySent)
       {
         // report failure
@@ -198,7 +199,7 @@ namespace moveit::hybrid_planning
         // stop executing the local plan
         hybrid_planning_manager_->stopLocalPlanner();
 
-        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction();
+        bool clientActionSuccessfullySent = hybrid_planning_manager_->sendGlobalPlannerAction(false);
         if (!clientActionSuccessfullySent)
         {
           // report failure

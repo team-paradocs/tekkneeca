@@ -139,76 +139,6 @@ bool LocalPlannerComponent::initialize()
     return false;
   }
 
-  // // Initialize global trajectory listener
-  // global_solution_subscriber_ = node_->create_subscription<moveit_msgs::msg::MotionPlanResponse>(
-  //     config_.global_solution_topic, rclcpp::SystemDefaultsQoS(),
-  //     [this](const moveit_msgs::msg::MotionPlanResponse::ConstSharedPtr& msg) {
-
-  //       RCLCPP_INFO(LOGGER, "Received global trajectory");
-
-  //       // Replace internal reference trajectory with received trajectory 
-  //       robot_trajectory::RobotTrajectory new_trajectory(planning_scene_monitor_->getRobotModel(), msg->group_name);
-  //       moveit::core::RobotState start_state(planning_scene_monitor_->getRobotModel());
-  //       moveit::core::robotStateMsgToRobotState(msg->trajectory_start, start_state);
-  //       new_trajectory.setRobotTrajectoryMsg(start_state, msg->trajectory);
-  //       // replace current trajectory
-
-  //       if (temp_robot_trajectory_->getWayPointCount() > 0)
-  //       {
-  //         // append the entire cached trajectory
-  //         // new_trajectory.append(*(temp_robot_trajectory_.get()), 0.1);
-  //         // append the last goal in cached trajectory
-
-  //         // new_trajectory.removeWayPoint(new_trajectory.getWayPointCount() - 1);
-
-  //         // Modify the last waypoint of the current trajectory
-  //         if (new_trajectory.getWayPointCount() > 0)
-  //         {
-
-  //           // Create a temporary copy of the current trajectory
-  //           auto tmp_traj = std::make_shared<robot_trajectory::RobotTrajectory>(
-  //               new_trajectory.getRobotModel(), new_trajectory.getGroupName());
-
-  //           // Copy all but the last waypoint
-  //           for (size_t i = 0; i < new_trajectory.getWayPointCount() - 1; ++i)
-  //           {
-  //               tmp_traj->addSuffixWayPoint(new_trajectory.getWayPoint(i), new_trajectory.getWayPointDurationFromPrevious(i));
-  //           }
-
-  //           // Add the last waypoint from the new trajectory
-  //           tmp_traj->addSuffixWayPoint(temp_robot_trajectory_->getLastWayPoint(), 0.1);
-
-  //           // Replace the reference trajectory with the modified one
-  //           new_trajectory = *(tmp_traj.get());
-  //         }
-  //         else
-  //         {
-  //             throw std::runtime_error("Current trajectory is empty, cannot modify the last waypoint.");
-  //         }
-
-  //         new_trajectory.addSuffixWayPoint(temp_robot_trajectory_->getLastWayPoint(), 0.1);
-  //         temp_robot_trajectory_->clear();
-  //       }       
-
-  //       // type 0: replace the current trajectory with the new trajectory
-  //       trajectory_operator_instance_->setTrajectorySegment(new_trajectory, 0);
-
-  //       // Update local planner state
-  //       if (long_callback_thread_.joinable())
-  //       {
-  //         long_callback_thread_.join();
-  //       }
-        
-  //       state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;
-
-  //       auto local_planner_timer = [&]() {
-  //         timer_ =
-  //             node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
-  //       };
-  //       long_callback_thread_ = std::thread(local_planner_timer);
-  //     }
-  // );
-
   // Initialize stop execution listener
   stop_execution_subscriber_ = node_->create_subscription<std_msgs::msg::Bool>(
       "stop_execution", rclcpp::SystemDefaultsQoS(),
@@ -352,9 +282,9 @@ bool LocalPlannerComponent::initialize()
           }
           goal_state->setVariablePositions(joint_positions.data());
 
-          // last point
           if (i == constraintSize - 1)
           {
+            // last point
             if (temp_robot_trajectory_->getWayPointCount() > 0)
             {
               // has cache
@@ -367,6 +297,11 @@ bool LocalPlannerComponent::initialize()
               new_trajectory.addSuffixWayPoint(goal_state, 0.1);
             }
           }
+          else
+          {
+            new_trajectory.addSuffixWayPoint(goal_state, 0.1);
+          }
+          
         }
         trajectory_operator_instance_->setTrajectorySegment(new_trajectory, 0);
         state_ = LocalPlannerState::LOCAL_PLANNING_ACTIVE;

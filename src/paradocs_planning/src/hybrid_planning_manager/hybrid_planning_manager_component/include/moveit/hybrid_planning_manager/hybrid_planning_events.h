@@ -52,6 +52,8 @@ enum class HybridPlanningEvent
   GLOBAL_PLANNING_ACTION_CANCELED,
   // Indicates that the global planner found a solution (This solution is not necessarily the last or best solution)
   GLOBAL_SOLUTION_AVAILABLE,
+  // Drilling request
+  DRILLING_REQUEST_RECEIVED,
   // Result of the local planning action
   LOCAL_PLANNING_ACTION_SUCCESSFUL,
   LOCAL_PLANNING_ACTION_ABORTED,

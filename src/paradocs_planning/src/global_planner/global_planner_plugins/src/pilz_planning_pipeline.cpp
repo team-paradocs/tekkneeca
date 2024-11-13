@@ -93,14 +93,6 @@ namespace moveit::hybrid_planning
       return response;
     }
 
-    // Process goal
-    if ((global_goal_handle->get_goal())->motion_sequence.items.size() > 1)
-    {
-      RCLCPP_WARN(LOGGER, "Global planner received motion sequence request with more than one item but the "
-                          "'moveit_planning_pipeline' plugin only accepts one item. Just using the first item as global "
-                          "planning goal!");
-    }
-    auto motion_plan_req = (global_goal_handle->get_goal())->motion_sequence.items[0].req;
     auto group_name = (global_goal_handle->get_goal())->planning_group;
 
     // Set parameters required by the planning component
@@ -124,45 +116,68 @@ namespace moveit::hybrid_planning
 
     // Set start state to current state
     planning_components->setStartStateToCurrentState();
-    auto current_state = planning_scene->getCurrentStateNonConst();
-    // const auto &link_state = current_state.getGlobalLinkTransform("link_tool"); // Replace "link_tool" with the actual link name
-    // RCLCPP_INFO(LOGGER, "Current Cartesian Position - x: %f, y: %f, z: %f",
-    //             link_state.translation().x(), link_state.translation().y(), link_state.translation().z());
+    auto current_state = planning_scene->getCurrentState();
 
-    // Plan the trajectory using pilz
+    auto motion_plan_req = (global_goal_handle->get_goal())->motion_sequence.items[0].req;
 
-    // Fix Pilz bug
-    // motion_plan_req.goal_constraints[0].position_constraints[0].header.frame_id = "world";
-    // motion_plan_req.goal_constraints[0].orientation_constraints[0].header.frame_id = "world";
-
-    // RCLCPP_INFO(LOGGER, "Passed");
-
-    planning_components->setGoal(motion_plan_req.goal_constraints);
-
+    // Process goal
     rclcpp::Clock clock(RCL_SYSTEM_TIME);  // Use system time (or RCL_ROS_TIME for simulation time)
 
     rclcpp::Time last_call_time = clock.now();
 
-    // Plan motion
-    auto plan_solution = planning_components->plan(plan_params);
-    if (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+    if (motion_plan_req.goal_constraints.size() > 1)
     {
+      RCLCPP_INFO(LOGGER, "Global planner plan for drill");
+      std::vector<moveit_msgs::msg::Constraints> goals = motion_plan_req.goal_constraints;
+      robot_trajectory::RobotTrajectory temp_robot_trajectory(planning_scene->getRobotModel(), group_name);
+      for (auto goal : goals)
+      {
+        // Fix Pilz bug
+        goal.position_constraints[0].header.frame_id = "world";
+        goal.orientation_constraints[0].header.frame_id = "world";
+
+        planning_components->setGoal({goal});
+        auto plan_solution = planning_components->plan(plan_params);
+        moveit::core::RobotState last_state(robot_model_);
+        last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
+        planning_components->setStartState(last_state);
+        temp_robot_trajectory.append(*(plan_solution.trajectory.get()), 0.1);
+        response.error_code = plan_solution.error_code;
+      }
+      moveit::core::robotStateToRobotStateMsg(current_state, response.trajectory_start, true);
+      temp_robot_trajectory.getRobotTrajectoryMsg(response.trajectory);
+      response.group_name = group_name;
+    }
+    else
+    {
+
+      // Plan the trajectory using pilz
+      // Don't need to fix Pilz bug because joint constraints are used
+      planning_components->setGoal(motion_plan_req.goal_constraints);
+
+      rclcpp::Clock clock(RCL_SYSTEM_TIME);  // Use system time (or RCL_ROS_TIME for simulation time)
+
+      rclcpp::Time last_call_time = clock.now();
+
+      // Plan motion
+      auto plan_solution = planning_components->plan(plan_params);
+      if (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+      {
+        response.error_code = plan_solution.error_code;
+        return response;
+      }
+      // Transform solution into MotionPlanResponse and publish it
+      response.trajectory_start = plan_solution.start_state;
+      plan_solution.trajectory->getRobotTrajectoryMsg(response.trajectory);
+      response.group_name = group_name;
       response.error_code = plan_solution.error_code;
-      return response;
     }
 
     // Get current time
     rclcpp::Time current_time = clock.now();
-    
     // Calculate the time difference in seconds
     double time_difference = (current_time - last_call_time).seconds();
     RCLCPP_INFO(LOGGER, "Planning time since last call: %.6f seconds", time_difference);
-
-    // Transform solution into MotionPlanResponse and publish it
-    response.trajectory_start = plan_solution.start_state;
-    response.group_name = group_name;
-    plan_solution.trajectory->getRobotTrajectoryMsg(response.trajectory);
-    response.error_code = plan_solution.error_code;
 
     return response;
   }

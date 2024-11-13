@@ -115,7 +115,7 @@ namespace moveit::hybrid_planning
     * Send global planning request to global planner component
     * @return Global planner successfully started yes/no
     */
-    bool sendGlobalPlannerAction();
+    bool sendGlobalPlannerAction(bool is_drill);
 
     /**
     * Send local planning request to local planner component
@@ -127,6 +127,10 @@ namespace moveit::hybrid_planning
     * Calculate IK
     */
     bool calculateIK();
+
+    void drillMotion();
+
+    const geometry_msgs::msg::PoseStamped computeOffsetPose(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& targetPose, float offset);
 
     std::shared_ptr<const geometry_msgs::msg::PoseStamped> 
       getHybridPlanningGoalHandle() const {
@@ -181,6 +185,7 @@ namespace moveit::hybrid_planning
     std::shared_ptr<moveit::core::RobotState> goal_state_;
 
     std::shared_ptr<robot_trajectory::RobotTrajectory> cache_global_trajectory_;
+    std::vector<moveit_msgs::msg::Constraints> drillWayPointConstraints;
 
     std::shared_ptr<const moveit::core::JointModelGroup> joint_model_group_;
 
@@ -193,6 +198,7 @@ namespace moveit::hybrid_planning
 
     // Shared hybrid planning goal handle
     std::shared_ptr<const geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
+    std::shared_ptr<const geometry_msgs::msg::PoseStamped> drill_pose_goal_handle_;
 
     // Planning request action clients
     rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;

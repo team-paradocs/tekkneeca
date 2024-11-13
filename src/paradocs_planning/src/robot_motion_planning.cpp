@@ -271,13 +271,18 @@ public:
   {
     RCLCPP_INFO(LOGGER, "Drilling motion");
 
-    geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(*(goalPose.get()), -0.001);
-
     // cartesian planning parameters
     // const double jump_threshold = 0.0;
     // const double eef_step = 0.01;
-    moveit_msgs::msg::RobotTrajectory drillTrajectory;
+
     std::vector<moveit_msgs::msg::Constraints> drillWayPointConstraints;
+    geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(*(goalPose.get()), -0.01);
+    moveit_msgs::msg::Constraints predrill_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
+
+    drillWayPointConstraints.push_back(predrill_constraints);
+     
+    geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(*(goalPose.get()), -0.001);
     moveit_msgs::msg::Constraints touch_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
 
@@ -327,49 +332,85 @@ public:
     plan_params.max_acceleration_scaling_factor =
         this->get_parameter(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor").as_double();
 
+    moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
+    // Set start state to current state
+    planning_component_->setStartStateToCurrentState();
+    planning_component_->setGoal(drillWayPointConstraints);
 
-    for (auto& constraints : drillWayPointConstraints)
+    // Plan motion
+    auto plan_solution = planning_component_->plan(plan_params);
+    if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
     {
-      // RCLCPP_INFO(LOGGER, "Drill waypoint constraints: %s", constraint.name.c_str());
+      // RCLCPP_INFO(LOGGER, "Planning succeeded");
+      if (!planner_state_==0)
+      {
+        // execute the global plan
+        // RCLCPP_INFO(LOGGER, "Executing the plan");
+        // true/false: isblocking or not
+        planning_component_->execute(true);
+        // // Local solution publisher is defined by the local constraint solver plugin
+        // auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
 
-      // update planning scene with current state
-        moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
-        // Set start state to current state
-        planning_component_->setStartStateToCurrentState();
-        planning_component_->setGoal({constraints});
+        // moveit_msgs::msg::RobotTrajectory robot_trajectory_msg;
+        // time_parameterization_.computeTimeStamps(*plan_solution.trajectory, 
+        //   plan_params.max_velocity_scaling_factor,
+        //   plan_params.max_acceleration_scaling_factor);
 
-        // Plan motion
-        auto plan_solution = planning_component_->plan(plan_params);
-        if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
-        {
-          // RCLCPP_INFO(LOGGER, "Planning succeeded");
-          if (!planner_state_==0)
-          {
-            // execute the global plan
-            // RCLCPP_INFO(LOGGER, "Executing the plan");
-            // true/false: isblocking or not
-            planning_component_->execute(true);
-            // // Local solution publisher is defined by the local constraint solver plugin
-            // auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
+        // plan_solution.trajectory->getRobotTrajectoryMsg(robot_trajectory_msg);
 
-            // moveit_msgs::msg::RobotTrajectory robot_trajectory_msg;
-            // time_parameterization_.computeTimeStamps(*plan_solution.trajectory, 
-            //   plan_params.max_velocity_scaling_factor,
-            //   plan_params.max_acceleration_scaling_factor);
+        // // Extract the JointTrajectory part
+        // goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
 
-            // plan_solution.trajectory->getRobotTrajectoryMsg(robot_trajectory_msg);
-
-            // // Extract the JointTrajectory part
-            // goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
-
-            // joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
-          }
-        }
-        else
-        {
-          RCLCPP_ERROR(LOGGER, "Planning failed");
-        }
+        // joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
+      }
     }
+    else
+    {
+      RCLCPP_ERROR(LOGGER, "Planning failed");
+    }
+
+    // for (auto& constraints : drillWayPointConstraints)
+    // {
+    //   // RCLCPP_INFO(LOGGER, "Drill waypoint constraints: %s", constraint.name.c_str());
+
+    //   // update planning scene with current state
+    //     moveit_cpp_->getPlanningSceneMonitor()->updateSceneWithCurrentState();
+    //     // Set start state to current state
+    //     planning_component_->setStartStateToCurrentState();
+    //     planning_component_->setGoal({constraints});
+
+    //     // Plan motion
+    //     auto plan_solution = planning_component_->plan(plan_params);
+    //     if (plan_solution.error_code == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+    //     {
+    //       // RCLCPP_INFO(LOGGER, "Planning succeeded");
+    //       if (!planner_state_==0)
+    //       {
+    //         // execute the global plan
+    //         // RCLCPP_INFO(LOGGER, "Executing the plan");
+    //         // true/false: isblocking or not
+    //         planning_component_->execute(true);
+    //         // // Local solution publisher is defined by the local constraint solver plugin
+    //         // auto goal_msg = control_msgs::action::FollowJointTrajectory::Goal();
+
+    //         // moveit_msgs::msg::RobotTrajectory robot_trajectory_msg;
+    //         // time_parameterization_.computeTimeStamps(*plan_solution.trajectory, 
+    //         //   plan_params.max_velocity_scaling_factor,
+    //         //   plan_params.max_acceleration_scaling_factor);
+
+    //         // plan_solution.trajectory->getRobotTrajectoryMsg(robot_trajectory_msg);
+
+    //         // // Extract the JointTrajectory part
+    //         // goal_msg.trajectory = robot_trajectory_msg.joint_trajectory;
+
+    //         // joint_trajectory_action_client_->async_send_goal(goal_msg, goal_options_);
+    //       }
+    //     }
+    //     else
+    //     {
+    //       RCLCPP_ERROR(LOGGER, "Planning failed");
+    //     }
+    // }
 
   }
 

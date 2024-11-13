@@ -77,6 +77,9 @@ struct ReactionResult
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:
         event = "Local planning action canceled";
         break;
+      case HybridPlanningEvent::DRILLING_REQUEST_RECEIVED:
+        event = "Drilling request received";
+        break;
       case HybridPlanningEvent::UNDEFINED:
         event = "Undefined event";
     }
