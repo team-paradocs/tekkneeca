@@ -3,18 +3,26 @@ import numpy as np
 import open3d as o3d
 import time
 
-class LeanPipeline:
+class RegistrationPipeline:
     def __init__(self):
+        # D405 Intrinsics
         self.fx = 425.19189453125
         self.fy = 424.6562805175781
         self.cx = 422.978515625
         self.cy = 242.1155242919922
 
-        self.intrinsics = np.array([
-            [self.fx, 0,  self.cx],
-            [0,  self.fy, self.cy],
-            [0,  0,  1]
-        ])
+
+    def register(self, mask, source_cloud, raw_cloud, annotated_points, mask_points):
+        mask_cloud = self.unproject_mask(mask, raw_cloud.points)
+        target_cloud = mask_cloud.voxel_down_sample(voxel_size=0.003)
+
+        # print(f"Number of points in source cloud: {len(self.source_cloud.points)}")
+        # print(f"Number of points in target cloud: {len(target_cloud.points)}")
+
+        init_transformation = self.global_registration(source_cloud, target_cloud, annotated_points, mask_points)
+        transform = self.multi_icp(source_cloud, target_cloud, init_transformation,max_trials=5)
+        return transform
+        
 
     def unproject_mask(self, mask, points):
         mask = np.fliplr(mask)
@@ -69,10 +77,8 @@ class LeanPipeline:
         rotation_4x4[0:3, 0:3] = rotation  # Set the top-left 3x3 to the rotation matrix
 
         px, py, pz = annotated_points[0]
-        fx, fy = self.intrinsics[0,0], self.intrinsics[1,1]
-        cx, cy = self.intrinsics[0,2], self.intrinsics[1,2]
-        X = (px - cx) *pz / fx
-        Y = (py - cy) *pz / fy
+        X = (px - self.cx) * pz / self.fx
+        Y = (py - self.cy) * pz / self.fy
         translation = np.eye(4)
         translation[0:3, 3] = np.array([X,Y,pz])
 
@@ -100,13 +106,37 @@ class LeanPipeline:
         print(f"ICP Fitness: {reg_result.fitness}")
         return reg_result.transformation
 
+    def multi_icp(self, source, target, initial_transformation, max_trials=5):
+        min_fitness = 0.9
+        max_iter = 50
+        threshold = 0.01
+        source.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        target.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
+        p2l = o3d.pipelines.registration.TransformationEstimationPointToPlane(loss)
+
+        while max_trials > 0:
+            reg_result = o3d.pipelines.registration.registration_icp(
+                source, target, threshold, initial_transformation,
+                p2l,
+                o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=max_iter)
+            )
+            if reg_result.fitness > min_fitness:
+                print(f"ICP Fitness: {reg_result.fitness}")
+                return reg_result.transformation
+            max_trials -= 1
+        print(f"Failed to converge. Final Fitness: {reg_result.fitness}")
+        return reg_result.transformation
+
     def ransac_icp(self, source, target, initial_transformation, trials=300):
         '''
         RANSAC ICP
         '''
         threshold = 0.01
         max_iter = 50
-        best_transformation = None
+        best_transformation = initial_transformation
         best_fitness = 0.0
 
         # Compute normals for the source and target point clouds
