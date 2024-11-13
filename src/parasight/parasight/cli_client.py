@@ -2,6 +2,7 @@ import questionary
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty
+from std_msgs.msg import Int32
 
 
 class ParaSightNode(Node):
@@ -10,7 +11,7 @@ class ParaSightNode(Node):
         # Publishers for the topics
         self.start_publisher = self.create_publisher(Empty, 'trigger_host_ui', 10)
         self.stop_publisher = self.create_publisher(Empty, 'hard_reset_host', 10)
-        self.drill_publisher = self.create_publisher(Empty, 'trigger_drill', 10)
+        self.drill_publisher = self.create_publisher(Int32, '/lbr/plan_flag', 10)
 
     def publish_start(self):
         # Publish an empty message to start topic
@@ -23,8 +24,11 @@ class ParaSightNode(Node):
         self.get_logger().info("Published Stop message on 'hard_reset_host'")
 
     def publish_drill(self):
-        self.drill_publisher.publish(Empty())
-        self.get_logger().info("Published Drill message on 'trigger_drill'")
+        msg = Int32()
+        msg.data = 2
+        self.drill_publisher.publish(msg)
+        self.get_logger().info("Published Drill message (2) on '/lbr/plan_flag'")
+        self.publish_stop() # Reset ParaSight after drilling
 
 class ParaSightCLI:
     def __init__(self):

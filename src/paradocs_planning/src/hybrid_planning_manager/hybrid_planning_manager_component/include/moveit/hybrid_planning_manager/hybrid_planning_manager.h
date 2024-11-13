@@ -47,6 +47,7 @@
 #include <moveit_msgs/action/global_planner.hpp>
 #include <moveit_msgs/action/hybrid_planner.hpp>
 #include <moveit_msgs/msg/robot_trajectory.hpp>
+#include "geometry_msgs/msg/pose_array.hpp"
 
 #include <moveit/robot_state/conversions.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
@@ -215,6 +216,9 @@ namespace moveit::hybrid_planning
 
     // Tracking goal subscriber
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr tracking_goal_sub_;
+
+    // Drilling goal subscriber
+    rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr drilling_goal_sub_;
 
     // Planning state subscriber
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr planning_state_sub_;
