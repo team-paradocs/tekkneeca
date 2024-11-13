@@ -9,14 +9,20 @@ from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from transitions import Machine
+import open3d as o3d
 
 from parasight.sam_ui import SegmentAnythingUI
+from parasight.registration import RegistrationPipeline
 from parasight.utils import *
+
+import time
 
 from parasight_interfaces.srv import StartTracking
 from parasight_interfaces.msg import TrackedPoints
 from std_srvs.srv import Empty as EmptySrv
 from functools import partial
+
+from ament_index_python.packages import get_package_share_directory
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
@@ -45,6 +51,7 @@ class ParaSightHost(Node):
         self.last_depth_image = None
         self.last_cloud = None
         self.annotated_points = None
+        self.need_to_register = True
 
         # Set up tf listener
         self.tf_buffer = Buffer()
@@ -92,7 +99,14 @@ class ParaSightHost(Node):
         self.start_tracking_client = self.create_client(StartTracking, '/start_tracking')
         self.stop_tracking_client = self.create_client(EmptySrv, '/stop_tracking')
 
+        # Load resources
+        package_dir = get_package_share_directory('parasight')
+        self.source = o3d.io.read_point_cloud(package_dir + "/resource/femur_shell.ply")
+        self.plan_path = package_dir + "/resource/plan_config.yaml"
+        self.plan = "plan3"
+
         # Interfaces
+        self.regpipe = RegistrationPipeline()
         self.segmentation_ui = SegmentAnythingUI()
         self.bridge = CvBridge()
 
@@ -191,12 +205,46 @@ class ParaSightHost(Node):
         depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1") / 1000.0
         self.last_depth_image = depth_image
 
+    def add_depth(self,points):
+        new_points = []
+        for point in points:
+            x,y = point
+            depth = self.last_depth_image[int(y),int(x)]
+            new_points.append([x,y,depth])
+        return new_points
+    
     def pcd_callback(self, msg):
         cloud = from_msg(msg)
         self.last_cloud = cloud
 
     def tracked_points_callback(self, msg):
-        self.annotated_points = [(p.x, p.y) for p in msg.points]
+        if not self.state == 'tracker_active':
+            return
+        
+        if not msg.stable or not msg.all_visible:
+            self.need_to_register = True
+            return # Wait for tracking to stabilize
+        elif self.need_to_register:
+            self.get_logger().info('Registering...')
+            annotated_points = [(p.x, p.y) for p in msg.points]
+            t0 = time.time()
+            mask, annotated_points, mask_points = self.segmentation_ui.segment_using_points(self.last_rgb_image, annotated_points[0], annotated_points[1])
+            annotated_points = self.add_depth(annotated_points)
+            mask_points = self.add_depth(mask_points)
+            source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
+            transform = self.regpipe.register(mask, source_cloud, self.last_cloud, annotated_points, mask_points)
+            t1 = time.time()
+            self.get_logger().info(f'Registration time: {t1 - t0}')
+
+            source_cloud.transform(transform)
+            source_cloud.paint_uniform_color([1, 0, 0])
+            self.publish_point_cloud(source_cloud)
+            self.need_to_register = False
+
+    def publish_point_cloud(self, cloud):
+        cloud_msg = to_msg(cloud,frame_id='camera_depth_optical_frame')
+        self.pcd_publisher.publish(cloud_msg)
+
 
 
 def main(args=None):

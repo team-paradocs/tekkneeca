@@ -10,6 +10,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/resource', ['resource/femur_shell.ply']),
+        ('share/' + package_name + '/resource', ['resource/plan_config.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

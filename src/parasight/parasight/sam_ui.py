@@ -101,7 +101,7 @@ class SegmentAnythingUI:
         # Update the displayed image
         cv2.imshow("Image", self.image)
 
-    def update_image_with_mask(self, mask):
+    def update_image_with_mask(self, mask,display=True):
         # Define the RGBA color (blue with 60% opacity)
         color = np.array([30, 144, 255, 153])  # Converted 0.6 to 255 scale for opacity
 
@@ -125,9 +125,10 @@ class SegmentAnythingUI:
         self.image = cv2.addWeighted(self.image, 0.5, mask_image, 0.5, 0)
 
         # Display the updated image
-        cv2.imshow("Image", self.image)
+        if display:
+            cv2.imshow("Image", self.image)
 
-    def update_image_with_annotations(self, mask, points):
+    def update_image_with_annotations(self, mask, points,display=True):
         # Draw a cv2.minAreaRect around the mask
         contour_mask = mask.astype(np.uint8)
         contours, _ = cv2.findContours(
@@ -184,7 +185,8 @@ class SegmentAnythingUI:
             )
             self.mask_pointA = center
             self.mask_pointB = tuple(map(int, midpoint))
-        cv2.imshow("Image", self.image)
+        if display:
+            cv2.imshow("Image", self.image)
 
     def show_register_button(self):
         # Reload the image without any text to clear the Tibia prompt
@@ -223,7 +225,7 @@ class SegmentAnythingUI:
         self.update_prompt("Esc to reset | Enter to register")
         cv2.imshow("Image", self.image)
 
-    def generate_mask(self,femur_point,tibia_point):
+    def generate_mask(self,femur_point,tibia_point,display=True):
         input_point = np.array([femur_point, tibia_point])
         input_label = np.array([1, 0]) # Extracts Femur Mask
 
@@ -240,8 +242,8 @@ class SegmentAnythingUI:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
         mask = cv2.erode(mask.astype(np.uint8), kernel, iterations=1)
         mask = cv2.dilate(mask, kernel, iterations=1).astype(bool)
-        self.update_image_with_mask(mask)
-        self.update_image_with_annotations(mask, [femur_point, tibia_point])
+        self.update_image_with_mask(mask,display)
+        self.update_image_with_annotations(mask, [femur_point, tibia_point],display)
         self.mask = mask
 
     def segment_using_ui(self, image):
@@ -291,8 +293,10 @@ class SegmentAnythingUI:
         return result
     
     def segment_using_points(self, image, femur_point, tibia_point):
-        self.original_image = image
-        self.generate_mask(femur_point, tibia_point)
+        self.original_image = image.copy()
+        self.femur_point = femur_point
+        self.tibia_point = tibia_point
+        self.generate_mask(femur_point, tibia_point, display=False)
         result = (
             self.mask,
             [femur_point, tibia_point],

@@ -7,15 +7,6 @@ from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
 import yaml
 
-def add_depth(self, points):
-    # Convert points to numpy array for optimized indexing if not already
-    points = np.array(points)
-    # Extract x and y coordinates as integer arrays
-    x_coords, y_coords = points[:, 0].astype(int), points[:, 1].astype(int)
-    # Gather depths in a single numpy operation
-    depths = self.last_depth[y_coords, x_coords]
-    # Concatenate the depth information
-    return np.column_stack((points, depths))
 
 def load_plan_points(self, plan_name):
     holes = {}
@@ -41,6 +32,7 @@ def load_plan_points(self, plan_name):
                 holes[hole_name] = [p1, p2, p3]
 
     return holes
+
 
     # def pixel_to_3d(self, x, y):
     #     z = self.last_depth_image[y, x]
