@@ -1,12 +1,13 @@
-import cv2
 import time
-import torch
+
+import cv2
 import numpy as np
+import torch
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 
-class RegistrationUI:
+class SegmentAnythingUI:
     def __init__(self, size='small'):
         self.femur_point = None
         self.tibia_point = None
@@ -100,7 +101,7 @@ class RegistrationUI:
         # Update the displayed image
         cv2.imshow("Image", self.image)
 
-    def update_image_with_mask(self, mask):
+    def update_image_with_mask(self, mask,display=True):
         # Define the RGBA color (blue with 60% opacity)
         color = np.array([30, 144, 255, 153])  # Converted 0.6 to 255 scale for opacity
 
@@ -124,9 +125,10 @@ class RegistrationUI:
         self.image = cv2.addWeighted(self.image, 0.5, mask_image, 0.5, 0)
 
         # Display the updated image
-        cv2.imshow("Image", self.image)
+        if display:
+            cv2.imshow("Image", self.image)
 
-    def update_image_with_annotations(self, mask, points):
+    def update_image_with_annotations(self, mask, points,display=True):
         # Draw a cv2.minAreaRect around the mask
         contour_mask = mask.astype(np.uint8)
         contours, _ = cv2.findContours(
@@ -183,7 +185,8 @@ class RegistrationUI:
             )
             self.mask_pointA = center
             self.mask_pointB = tuple(map(int, midpoint))
-        cv2.imshow("Image", self.image)
+        if display:
+            cv2.imshow("Image", self.image)
 
     def show_register_button(self):
         # Reload the image without any text to clear the Tibia prompt
@@ -222,9 +225,9 @@ class RegistrationUI:
         self.update_prompt("Esc to reset | Enter to register")
         cv2.imshow("Image", self.image)
 
-    def generate_mask(self):
-        input_point = np.array([self.femur_point, self.tibia_point])
-        input_label = np.array([1, 0])
+    def generate_mask(self,femur_point,tibia_point,display=True):
+        input_point = np.array([femur_point, tibia_point])
+        input_label = np.array([1, 0]) # Extracts Femur Mask
 
         self.predictor.set_image(self.original_image)
         t0 = time.time()
@@ -239,11 +242,11 @@ class RegistrationUI:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
         mask = cv2.erode(mask.astype(np.uint8), kernel, iterations=1)
         mask = cv2.dilate(mask, kernel, iterations=1).astype(bool)
-        self.update_image_with_mask(mask)
-        self.update_image_with_annotations(mask, [self.femur_point, self.tibia_point])
+        self.update_image_with_mask(mask,display)
+        self.update_image_with_annotations(mask, [femur_point, tibia_point],display)
         self.mask = mask
 
-    def register(self, image):
+    def segment_using_ui(self, image):
         self.original_image = image.copy()
         self.update_prompt("Click a point on the Femur")
 
@@ -268,7 +271,7 @@ class RegistrationUI:
 
             if self.femur_point is not None and self.tibia_point is not None:
                 if not self.mask_generated:
-                    self.generate_mask()
+                    self.generate_mask(self.femur_point, self.tibia_point)
                     self.mask_generated = True
 
             # Press 'Enter' to register
@@ -286,32 +289,25 @@ class RegistrationUI:
         )
         
         # Reset instance variables
+        self.reset()
+        return result
+    
+    def segment_using_points(self, image, femur_point, tibia_point):
+        self.original_image = image.copy()
+        self.femur_point = femur_point
+        self.tibia_point = tibia_point
+        self.generate_mask(femur_point, tibia_point, display=False)
+        result = (
+            self.mask,
+            [femur_point, tibia_point],
+            [self.mask_pointA, self.mask_pointB]
+        )
+        self.reset()
+        return result
+    
+    def reset(self):
         self.mask = None
         self.femur_point = self.tibia_point = None
         self.mask_pointA = self.mask_pointB = None
         self.mask_generated = False
-        return result
-
-
-
-
-# Main function to run the registration UI
-def main():
-    # Load the image
-    rgb_data = "/ros2ws/src/test_data/"
-    image_path = rgb_data + "npbone0_Color.png"
-    image = cv2.imread(image_path)
-
-    if image is None:
-        print("Error: Could not load the image.")
-        return
-
-    # Create the UI object
-    ui = RegistrationUI()
-
-    # Run the registration
-    mask, points, mask_points = ui.register(image)
-
-
-if __name__ == "__main__":
-    main()
+        self.button_shown = False

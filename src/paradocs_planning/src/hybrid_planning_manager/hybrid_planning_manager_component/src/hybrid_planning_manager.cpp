@@ -178,7 +178,18 @@ namespace moveit::hybrid_planning
           }
         }
     );
-    
+
+    drilling_goal_sub_ = create_subscription<geometry_msgs::msg::PoseArray>(
+        "surgical_drill_pose", rclcpp::SystemDefaultsQoS(),
+        [this](const geometry_msgs::msg::PoseArray::ConstSharedPtr& msg) {
+          auto drill_pose = msg->poses[0];
+          auto drill_pose_stamped = std::make_shared<geometry_msgs::msg::PoseStamped>();
+          drill_pose_stamped->pose = drill_pose;
+          drill_pose_stamped->header.frame_id = msg->header.frame_id;
+          drill_pose_goal_handle_ = std::move(drill_pose_stamped);
+        }
+    );
+
     // Initialize planning state subscriber
     planning_state_sub_ = create_subscription<std_msgs::msg::Int32>(
         "/lbr/plan_flag", rclcpp::SystemDefaultsQoS(),
@@ -210,7 +221,7 @@ namespace moveit::hybrid_planning
             if (!dill_started_) {
               dill_started_ = true;
               // TODO: change it to reg result, for now just use tracking result
-              drill_pose_goal_handle_ = std::move(hybrid_planning_goal_handle_);
+              // drill_pose_goal_handle_ = std::move(hybrid_planning_goal_handle_);
               ReactionResult reaction_result = planner_logic_instance_->react(HybridPlanningEvent::DRILLING_REQUEST_RECEIVED);
               if (reaction_result.error_code.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) 
               {
@@ -241,7 +252,8 @@ namespace moveit::hybrid_planning
         goal_state_->getJointModelGroup(planning_group_));
     cache_global_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model_);
     drillWayPointConstraints = std::vector<moveit_msgs::msg::Constraints>();
-
+    drill_pose_goal_handle_ = nullptr;
+    hybrid_planning_goal_handle_ = nullptr;
     return true;
   }
 
@@ -542,14 +554,17 @@ namespace moveit::hybrid_planning
 
     drillWayPointConstraints.clear();
 
-    const geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.03);
+    const geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.05);
     moveit_msgs::msg::Constraints predrill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
+
     drillWayPointConstraints.push_back(predrill_constraints);
 
     const geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(drill_pose_goal_handle_, -0.001);
+
     moveit_msgs::msg::Constraints touch_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
+
     drillWayPointConstraints.push_back(touch_constraints);
 
     int drillPoints = 25;
@@ -579,7 +594,7 @@ namespace moveit::hybrid_planning
       drillWayPointConstraints.push_back(interpolatedConstraints);
     }
 
-    //drill out 
+    // drill out 
     while (!interpolatedConstraintsStack.empty()) {
       drillWayPointConstraints.push_back(interpolatedConstraintsStack.top());
       interpolatedConstraintsStack.pop();

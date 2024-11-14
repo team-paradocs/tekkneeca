@@ -14,6 +14,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import PoseStamped, PoseArray, Point
 from scipy.spatial.transform import Rotation as R
 import geometry_msgs.msg
+import time
 
 from . import open3d_conversions, proc_pipeline, lean_pipeline, registration
 from .sam_clicker import RegistrationUI
@@ -56,6 +57,9 @@ class PCDRegPipe(Node):
         self.estimator = registration.Estimator('centroid')
         self.refiner = registration.Refiner('ransac_icp')
 
+        # Initialize SAM2 clicker
+        self.sam_clicker = RegistrationUI(size='small')
+
         self.last_cloud = None
         self.last_image = None
         self.last_depth = None
@@ -66,9 +70,6 @@ class PCDRegPipe(Node):
         self.input_thread = threading.Thread(target=self.wait_for_input)
         self.input_thread.daemon = True
         self.input_thread.start()
-
-        # Initialize SAM2 clicker
-        self.sam_clicker = RegistrationUI(size='large')
 
     def callback(self, msg):
         """Callback function for the subscriber.
@@ -134,11 +135,22 @@ class PCDRegPipe(Node):
                                             front=[0.086126891594714566, 0.27099417737370496, -0.9587201439282379],
                                             lookat=[-0.11521162012853672, -0.39411284983247913, 1.8123871758649917],
                                             up=[-0.0069065635673039305, -0.96211034045195976, -0.27257291166787834])
+            
+    def add_depth(self,points):
+        new_points = []
+        for point in points:
+            x,y = point
+            depth = self.last_depth[int(y),int(x)]
+            new_points.append([x,y,depth])
+        return new_points
 
     def process_point_cloud(self):
         """Processes the last received point cloud with Open3D."""
-        if self.last_cloud is not None and self.last_image is not None:
+        if self.last_cloud is not None and self.last_image is not None and self.last_depth is not None:
             mask, annotated_points, mask_points = self.sam_clicker.register(self.last_image)
+            t0 = time.time()
+            annotated_points = self.add_depth(annotated_points)
+            mask_points = self.add_depth(mask_points)
             self.pcd_center = self.last_cloud.get_center()
             raw_cloud = self.last_cloud
             mask_cloud = self.lean_pipe.unproject_mask(mask,raw_cloud.points)
@@ -150,8 +162,8 @@ class PCDRegPipe(Node):
             init_transformation = self.lean_pipe.global_registration(self.source_cloud,self.target_cloud,annotated_points,mask_points)
             # init_transformation = np.eye(4)
             transform = init_transformation
-            transform = self.lean_pipe.ransac_icp(self.source_cloud,self.target_cloud,transform)
-            self.get_logger().info(f"Transformation matrix: {transform}")
+            transform = self.lean_pipe.icp(self.source_cloud,self.target_cloud,transform)
+            self.get_logger().info(f"Registration Time: {(time.time() - t0)*1000:.2f} ms")
 
             self.source_cloud.transform(transform)
             self.source_cloud.paint_uniform_color([1, 0, 0])
@@ -162,12 +174,9 @@ class PCDRegPipe(Node):
 
             # Publish the annotated point
             annotated_point = Point()
-            depth_at_annotated_point = self.last_depth[
-                int(annotated_points[0][1]), int(annotated_points[0][0])
-            ]
             annotated_point.x = float(annotated_points[0][0])
             annotated_point.y = float(annotated_points[0][1])
-            annotated_point.z = float(depth_at_annotated_point)
+            annotated_point.z = float(annotated_points[0][2])
             self.annotated_point_publisher.publish(annotated_point)
 
             if_publish = input("Do you want to publish (y/n)?")
@@ -234,10 +243,9 @@ class PCDRegPipe(Node):
             pose.pose.orientation.z = quat[2]
             pose.pose.orientation.w = quat[3]
 
-            self.get_logger().info(f"Drill point: {p}")
+            # self.get_logger().info(f"Drill point: {p}")
             drill_pose_array.poses.append(pose.pose)
 
-        # print(drill_pose_array)
         return drill_pose_array
 
     def load_plan_points(self,plan_name):
@@ -245,7 +253,6 @@ class PCDRegPipe(Node):
         with open(self.plan_path, 'r') as file:
             data = yaml.safe_load(file)  # Use safe_load to prevent arbitrary code execution
             plan_data = data.get(plan_name, {})
-            # print(plan_data)
             for hole_name, hole in plan_data.items():
                 for point_name, point_coords in hole.items():
                     if point_name == "p1":
@@ -256,9 +263,6 @@ class PCDRegPipe(Node):
                         p3 = np.array(point_coords) / 1000.0
                 holes[hole_name] = [p1, p2, p3]
 
-            # p1 = np.array(plan_data.get('p1', [])) / 1000.0
-            # p2 = np.array(plan_data.get('p2', [])) / 1000.0
-            # p3 = np.array(plan_data.get('p3', [])) / 1000.0
             return holes
 
     def publish_point_cloud(self, cloud):
@@ -267,7 +271,6 @@ class PCDRegPipe(Node):
             cloud (open3d.geometry.PointCloud): The processed point cloud to publish.
         """
         try:
-            self.publish_bounding_box()
             msg = open3d_conversions.to_msg(cloud, frame_id=self.camera_frame)
             self._publisher_.publish(msg)
             self.get_logger().info(f"Processed point cloud with {len(cloud.points)} points published.")

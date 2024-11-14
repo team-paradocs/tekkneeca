@@ -78,7 +78,7 @@ configurable_parameters = [{'name': 'camera_name',                  'default': '
                            {'name': 'spatial_filter.enable',        'default': 'true', 'description': 'enable_spatial_filter'},
                            {'name': 'temporal_filter.enable',       'default': 'true', 'description': 'enable_temporal_filter'},
                            {'name': 'disparity_filter.enable',      'default': 'false', 'description': 'enable_disparity_filter'},
-                           {'name': 'hole_filling_filter.enable',   'default': 'false', 'description': 'enable_hole_filling_filter'},
+                           {'name': 'hole_filling_filter.enable',   'default': 'true', 'description': 'enable_hole_filling_filter'},
                            {'name': 'hdr_merge.enable',             'default': 'false', 'description': 'hdr_merge filter enablement flag'},
                            {'name': 'wait_for_device_timeout',      'default': '-1.', 'description': 'Timeout for waiting for device to connect (Seconds)'},
                            {'name': 'reconnect_timeout',            'default': '6.', 'description': 'Timeout(seconds) between consequtive reconnection attempts'},
