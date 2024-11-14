@@ -370,7 +370,7 @@ namespace moveit::hybrid_planning
   bool HybridPlanningManager::sendLocalPlannerAction(int type)
   {
     RCLCPP_INFO(LOGGER, "In sendLocalPlannerAction function, type: %d", type);
-    // 0: start the execution loop
+    // 0: do nothing for now
     // 1: global traj, don't start exe loop just chage state
     // 2: compensate traj, don't start exe loop just chage state
 
