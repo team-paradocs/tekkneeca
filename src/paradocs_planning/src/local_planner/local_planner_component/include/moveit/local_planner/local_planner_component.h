@@ -89,7 +89,6 @@ void declareOrGetParam(const std::string& param_name, T& output_value, const T& 
 }
 
 /// Internal local planner states
-/// TODO(sjahr) Use lifecycle node?
 enum class LocalPlannerState : int8_t
 {
   ERROR = 0,
