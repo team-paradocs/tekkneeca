@@ -282,7 +282,7 @@ void goToGoalCallback(const geometry_msgs::msg::PoseArray msg_array)
 
       // switch on the drill
       rclcpp::sleep_for(std::chrono::seconds(1));
-      RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "starting drill motiuon");
+      RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "starting drill motion");
       auto message = std_msgs::msg::String();
       message.data = "d";
       publisher_->publish(message);
