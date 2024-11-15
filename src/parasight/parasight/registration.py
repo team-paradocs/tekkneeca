@@ -20,7 +20,7 @@ class RegistrationPipeline:
         # print(f"Number of points in target cloud: {len(target_cloud.points)}")
 
         init_transformation = self.global_registration(source_cloud, target_cloud, annotated_points, mask_points)
-        transform = self.multi_icp(source_cloud, target_cloud, init_transformation,max_trials=5)
+        transform = self.directional_icp(source_cloud, target_cloud, init_transformation)
         return transform
         
 
@@ -129,6 +129,62 @@ class RegistrationPipeline:
             max_trials -= 1
         print(f"Failed to converge. Final Fitness: {reg_result.fitness}")
         return reg_result.transformation
+
+    def directional_icp(self, source, target, initial_transformation, offset=0.02):
+        # Define ICP parameters
+        min_fitness = 0.9
+        max_iter = 50
+        threshold = 0.01
+        source.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        target.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+        
+        loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
+        p2l = o3d.pipelines.registration.TransformationEstimationPointToPlane(loss)
+        
+        # Define directional offsets
+        offsets = [
+            [ offset,  0.0,    0.0],  # +x
+            [-offset,  0.0,    0.0],  # -x
+            [ 0.0,     offset, 0.0],  # +y
+            [ 0.0,    -offset, 0.0],  # -y
+            [ 0.0,     0.0,    offset], # +z
+            [ 0.0,     0.0,   -offset], # -z
+            [ offset,  offset, 0.0],    # +x+y
+            [ offset,  0.0,    offset], # +x+z
+            [ 0.0,     offset, offset]  # +y+z
+        ]
+        
+        best_fitness = 0
+        best_transformation = initial_transformation
+
+        # Perform ICP trials with each directional offset
+        for i, direction in enumerate(offsets):
+            # Create a new transformation matrix with the current offset
+            directional_transform = np.copy(initial_transformation)  # Use np.copy instead of np.array
+            directional_transform[:3, 3] += np.array(direction)  # Convert direction to numpy array
+            
+            # Run ICP with the current transformation
+            reg_result = o3d.pipelines.registration.registration_icp(
+                source, target, threshold, directional_transform,
+                p2l,
+                o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=max_iter)
+            )
+            
+            # Check if the fitness is the best found so far
+            if reg_result.fitness > best_fitness:
+                best_fitness = reg_result.fitness
+                best_transformation = reg_result.transformation
+            
+            # print(f"Trial {i+1} - Direction: {direction} - Fitness: {reg_result.fitness}")
+            
+            # Early exit if fitness meets the threshold
+            # if reg_result.fitness > min_fitness:
+            #     print(f"Early convergence reached with fitness: {reg_result.fitness}")
+            #     return reg_result.transformation
+        
+        # Final output with best fitness result
+        print(f"Best fitness achieved: {best_fitness}")
+        return best_transformation
 
     def ransac_icp(self, source, target, initial_transformation, trials=300):
         '''
