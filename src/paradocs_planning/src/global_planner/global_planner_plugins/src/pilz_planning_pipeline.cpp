@@ -132,9 +132,9 @@ namespace moveit::hybrid_planning
       robot_trajectory::RobotTrajectory temp_robot_trajectory(planning_scene->getRobotModel(), group_name);
       for (auto goal : goals)
       {
-        // Fix Pilz bug
-        goal.position_constraints[0].header.frame_id = "world";
-        goal.orientation_constraints[0].header.frame_id = "world";
+        // Fix Pilz bug, fixed in hybrid_planning_manager
+        // goal.position_constraints[0].header.frame_id = "world";
+        // goal.orientation_constraints[0].header.frame_id = "world";
 
         planning_components->setGoal({goal});
         auto plan_solution = planning_components->plan(plan_params);

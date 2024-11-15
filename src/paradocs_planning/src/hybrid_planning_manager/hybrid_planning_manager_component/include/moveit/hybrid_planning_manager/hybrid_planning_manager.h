@@ -43,11 +43,12 @@
 
 #include <std_msgs/msg/int32.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <moveit_msgs/action/local_planner.hpp>
 #include <moveit_msgs/action/global_planner.hpp>
 #include <moveit_msgs/action/hybrid_planner.hpp>
 #include <moveit_msgs/msg/robot_trajectory.hpp>
-#include "geometry_msgs/msg/pose_array.hpp"
+#include <geometry_msgs/msg/pose_array.hpp>
 
 #include <moveit/robot_state/conversions.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
@@ -109,8 +110,7 @@ namespace moveit::hybrid_planning
     * This handles execution of a hybrid planning goal in a new thread, to avoid blocking the executor.
     * @param goal_handle The action server goal
     */
-    void executeHybridPlannerGoal(
-        const std::shared_ptr<const geometry_msgs::msg::PoseStamped>& goal_handle);
+    void executeHybridPlannerGoal();
 
     /**
     * Send global planning request to global planner component
@@ -131,22 +131,27 @@ namespace moveit::hybrid_planning
 
     void drillMotion();
 
-    const geometry_msgs::msg::PoseStamped computeOffsetPose(const geometry_msgs::msg::PoseStamped::ConstSharedPtr& targetPose, float offset);
+    geometry_msgs::msg::PoseStamped computeOffsetPose(const geometry_msgs::msg::PoseStamped::SharedPtr& targetPose, float offset);
 
-    std::shared_ptr<const geometry_msgs::msg::PoseStamped> 
+    std::shared_ptr<geometry_msgs::msg::PoseStamped> 
       getHybridPlanningGoalHandle() const {
         return hybrid_planning_goal_handle_;
       }
 
-    std::shared_ptr<const geometry_msgs::msg::PoseStamped> 
+    std::shared_ptr<geometry_msgs::msg::PoseStamped> 
       getDrillPoseGoalHandle() const {
         return drill_pose_goal_handle_;
       }
 
-    std::shared_ptr<const bool> getDrillStarted() const {
-      return dill_started_.load()
+    int getDrillState() const {
+      return drill_state_.load();
     }
 
+    void setDrillState(int state) {
+      drill_state_.store(state);
+    }
+
+    void drillCmd(bool start);
 
   private:
 
@@ -205,11 +210,13 @@ namespace moveit::hybrid_planning
 
     // Flag that indicates hybrid planning has been canceled
     std::atomic<int> planner_state_;
-    std::atomic<bool> dill_started_ = false;
+
+    // 0: not drilling, 1: predrill, 2: finished drill
+    std::atomic<int> drill_state_;
 
     // Shared hybrid planning goal handle
-    std::shared_ptr<const geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
-    std::shared_ptr<const geometry_msgs::msg::PoseStamped> drill_pose_goal_handle_;
+    std::shared_ptr<geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
+    std::shared_ptr<geometry_msgs::msg::PoseStamped> drill_pose_goal_handle_;
 
     // Planning request action clients
     rclcpp_action::Client<moveit_msgs::action::LocalPlanner>::SharedPtr local_planner_action_client_;
@@ -217,6 +224,9 @@ namespace moveit::hybrid_planning
 
     // Stop execution publisher
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_execution_publisher_;
+
+    // start drilling publisher
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr start_drilling_publisher_;
 
     // Hybrid planning request action server
     rclcpp_action::Server<moveit_msgs::action::HybridPlanner>::SharedPtr hybrid_planning_request_server_;
