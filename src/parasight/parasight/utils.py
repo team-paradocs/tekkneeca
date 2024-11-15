@@ -7,6 +7,13 @@ from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
 import yaml
 
+def average_depth(depth_image,y,x,kernel_size=5):
+    y,x = int(y), int(x)
+    y_start = max(0,y-kernel_size//2)
+    y_end = min(depth_image.shape[0],y+kernel_size//2)
+    x_start = max(0,x-kernel_size//2)
+    x_end = min(depth_image.shape[1],x+kernel_size//2)
+    return np.mean(depth_image[y_start:y_end,x_start:x_end])
 
 def load_plan_points(plan_path, plan_name):
     holes = {}

@@ -648,7 +648,6 @@ namespace moveit::hybrid_planning
         kinematic_constraints::constructGoalConstraints(temp_state, joint_model_group_.get());
       drillWayPointConstraints.push_back(home_constraints);
     }
-
     RCLCPP_INFO(LOGGER, "drillWayPointConstraints.size() %ld", drillWayPointConstraints.size());
     sendGlobalPlannerAction(true);
   }

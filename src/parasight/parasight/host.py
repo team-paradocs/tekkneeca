@@ -104,7 +104,6 @@ class ParaSightHost(Node):
         
         # Publishers
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
-        self.tracked_pose_publisher = self.create_publisher(PoseStamped, '/tracked_pose', 10)
         self.pose_array_publisher = self.create_publisher(PoseArray, '/surgical_drill_pose', 10)
 
         # Service Clients
@@ -221,7 +220,7 @@ class ParaSightHost(Node):
         new_points = []
         for point in points:
             x,y = point
-            depth = self.last_depth_image[int(y),int(x)]
+            depth = average_depth(self.last_depth_image,y,x)
             new_points.append([x,y,depth])
         return new_points
     
@@ -236,9 +235,6 @@ class ParaSightHost(Node):
         if not msg.all_visible:
             self.get_logger().info('Not all points are visible')
             return
-        
-        tracked_3d_pose = self.pixel_to_3d(msg.points[0].x, msg.points[0].y)
-        self.tracked_pose_publisher.publish(tracked_3d_pose)
         
         if not msg.stable:
             self.need_to_register = True
@@ -325,35 +321,6 @@ class ParaSightHost(Node):
             drill_pose_array.poses.append(pose)
 
         return drill_pose_array
-    
-    def pixel_to_3d(self, x, y):
-        z = self.last_depth_image[int(y), int(x)]
-        x = (x - self.cx) * z / self.fx
-        y = (y - self.cy) * z / self.fy
-
-        point_3d = PointStamped()
-        point_3d.header.frame_id = self.camera_frame
-        point_3d.point.x = x
-        point_3d.point.y = y
-        point_3d.point.z = z
-
-        transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rclpy.time.Time())
-        point_3d = do_transform_point(point_3d, transform)
-
-        pose = PoseStamped()
-        hover_offset = 0.15
-        pose.header.frame_id = self.base_frame
-        pose.pose.position.x = point_3d.point.x
-        pose.pose.position.y = point_3d.point.y
-        pose.pose.position.z = point_3d.point.z + hover_offset
-
-        # Fixed Orientation
-        pose.pose.orientation.x = 0.0
-        pose.pose.orientation.y = 1.0
-        pose.pose.orientation.z = 0.0
-        pose.pose.orientation.w = 0.0
-
-        return pose
 
 
 

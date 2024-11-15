@@ -138,8 +138,7 @@ namespace moveit::hybrid_planning
         return hybrid_planning_goal_handle_;
       }
 
-    std::shared_ptr<geometry_msgs::msg::PoseStamped> 
-      getDrillPoseGoalHandle() const {
+    std::shared_ptr<geometry_msgs::msg::PoseStamped> getDrillPoseGoalHandle() const {
         return drill_pose_goal_handle_;
       }
 
