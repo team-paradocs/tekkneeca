@@ -166,17 +166,21 @@ namespace moveit::hybrid_planning
         "tracked_pose", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseStamped::ConstSharedPtr& msg) {
 
+          // RCLCPP_INFO(LOGGER, "Tracking goal received");
+
+          // always cache the tracking goal
+          auto temp_pose = std::make_shared<geometry_msgs::msg::PoseStamped>();
+          temp_pose->pose = msg->pose;
+          // fix pilz bug
+          temp_pose->header.frame_id = "world";
+          hybrid_planning_goal_handle_ = std::move(temp_pose);
+
           if (planner_state_ == 0 || planner_state_ == 2) {
             // not planning
           }
           else if (planner_state_ == 1)
           {
-            // planning, the execution or not is taken care by stop_execution_publisher_
-            auto temp_pose = std::make_shared<geometry_msgs::msg::PoseStamped>();
-            temp_pose->pose = msg->pose;
-            // fix pilz bug
-            temp_pose->header.frame_id = "world";
-            hybrid_planning_goal_handle_ = std::move(temp_pose);
+            // planning, the execution or not is taken care by stop_execution_publisher
             executeHybridPlannerGoal();
           }
           else
@@ -208,6 +212,7 @@ namespace moveit::hybrid_planning
           if (msg->data == 1) {
             // planning + execution mode for now
             planner_state_ = 1;
+            executeHybridPlannerGoal();
             // auto message = std_msgs::msg::Bool();
             // message.data = true;
             // // stop execution
@@ -560,34 +565,50 @@ namespace moveit::hybrid_planning
     // const double jump_threshold = 0.0;
     // const double eef_step = 0.01;
 
+    geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.05);
+    moveit_msgs::msg::Constraints predrill_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
+
+    geometry_msgs::msg::PoseStamped startDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
+    moveit_msgs::msg::Constraints start_drill_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", startDrillPose);
+
+    geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(drill_pose_goal_handle_, -0.001);
+    moveit_msgs::msg::Constraints touch_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
+
+    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.015);
+
+    geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
+    moveit_msgs::msg::Constraints off_drill_constraints =
+      kinematic_constraints::constructGoalConstraints("link_tool", offDrillPose);
+
+    std::vector<double> joint_values = { 0.0, 0.0, 0.0, 1.57, 0.0, -1.57, 0.0};
+    moveit::core::RobotState temp_state(robot_model_);
+    temp_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
+    moveit_msgs::msg::Constraints home_constraints =
+      kinematic_constraints::constructGoalConstraints(temp_state, joint_model_group_.get());
+
     drillWayPointConstraints.clear();
 
     if (stage == 1)
     {
       // predrill
-      geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.13);
-      moveit_msgs::msg::Constraints predrill_constraints =
-        kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
       drillWayPointConstraints.push_back(predrill_constraints);
     }
     else if (stage == 2)
     {
-      geometry_msgs::msg::PoseStamped startDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
-      moveit_msgs::msg::Constraints start_drill_constraints =
-        kinematic_constraints::constructGoalConstraints("link_tool", startDrillPose);
+
       drillWayPointConstraints.push_back(start_drill_constraints);
     }
     // between stage 2 and 3, we switch on the drill
     else if (stage == 3)
     {
       // drill in and out 
-      geometry_msgs::msg::PoseStamped touchPose = computeOffsetPose(drill_pose_goal_handle_, -0.001);
-      moveit_msgs::msg::Constraints touch_constraints =
-        kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
+
       drillWayPointConstraints.push_back(touch_constraints);
 
       int drillPoints = 25;
-      geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.015);
       // Interpolate drill_points number of points between start and end pose
       std::stack<moveit_msgs::msg::Constraints> interpolatedConstraintsStack;
 
@@ -623,29 +644,17 @@ namespace moveit::hybrid_planning
     }
     else if (stage == 4)
     {
-      geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
-      moveit_msgs::msg::Constraints off_drill_constraints =
-        kinematic_constraints::constructGoalConstraints("link_tool", offDrillPose);
       drillWayPointConstraints.push_back(off_drill_constraints);
     }
     // between stage 4 and 5, we switch off the drill
     else if (stage == 5)
     {
       // go back to predrill
-      geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.13);
-      moveit_msgs::msg::Constraints predrill_constraints =
-        kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
       drillWayPointConstraints.push_back(predrill_constraints);
     }
     else
     {
       // go back to home
-      // TODO: add home pose
-      std::vector<double> joint_values = { 0.0, 0.0, 0.0, 1.57, 0.0, -1.57, 0.0};
-      moveit::core::RobotState temp_state(robot_model_);
-      temp_state.setJointGroupPositions(joint_model_group_.get(), joint_values);
-      moveit_msgs::msg::Constraints home_constraints =
-        kinematic_constraints::constructGoalConstraints(temp_state, joint_model_group_.get());
       drillWayPointConstraints.push_back(home_constraints);
     }
     RCLCPP_INFO(LOGGER, "drillWayPointConstraints.size() %ld", drillWayPointConstraints.size());
