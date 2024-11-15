@@ -63,7 +63,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     ld.add_action(depth_optical_tf_publisher_d435) 
 
-    drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')
-    ld.add_action(drill_pose_transformer)
+    # drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')
+    # ld.add_action(drill_pose_transformer)
 
     return ld
