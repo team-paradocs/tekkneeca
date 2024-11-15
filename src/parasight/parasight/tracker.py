@@ -7,15 +7,26 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point, PointStamped, PoseStamped
 import time
-import tf2_geometry_msgs
 import tf2_ros
+from tf2_geometry_msgs import do_transform_point
 from parasight_interfaces.srv import StartTracking
 from parasight_interfaces.msg import TrackedPoints
 from std_srvs.srv import Empty
 
+from parasight.utils import *
+
 class Tracker(Node):
     def __init__(self):
         super().__init__('tracker')
+
+        # D405 Intrinsics
+        self.fx = 425.19189453125
+        self.fy = 424.6562805175781
+        self.cx = 422.978515625
+        self.cy = 242.1155242919922
+        self.camera_frame = 'camera_color_optical_frame'
+        self.base_frame = 'lbr/link_0'
+
 
         # CoTracker Setup
         self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -27,12 +38,22 @@ class Tracker(Node):
         self.is_first_step = True
         self.tracking_enabled = False
         self.queries = None
+        self.last_depth_image = None
+
+        self.stable_and_published = False
 
         # ROS Setup
         self.image_subscription = self.create_subscription(
             Image,
             '/camera/color/image_rect_raw',
             self.image_callback,
+            10
+        )
+
+        self.depth_subscription = self.create_subscription(
+            Image,
+            '/camera/depth/image_rect_raw',
+            self.depth_image_callback,
             10
         )
 
@@ -45,6 +66,9 @@ class Tracker(Node):
         
         self.bridge = CvBridge()
         self.logger = self.get_logger()
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         self.logger.info("RGB Tracker initialized")
 
@@ -71,6 +95,39 @@ class Tracker(Node):
         pred_tracks, pred_visibility = self.model(video_chunk, self.is_first_step, queries=self.queries[None])
         self.is_first_step = False
         return pred_tracks, pred_visibility
+    
+    def depth_image_callback(self, msg):
+        depth_image = self.bridge.imgmsg_to_cv2(msg, "16UC1") / 1000.0
+        self.last_depth_image = depth_image
+
+    def pixel_to_3d(self, x, y):
+        z = average_depth(self.last_depth_image,y,x)
+        x = (x - self.cx) * z / self.fx
+        y = (y - self.cy) * z / self.fy
+
+        point_3d = PointStamped()
+        point_3d.header.frame_id = self.camera_frame
+        point_3d.point.x = x
+        point_3d.point.y = y
+        point_3d.point.z = z
+
+        transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rclpy.time.Time())
+        point_3d = do_transform_point(point_3d, transform)
+
+        pose = PoseStamped()
+        hover_offset = 0.07
+        pose.header.frame_id = self.base_frame
+        pose.pose.position.x = point_3d.point.x
+        pose.pose.position.y = point_3d.point.y
+        pose.pose.position.z = point_3d.point.z + hover_offset
+
+        # Fixed Orientation
+        pose.pose.orientation.x = 0.0
+        pose.pose.orientation.y = 1.0
+        pose.pose.orientation.z = 0.0
+        pose.pose.orientation.w = 0.0
+
+        return pose
 
     def image_callback(self, msg):
         # Process images only if tracking is enabled
@@ -136,6 +193,22 @@ class Tracker(Node):
                 tracked_points_msg.stable = bool(self.stable)
                 tracked_points_msg.all_visible = all(tracked_points_msg.visibility)
                 self.tracked_points_publisher.publish(tracked_points_msg)
+
+
+                # Publish Tracked Pose if not stable
+                # If stable, publish only once
+                # if not all visible, don't publish
+                if not tracked_points_msg.all_visible:
+                    return
+                
+                x,y = tracked_points_msg.points[0].x, tracked_points_msg.points[0].y
+                if self.stable:
+                    if not self.stable_and_published:
+                        self.pose_publisher.publish(self.pixel_to_3d(x, y))
+                        self.stable_and_published = True
+                else:
+                    self.pose_publisher.publish(self.pixel_to_3d(x, y))
+                    self.stable_and_published = False
 
 
 
