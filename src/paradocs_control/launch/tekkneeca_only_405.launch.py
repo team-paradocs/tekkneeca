@@ -79,10 +79,10 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     # now testing aruco_pose, uncomment when doing the drill_pose
-    drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')
-    ld.add_action(drill_pose_transformer)
+    # drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')
+    # ld.add_action(drill_pose_transformer)
 
-    serial_writer = Node(package='serialcomm', executable='serialwriter_exec', name='serial_writer')
-    ld.add_action(serial_writer)
+    # serial_writer = Node(package='serialcomm', executable='serialwriter_exec', name='serial_writer')
+    # ld.add_action(serial_writer)
 
     return ld
