@@ -67,6 +67,7 @@ namespace moveit::hybrid_planning
       case HybridPlanningEvent::DRILLING_REQUEST_RECEIVED:
         // Handle new drilling request
         // Do nothing since we wait for the drilling action to finish
+        // the state is drill_state_ is 1
         hybrid_planning_manager_->drillMotion();
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       case HybridPlanningEvent::GLOBAL_SOLUTION_AVAILABLE:
@@ -87,10 +88,43 @@ namespace moveit::hybrid_planning
         // Abort hybrid planning if no global solution is found
         return ReactionResult(event, "Global planner failed to find a solution",
                               moveit_msgs::msg::MoveItErrorCodes::PLANNING_FAILED);
-
-
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_SUCCESSFUL:
         // Finish hybrid planning action successfully because local planning action succeeded
+        if (hybrid_planning_manager_->getDrillState() == 0)
+        {
+          // does nothing
+        }
+        else if (hybrid_planning_manager_->getDrillState() == 1)
+        {
+          // arrive at the predrill pose
+          hybrid_planning_manager_->setDrillState(2);
+          hybrid_planning_manager_->drillMotion();
+        }
+        else if (hybrid_planning_manager_->getDrillState() == 2)
+        {
+          // arrive at the startdrill pose
+          hybrid_planning_manager_->setDrillState(3);
+          hybrid_planning_manager_->drillCmd(true);
+          hybrid_planning_manager_->drillMotion();
+        }
+        else if (hybrid_planning_manager_->getDrillState() == 3)
+        {
+          hybrid_planning_manager_->setDrillState(4);
+          hybrid_planning_manager_->drillMotion();
+        }
+        else if (hybrid_planning_manager_->getDrillState() == 4)
+        {
+          hybrid_planning_manager_->setDrillState(5);
+          // backed to predrill
+          hybrid_planning_manager_->drillCmd(false);
+          hybrid_planning_manager_->drillMotion();
+        }
+        else if (hybrid_planning_manager_->getDrillState() == 5)
+        {
+          // homed
+          hybrid_planning_manager_->setDrillState(0);
+          hybrid_planning_manager_->drillMotion();
+        }
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:
         return ReactionResult(event, "Local planner actoin canceled",
@@ -146,7 +180,6 @@ namespace moveit::hybrid_planning
     first_time_ = true;
     previous_goal_ = nullptr;
   }
-
 
   bool MotionCompensation::checkMotionXsendAction()
   {
