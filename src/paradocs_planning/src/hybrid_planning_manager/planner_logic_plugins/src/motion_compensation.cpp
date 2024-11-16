@@ -114,16 +114,16 @@ namespace moveit::hybrid_planning
         }
         else if (hybrid_planning_manager_->getDrillState() == 4)
         {
-          hybrid_planning_manager_->setDrillState(5);
-          // backed to predrill
-          hybrid_planning_manager_->drillCmd(false);
-          hybrid_planning_manager_->drillMotion();
+          // hybrid_planning_manager_->setDrillState(5);
+          // // backed to predrill
+          // hybrid_planning_manager_->drillCmd(false);
+          // hybrid_planning_manager_->drillMotion();
         }
         else if (hybrid_planning_manager_->getDrillState() == 5)
         {
           // homed
-          hybrid_planning_manager_->setDrillState(0);
-          hybrid_planning_manager_->drillMotion();
+          // hybrid_planning_manager_->setDrillState(0);
+          // hybrid_planning_manager_->drillMotion();
         }
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:

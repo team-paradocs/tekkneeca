@@ -222,6 +222,7 @@ namespace moveit::hybrid_planning
             // stop planning stop execution
             planner_state_ = 0;
             cancelHybridManagerGoals();
+            drill_state_ = 0;
             // auto message = std_msgs::msg::Bool();
             // message.data = true;
             // // stop execution
