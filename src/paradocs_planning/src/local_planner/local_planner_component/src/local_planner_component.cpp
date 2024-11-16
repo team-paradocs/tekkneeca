@@ -178,7 +178,7 @@ bool LocalPlannerComponent::initialize()
     // Goal callback
     [this](const rclcpp_action::GoalUUID& /*unused*/, const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal>& /*unused*/) 
     {
-      RCLCPP_INFO(LOGGER, "Received local planning goal request");
+      // RCLCPP_INFO(LOGGER, "Received local planning goal request");
       // always accept the new goal
       if (long_callback_thread_.joinable())
       {
@@ -249,7 +249,7 @@ bool LocalPlannerComponent::initialize()
         {
           // inactive
           // need to append start state and start local planer
-          RCLCPP_INFO(LOGGER, "Add current_robot_state as part of compensation");
+          // RCLCPP_INFO(LOGGER, "Add current_robot_state as part of compensation");
           // Read current robot state
           const moveit::core::RobotState current_robot_state = [this] {
             planning_scene_monitor::LockedPlanningSceneRO ls(planning_scene_monitor_);
@@ -375,7 +375,7 @@ void LocalPlannerComponent::executeIteration()
       // RCLCPP_INFO(LOGGER, "Progress: %f", trajectory_operator_instance_->getTrajectoryProgress(current_robot_state));
       if (trajectory_operator_instance_->getTrajectoryProgress(current_robot_state) > PROGRESS_THRESHOLD)
       {
-        RCLCPP_INFO(LOGGER, "Local planner reached the goal");
+        // RCLCPP_INFO(LOGGER, "Local planner reached the goal");
         local_planning_goal_handle_->succeed(result);
         // in reset set to AWAIT_GLOBAL_TRAJECTORY
         reset();
