@@ -143,7 +143,7 @@ private:
 
       n->declare_parameter<std::string>("ompl.request_adapters", UNDEFINED);
       n->declare_parameter<std::string>("ompl.response_adapters", UNDEFINED);
-      n->declare_parameter<double>("ompl.start_state_max_bounds_error", UNDEFINEDDOUBLE);
+      // n->declare_parameter<double>("ompl.start_state_max_bounds_error", UNDEFINEDDOUBLE);
     }
     
     // Declare planning pipeline Pilz parameters
@@ -154,7 +154,7 @@ private:
       n->declare_parameter<std::string>("pilz_industrial_motion_planner.planning_plugin", UNDEFINED);
       n->declare_parameter<std::string>("pilz_industrial_motion_planner.request_adapters", UNDEFINED);
       n->declare_parameter<std::string>("pilz_industrial_motion_planner.response_adapters", UNDEFINED);
-      n->declare_parameter<double>("pilz_industrial_motion_planner.start_state_max_bounds_error", UNDEFINEDDOUBLE);
+      // n->declare_parameter<double>("pilz_industrial_motion_planner.start_state_max_bounds_error", UNDEFINEDDOUBLE);
       n->declare_parameter<double>("robot_description_planning.cartesian_limits.max_trans_vel", UNDEFINEDDOUBLE);
       n->declare_parameter<double>("robot_description_planning.cartesian_limits.max_trans_acc", UNDEFINEDDOUBLE);
       n->declare_parameter<double>("robot_description_planning.cartesian_limits.max_trans_dec", UNDEFINEDDOUBLE);

@@ -380,7 +380,7 @@ namespace moveit::hybrid_planning
 
   bool HybridPlanningManager::sendLocalPlannerAction(int type)
   {
-    RCLCPP_INFO(LOGGER, "In sendLocalPlannerAction function, type: %d", type);
+    // RCLCPP_INFO(LOGGER, "In sendLocalPlannerAction function, type: %d", type);
     // 0: do nothing for now, can be another signal in the future
     // 1: global traj, don't start exe loop just chage state
     // 2: compensate traj, don't start exe loop just chage state
@@ -394,7 +394,7 @@ namespace moveit::hybrid_planning
           if (!goal_handle) {
             RCLCPP_ERROR(LOGGER, "Local goal was rejected by server");
           } else {
-            RCLCPP_INFO(LOGGER, "Local goal accepted by server");
+            // RCLCPP_INFO(LOGGER, "Local goal accepted by server");
           }
         };
 
@@ -457,7 +457,7 @@ namespace moveit::hybrid_planning
     {
       // send cache_global_trajectory_ to local planner
       size_t trajSize = cache_global_trajectory_->getWayPointCount();
-      RCLCPP_INFO(LOGGER, "trajSize, %ld", trajSize);
+      // RCLCPP_INFO(LOGGER, "trajSize, %ld", trajSize);
 
       // Loop through each waypoint in the trajectory
       for (size_t i = 0; i < trajSize; ++i)
@@ -599,7 +599,6 @@ namespace moveit::hybrid_planning
     }
     else if (stage == 2)
     {
-
       drillWayPointConstraints.push_back(start_drill_constraints);
     }
     // between stage 2 and 3, we switch on the drill
