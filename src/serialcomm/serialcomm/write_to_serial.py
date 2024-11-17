@@ -11,7 +11,7 @@ class TestSub(Node):
         super().__init__('serial_writer')
         self.subscription=self.create_subscription(
             String,
-            '/lbr/drill_commands',
+            '/drill_commands',
             self.subscriber_callback,
             10
         )

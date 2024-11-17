@@ -108,7 +108,7 @@ namespace moveit::hybrid_planning
     }
 
     // Parametrize trajectory and calculate velocity and accelerations
-    // time_parameterization_.computeTimeStamps(*reference_trajectory_);
+    time_parameterization_.computeTimeStamps(*reference_trajectory_);
 
     // Return empty feedback
     return feedback_;

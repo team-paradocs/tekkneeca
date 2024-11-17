@@ -210,7 +210,7 @@ ompl:
   response_adapters: >-
     default_planning_response_adapters/ValidateSolution
     default_planning_response_adapters/DisplayMotionPath
-  # default_planning_response_adapters/AddTimeOptimalParameterization
+    default_planning_response_adapters/AddTimeOptimalParameterization
 
 pilz_industrial_motion_planner:
   capabilities: >-
@@ -233,7 +233,7 @@ pilz_industrial_motion_planner:
   response_adapters: >-
     default_planning_response_adapters/ValidateSolution
     default_planning_response_adapters/DisplayMotionPath
-  # default_planning_response_adapters/AddTimeOptimalParameterization
+    default_planning_response_adapters/AddTimeOptimalParameterization
 
 # part of pilz_industrial_motion_planner
 robot_description_planning:
@@ -241,7 +241,7 @@ robot_description_planning:
     max_rot_vel: 1.57
     max_trans_acc: 2.25
     max_trans_dec: -5.0
-    max_trans_vel: 1.0
+    max_trans_vel: 2.0
   # these are for rviz move_group so are not used 
   # default_acceleration_scaling_factor: 0.1
   # default_velocity_scaling_factor: 0.1
@@ -249,7 +249,7 @@ robot_description_planning:
     A1:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -258,19 +258,19 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0
+      # max_deceleration: -10.0
       max_effort: 200.0
       max_jerk: .nan
       max_position: 2.96555555556
       max_velocity: 1.710422666954443
       min_position: -2.96555555556
-      min_velocity: .nan
+      min_velocity: -1.710422666954443
       soft_lower_limit: .nan
       soft_upper_limit: .nan
     A2:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -279,19 +279,19 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0
+      # max_deceleration: -10.0
       max_effort: 200.0
       max_jerk: .nan
       max_position: 2.09333333333
       max_velocity: 1.710422666954443
       min_position: -2.09333333333
-      min_velocity: .nan
+      min_velocity: -1.710422666954443
       soft_lower_limit: .nan
       soft_upper_limit: .nan
     A3:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -300,19 +300,19 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0
+      # max_deceleration: -10.0
       max_effort: 200.0
       max_jerk: .nan
       max_position: 2.96555555556
       max_velocity: 1.7453292519943295
       min_position: -2.96555555556
-      min_velocity: .nan
+      min_velocity: -1.7453292519943295
       soft_lower_limit: .nan
       soft_upper_limit: .nan
     A4:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -321,19 +321,19 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0
+      # max_deceleration: -10.0
       max_effort: 200.0
       max_jerk: .nan
       max_position: 2.09333333333
       max_velocity: 2.2689280275926285
       min_position: -2.09333333333
-      min_velocity: .nan
+      min_velocity: -2.2689280275926285
       soft_lower_limit: .nan
       soft_upper_limit: .nan
     A5:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -342,19 +342,19 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0
+      # max_deceleration: -10.0
       max_effort: 200.0
       max_jerk: .nan
       max_position: 2.96555555556
       max_velocity: 2.443460952792061
       min_position: -2.96555555556
-      min_velocity: .nan
+      min_velocity: -2.443460952792061
       soft_lower_limit: .nan
       soft_upper_limit: .nan
     A6:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -363,19 +363,19 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0
+      # max_deceleration: -10.0
       max_effort: 200.0
       max_jerk: .nan
       max_position: 2.09333333333
       max_velocity: 3.141592653589793
       min_position: -2.09333333333
-      min_velocity: .nan
+      min_velocity: -3.141592653589793
       soft_lower_limit: .nan
       soft_upper_limit: .nan
     A7:
       angle_wraparound: false
       has_acceleration_limits: true
-      has_deceleration_limits: true
+      has_deceleration_limits: false
       has_effort_limits: true
       # has_jerk_limits: null
       has_position_limits: true
@@ -384,13 +384,13 @@ robot_description_planning:
       k_position: .nan
       k_velocity: .nan
       max_acceleration: 10.0
-      max_deceleration: -10.0          
+      # max_deceleration: -10.0          
       max_effort: 200.0
       max_jerk: .nan
       max_position: 3.05277777778
       max_velocity: 3.141592653589793
       min_position: -3.05277777778
-      min_velocity: .nan
+      min_velocity: -3.141592653589793
       soft_lower_limit: .nan
       soft_upper_limit: .nan
 
@@ -417,7 +417,7 @@ robot_description_kinematics:
     kinematics_solver: pick_ik/PickIkPlugin
     kinematics_solver_timeout: 0.05
     kinematics_solver_attempts: 3
-    mode: global
+    mode: local
     position_scale: 1.0
     rotation_scale: 0.5
     position_threshold: 0.001
