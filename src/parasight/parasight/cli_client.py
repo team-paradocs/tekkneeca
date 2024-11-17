@@ -12,6 +12,8 @@ class ParaSightNode(Node):
         self.start_publisher = self.create_publisher(Empty, 'trigger_host_ui', 10)
         self.stop_publisher = self.create_publisher(Empty, 'hard_reset_host', 10)
         self.drill_publisher = self.create_publisher(Int32, '/lbr/plan_flag', 10)
+        self.reg_request_publisher = self.create_publisher(Int32, '/trigger_reg', 10)
+        self.log_request_publisher = self.create_publisher(Empty, '/log_request', 10)
 
     def publish_start(self):
         # Publish an empty message to start topic
@@ -30,6 +32,22 @@ class ParaSightNode(Node):
         self.get_logger().info("Published Drill message (2) on '/lbr/plan_flag'")
         self.publish_stop() # Reset ParaSight after drilling
 
+    def publish_reg(self):
+        msg = Int32()
+        msg.data = 0
+        self.reg_request_publisher.publish(msg)
+        self.get_logger().info("Published Registration request message (0) on '/trigger_reg'")
+
+    def publish_reg_ui(self):
+        msg = Int32()
+        msg.data = 1
+        self.reg_request_publisher.publish(msg)
+        self.get_logger().info("Published Registration request with UI message (1) on '/trigger_reg'")
+
+    def publish_log_request(self):
+        self.log_request_publisher.publish(Empty())
+        self.get_logger().info("Requested log")
+
 class ParaSightCLI:
     def __init__(self):
         # Initialize ROS2 and the node
@@ -45,8 +63,12 @@ class ParaSightCLI:
                     "Start ParaSight",
                     "Reset ParaSight",
                     "Drill",
+                    "Register",
+                    "Register (+UI)",
+                    "Log",
                     "Exit"
-                ]
+                ],
+                use_shortcuts=True
             ).ask()
 
             if choice == "Start ParaSight":
@@ -55,6 +77,12 @@ class ParaSightCLI:
                 self.node.publish_stop()
             elif choice == "Drill":
                 self.node.publish_drill()
+            elif choice == "Register":
+                self.node.publish_reg()
+            elif choice == "Register (+UI)":
+                self.node.publish_reg_ui()
+            elif choice == "Log":
+                self.node.publish_log_request()
             elif choice == "Exit":
                 print("Exiting...")
                 break

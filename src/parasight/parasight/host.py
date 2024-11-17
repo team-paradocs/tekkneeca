@@ -9,6 +9,7 @@ from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from tf2_geometry_msgs import do_transform_pose, do_transform_point
+from std_msgs.msg import Int32
 from transitions import Machine
 import open3d as o3d
 
@@ -18,7 +19,7 @@ from parasight.utils import *
 
 import time
 
-from parasight_interfaces.srv import StartTracking
+from parasight_interfaces.srv import StartTracking, StopTracking
 from parasight_interfaces.msg import TrackedPoints
 from std_srvs.srv import Empty as EmptySrv
 from functools import partial
@@ -55,6 +56,7 @@ class ParaSightHost(Node):
         self.last_cloud = None
         self.annotated_points = None
         self.need_to_register = True
+        self.last_drill_pose = None
         
         # D405 Intrinsics
         self.fx = 425.19189453125
@@ -66,8 +68,13 @@ class ParaSightHost(Node):
         # Set up tf listener
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.camera_frame = 'camera_depth_optical_frame'
         self.base_frame = 'lbr/link_0'
+        self.ee_frame = 'lbr/link_ee'
+        self.tool_frame = 'lbr/link_tool'
+        self.camera_link_frame = 'camera_link'
+        self.camera_frame = 'camera_depth_optical_frame'
+
+
         # Trigger Subscribers
         self.ui_trigger_subscription = self.create_subscription(
             Empty,
@@ -101,6 +108,16 @@ class ParaSightHost(Node):
             '/tracked_points',
             self.tracked_points_callback,
             10)
+        self.reg_request_subscription = self.create_subscription(
+            Int32,
+            '/trigger_reg',
+            self.reg_request_callback,
+            10)
+        self.log_request_subscription = self.create_subscription(
+            Empty,
+            '/log_request',
+            self.log_request_callback,
+            10)
         
         # Publishers
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
@@ -108,7 +125,7 @@ class ParaSightHost(Node):
 
         # Service Clients
         self.start_tracking_client = self.create_client(StartTracking, '/start_tracking')
-        self.stop_tracking_client = self.create_client(EmptySrv, '/stop_tracking')
+        self.stop_tracking_client = self.create_client(StopTracking, '/stop_tracking')
 
         # Load resources
         package_dir = get_package_share_directory('parasight')
@@ -166,7 +183,7 @@ class ParaSightHost(Node):
         ros_points = [Point(x=float(p[0]), y=float(p[1]), z=0.0) for p in self.annotated_points]
         
         # Prepare the request
-        request = StartTracking.Request(points=ros_points)
+        request = StartTracking.Request(points=ros_points, resume=False)
         
         # Call asynchronously to avoid blocking
         self.start_tracking_client.wait_for_service()
@@ -187,25 +204,38 @@ class ParaSightHost(Node):
         self.get_logger().info('Hard reset received, attempting to stop tracking...')
         
         # Create an empty request for the stop_tracking service
-        stop_tracking_request = EmptySrv.Request()
+        stop_tracking_request = StopTracking.Request(reset=True)
         
         # Call stop_tracking service asynchronously
         self.stop_tracking_client.wait_for_service()
         future = self.stop_tracking_client.call_async(stop_tracking_request)
         
         # Add a callback to handle after stopping tracking
-        future.add_done_callback(partial(self.after_stop_tracking))
+        future.add_done_callback(partial(self.after_stop_tracking, reset=True))
 
-    def after_stop_tracking(self, future):
+    def after_stop_tracking(self, future, reset=True):
         try:
             # Check if the service call was successful
             future.result()  # This will raise an exception if the service failed
-            self.get_logger().info("Tracking successfully stopped, proceeding with reset.")
+            self.get_logger().info("Tracking successfully stopped, proceeding with reset." if reset else "Tracking successfully paused.")
         except Exception as e:
             self.get_logger().error(f"Failed to stop tracking: {e}")
         
         # Now, trigger the state machine reset
-        self.trigger('hard_reset')
+        if reset:
+            self.trigger('hard_reset')
+
+    def pause_tracking(self):
+        request = StopTracking.Request(reset=False)
+        self.stop_tracking_client.wait_for_service()
+        self.future = self.stop_tracking_client.call_async(request)
+        self.future.add_done_callback(partial(self.after_stop_tracking, reset=False))
+
+    def resume_tracking(self):
+        request = StartTracking.Request(resume=True)
+        self.start_tracking_client.wait_for_service()
+        self.future = self.start_tracking_client.call_async(request)
+        self.future.add_done_callback(partial(self.tracking_response_callback))
 
     def rgb_image_callback(self, msg):
         rgb_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
@@ -228,6 +258,40 @@ class ParaSightHost(Node):
         cloud = from_msg(msg)
         self.last_cloud = cloud
 
+    def register_and_publish(self, points):
+        # self.pause_tracking() # Pause tracking while registering to improve performance
+        t0 = time.time()
+        mask, annotated_points, mask_points = self.segmentation_ui.segment_using_points(self.last_rgb_image, points[0], points[1])
+        self.annotated_points = annotated_points # cache
+        annotated_points = self.add_depth(annotated_points)
+        mask_points = self.add_depth(mask_points)
+        transform = self.regpipe.register(mask, self.source, self.last_cloud, annotated_points, mask_points)
+        t1 = time.time()
+        self.get_logger().info(f'Registration time: {t1 - t0}')
+        source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
+        source_cloud.transform(transform)
+        source_cloud.paint_uniform_color([1, 0, 0])
+        self.publish_point_cloud(source_cloud)
+
+        drill_pose_array = self.compute_plan(transform,theta=-np.pi)
+        # drill_pose_array = self.calibration_offset(drill_pose_array,0.0045,-0.0065,0.0)
+        self.pose_array_publisher.publish(drill_pose_array)
+        self.last_drill_pose = drill_pose_array.poses[0]
+        # self.resume_tracking()
+
+    def reg_request_callback(self, msg):
+        if msg.data == 0:
+            if self.annotated_points is not None:
+                print('Re-Registering...')
+                self.register_and_publish(self.annotated_points)
+            else:
+                self.get_logger().warn('No annotated points set. Register with UI first')
+        elif msg.data == 1:
+            print('Re-Registering with UI...')
+            mask, annotated_points, mask_points = self.segmentation_ui.segment_using_ui(self.last_rgb_image) # Blocking call
+            self.annotated_points = annotated_points
+            self.register_and_publish(annotated_points)
+
     def tracked_points_callback(self, msg):
         if not self.state == 'tracker_active':
             return
@@ -240,24 +304,9 @@ class ParaSightHost(Node):
             self.need_to_register = True
             return # Wait for tracking to stabilize
         elif self.need_to_register:
-            self.get_logger().info('Registering...')
             annotated_points = [(p.x, p.y) for p in msg.points]
-            t0 = time.time()
-            mask, annotated_points, mask_points = self.segmentation_ui.segment_using_points(self.last_rgb_image, annotated_points[0], annotated_points[1])
-            annotated_points = self.add_depth(annotated_points)
-            mask_points = self.add_depth(mask_points)
-            source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
-            transform = self.regpipe.register(mask, source_cloud, self.last_cloud, annotated_points, mask_points)
-            t1 = time.time()
-            self.get_logger().info(f'Registration time: {t1 - t0}')
-
-            source_cloud.transform(transform)
-            source_cloud.paint_uniform_color([1, 0, 0])
-            self.publish_point_cloud(source_cloud)
-
-            drill_pose_array = self.compute_plan(transform)
-            self.pose_array_publisher.publish(drill_pose_array)
-
+            self.get_logger().info('Registering...')
+            self.register_and_publish(annotated_points)
             self.need_to_register = False
 
     def publish_point_cloud(self, cloud):
@@ -319,9 +368,22 @@ class ParaSightHost(Node):
 
             # self.get_logger().info(f"Drill point: {p}")
             drill_pose_array.poses.append(pose)
+            break # Only compute one point for now
 
         return drill_pose_array
 
+    def calibration_offset(self,pose_array,x_off,y_off,z_off):
+        for pose in pose_array.poses:
+            pose.position.x += x_off
+            pose.position.y += y_off
+            pose.position.z += z_off
+        return pose_array
+
+    def log_request_callback(self, msg):
+        self.get_logger().info('Log requested')
+        base_to_tool = self.tf_buffer.lookup_transform(self.base_frame, self.tool_frame, rclpy.time.Time())
+        self.get_logger().info(f'Base to tool: {base_to_tool}')
+        self.get_logger().info(f'Drill pose: {self.last_drill_pose}') # Target in World Frame
 
 
 def main(args=None):
