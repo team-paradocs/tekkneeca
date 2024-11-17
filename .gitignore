@@ -62,3 +62,7 @@ CATKIN_IGNORE
 src/build/
 src/install/
 src/log/
+
+# ROS bags
+metadata.yaml
+*.db3

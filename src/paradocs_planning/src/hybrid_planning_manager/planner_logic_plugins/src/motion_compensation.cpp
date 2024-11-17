@@ -102,34 +102,44 @@ namespace moveit::hybrid_planning
         }
         else if (hybrid_planning_manager_->getDrillState() == 2)
         {
-          // arrive at the startdrill pose
+          // arrived at the startdrill pose
           hybrid_planning_manager_->setDrillState(3);
+          // start the drill
           hybrid_planning_manager_->drillCmd(true);
           hybrid_planning_manager_->drillMotion();
         }
         else if (hybrid_planning_manager_->getDrillState() == 3)
         {
+          // drilld and arrived at the touch pose
           hybrid_planning_manager_->setDrillState(4);
           hybrid_planning_manager_->drillMotion();
         }
         else if (hybrid_planning_manager_->getDrillState() == 4)
         {
+          // drilld and arrived at the touch pose
           hybrid_planning_manager_->setDrillState(5);
-          // backed to predrill
-          hybrid_planning_manager_->drillCmd(false);
           hybrid_planning_manager_->drillMotion();
         }
         else if (hybrid_planning_manager_->getDrillState() == 5)
         {
-          // homed
-          hybrid_planning_manager_->setDrillState(0);
+          // arrived at the offdrill pose
+          hybrid_planning_manager_->setDrillState(6);
+          // turn off the drill
+          hybrid_planning_manager_->drillCmd(false);
           hybrid_planning_manager_->drillMotion();
         }
         else if (hybrid_planning_manager_->getDrillState() == 6)
         {
-          // homed
+          // arrived at the predrill pose
+          hybrid_planning_manager_->setDrillState(7);
+          hybrid_planning_manager_->drillMotion();
+        }
+        else if (hybrid_planning_manager_->getDrillState() == 7)
+        {
+          // arrived at the home pose
           hybrid_planning_manager_->setDrillState(0);
         }
+        
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:
         return ReactionResult(event, "Local planner actoin canceled",

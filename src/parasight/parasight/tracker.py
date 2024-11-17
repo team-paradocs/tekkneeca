@@ -9,7 +9,7 @@ from geometry_msgs.msg import Point, PointStamped, PoseStamped
 import time
 import tf2_ros
 from tf2_geometry_msgs import do_transform_point
-from parasight_interfaces.srv import StartTracking
+from parasight_interfaces.srv import StartTracking, StopTracking
 from parasight_interfaces.msg import TrackedPoints
 from std_srvs.srv import Empty
 
@@ -62,7 +62,7 @@ class Tracker(Node):
         self.tracked_points_publisher = self.create_publisher(TrackedPoints, '/tracked_points', 10)
 
         self.start_service = self.create_service(StartTracking, '/start_tracking', self.start_tracking_callback)
-        self.stop_service = self.create_service(Empty, '/stop_tracking', self.stop_tracking_callback)
+        self.stop_service = self.create_service(StopTracking, '/stop_tracking', self.stop_tracking_callback)
         
         self.bridge = CvBridge()
         self.logger = self.get_logger()
@@ -74,18 +74,25 @@ class Tracker(Node):
 
     def start_tracking_callback(self, request, response):
         self.tracking_enabled = True
-        points = request.points
-        self.queries = torch.tensor([[0, point.x, point.y] for point in points], dtype=torch.float32).to(self.device)
-        self.logger.info(f"Starting tracking with {len(points)} points")
+        if not request.resume:  
+            points = request.points
+            self.queries = torch.tensor([[0, point.x, point.y] for point in points], dtype=torch.float32).to(self.device)
+            self.logger.info(f"Starting tracking with {len(points)} points")
+        else:
+            self.logger.info("Resuming tracking")
         response.success = True
         return response
 
     def stop_tracking_callback(self, request, response):
         self.tracking_enabled = False
-        self.queries = None
-        self.buffer = []
-        self.is_first_step = True
-        self.logger.info("Stopping tracking")
+        if request.reset:
+            self.queries = None
+            self.buffer = []
+            self.is_first_step = True
+            self.logger.info("Stopping tracking")
+        else:
+            self.logger.info("Pausing tracking")
+        response.success = True
         return response
 
 
@@ -115,7 +122,7 @@ class Tracker(Node):
         point_3d = do_transform_point(point_3d, transform)
 
         pose = PoseStamped()
-        hover_offset = 0.07
+        hover_offset = 0.1
         pose.header.frame_id = self.base_frame
         pose.pose.position.x = point_3d.point.x
         pose.pose.position.y = point_3d.point.y

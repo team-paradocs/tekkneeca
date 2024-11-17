@@ -142,6 +142,7 @@ def launch_setup(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 ],
                 remappings=[
                     ("/lbr/tracked_pose", "/tracked_pose"),
+                    ("/lbr/drill_commands", "/drill_commands"),
                 ],
                 # extra_arguments=[
                 #     {"use_intra_process_comms": True},
