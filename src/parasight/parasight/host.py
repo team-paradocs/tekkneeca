@@ -273,8 +273,8 @@ class ParaSightHost(Node):
         source_cloud.paint_uniform_color([1, 0, 0])
         self.publish_point_cloud(source_cloud)
 
-        drill_pose_array = self.compute_plan(transform,theta=-np.pi)
-        # drill_pose_array = self.calibration_offset(drill_pose_array,0.0045,-0.0065,0.0)
+        drill_pose_array = self.compute_plan(transform,theta=0)
+        drill_pose_array = self.calibration_offset(drill_pose_array,0.0035,0.00,0.0)
         self.pose_array_publisher.publish(drill_pose_array)
         self.last_drill_pose = drill_pose_array.poses[0]
         # self.resume_tracking()
