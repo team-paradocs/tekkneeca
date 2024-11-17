@@ -226,8 +226,10 @@ pilz_industrial_motion_planner:
     default_planner_request_adapters/FixStartStateBounds
     default_planner_request_adapters/FixStartStateCollision 
     default_planner_request_adapters/FixStartStatePathConstraints
+    default_planner_request_adapters/AddTimeOptimalParameterization
   # this value is used in fix_start_state_bounds adapter, use the default value for now
   # start_state_max_bounds_error: 0.1
+  resample_dt: 0.1
 
   # can be either a vector of strings or a single string
   response_adapters: >-

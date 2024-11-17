@@ -50,6 +50,7 @@ namespace moveit::hybrid_planning
     reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, group_name);
     next_waypoint_index_ = 0;
     joint_group_ = robot_model->getJointModelGroup(group_name);
+    time_parameterization_ = std::make_shared<trajectory_processing::TimeOptimalTrajectoryGeneration>(0.1, 0.05, 0.001);
     return true;
   }
 
@@ -108,7 +109,7 @@ namespace moveit::hybrid_planning
     }
 
     // Parametrize trajectory and calculate velocity and accelerations
-    // time_parameterization_.computeTimeStamps(*reference_trajectory_);
+    // time_parameterization_->computeTimeStamps(*reference_trajectory_);
 
     // Return empty feedback
     return feedback_;

@@ -125,6 +125,11 @@ namespace moveit::hybrid_planning
           hybrid_planning_manager_->setDrillState(0);
           hybrid_planning_manager_->drillMotion();
         }
+        else if (hybrid_planning_manager_->getDrillState() == 6)
+        {
+          // homed
+          hybrid_planning_manager_->setDrillState(0);
+        }
         return ReactionResult(event, "", moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
       case HybridPlanningEvent::LOCAL_PLANNING_ACTION_CANCELED:
         return ReactionResult(event, "Local planner actoin canceled",
