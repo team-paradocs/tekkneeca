@@ -210,7 +210,7 @@ ompl:
   response_adapters: >-
     default_planning_response_adapters/ValidateSolution
     default_planning_response_adapters/DisplayMotionPath
-    default_planning_response_adapters/AddTimeOptimalParameterization
+  # default_planning_response_adapters/AddTimeOptimalParameterization
 
 pilz_industrial_motion_planner:
   capabilities: >-
@@ -226,14 +226,16 @@ pilz_industrial_motion_planner:
     default_planner_request_adapters/FixStartStateBounds
     default_planner_request_adapters/FixStartStateCollision 
     default_planner_request_adapters/FixStartStatePathConstraints
+    default_planner_request_adapters/AddTimeOptimalParameterization
   # this value is used in fix_start_state_bounds adapter, use the default value for now
   # start_state_max_bounds_error: 0.1
+  resample_dt: 0.1
 
   # can be either a vector of strings or a single string
   response_adapters: >-
     default_planning_response_adapters/ValidateSolution
     default_planning_response_adapters/DisplayMotionPath
-    default_planning_response_adapters/AddTimeOptimalParameterization
+  # default_planning_response_adapters/AddTimeOptimalParameterization
 
 # part of pilz_industrial_motion_planner
 robot_description_planning:
@@ -241,7 +243,7 @@ robot_description_planning:
     max_rot_vel: 1.57
     max_trans_acc: 2.25
     max_trans_dec: -5.0
-    max_trans_vel: 2.0
+    max_trans_vel: 1.0
   # these are for rviz move_group so are not used 
   # default_acceleration_scaling_factor: 0.1
   # default_velocity_scaling_factor: 0.1

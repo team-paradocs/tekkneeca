@@ -110,13 +110,13 @@ namespace moveit::hybrid_planning
         }
         else if (hybrid_planning_manager_->getDrillState() == 3)
         {
-          // drilld and arrived at the touch pose
+          // drilled and arrived at the endpose
           hybrid_planning_manager_->setDrillState(4);
           hybrid_planning_manager_->drillMotion();
         }
         else if (hybrid_planning_manager_->getDrillState() == 4)
         {
-          // drilld and arrived at the touch pose
+          // arrived at the touch pose
           hybrid_planning_manager_->setDrillState(5);
           hybrid_planning_manager_->drillMotion();
         }

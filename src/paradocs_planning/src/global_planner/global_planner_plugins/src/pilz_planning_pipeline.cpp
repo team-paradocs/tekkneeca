@@ -132,16 +132,17 @@ namespace moveit::hybrid_planning
       robot_trajectory::RobotTrajectory temp_robot_trajectory(planning_scene->getRobotModel(), group_name);
       for (auto goal : goals)
       {
-        // Fix Pilz bug, fixed in hybrid_planning_manager
-        // goal.position_constraints[0].header.frame_id = "world";
-        // goal.orientation_constraints[0].header.frame_id = "world";
-
         planning_components->setGoal({goal});
         auto plan_solution = planning_components->plan(plan_params);
+        if (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+        {
+          response.error_code = plan_solution.error_code;
+          return response;
+        }
         moveit::core::RobotState last_state(robot_model_);
         last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
         planning_components->setStartState(last_state);
-        temp_robot_trajectory.append(*(plan_solution.trajectory.get()), 0.1);
+        temp_robot_trajectory.append(*(plan_solution.trajectory.get()), 1.0);
         response.error_code = plan_solution.error_code;
       }
       moveit::core::robotStateToRobotStateMsg(current_state, response.trajectory_start, true);

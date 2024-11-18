@@ -157,7 +157,7 @@ namespace moveit::hybrid_planning
         }
     );
 
-    stop_execution_publisher_ = this->create_publisher<std_msgs::msg::Bool>("stop_execution", rclcpp::SystemDefaultsQoS());
+    // stop_execution_publisher_ = this->create_publisher<std_msgs::msg::Bool>("stop_execution", rclcpp::SystemDefaultsQoS());
 
     start_drilling_publisher_ = this->create_publisher<std_msgs::msg::String>("drill_commands", 10);
 
@@ -175,7 +175,7 @@ namespace moveit::hybrid_planning
           temp_pose->header.frame_id = "world";
           hybrid_planning_goal_handle_ = std::move(temp_pose);
 
-          if (planner_state_ == 0 || planner_state_ == 2) {
+          if (planner_state_ == 0 || planner_state_ == 2 || planner_state_ == 3) {
             // not planning
           }
           else if (planner_state_ == 1)
@@ -209,31 +209,21 @@ namespace moveit::hybrid_planning
         "/lbr/plan_flag", rclcpp::SystemDefaultsQoS(),
         [this](const std_msgs::msg::Int32::ConstSharedPtr& msg) {
           RCLCPP_INFO(LOGGER, "Planning flag received: %d", msg->data);
-          if (msg->data == 1) {
+
+          planner_state_ = msg->data;
+          if (planner_state_ == 1) {
             // planning + execution mode for now
-            planner_state_ = 1;
             executeHybridPlannerGoal();
-            // auto message = std_msgs::msg::Bool();
-            // message.data = true;
-            // // stop execution
-            // stop_execution_publisher_->publish(message);
           }
-          else if (msg->data == 0) {
+          else if (planner_state_ == 0) {
             // stop planning stop execution
-            planner_state_ = 0;
             drill_state_ = 0;
             cancelHybridManagerGoals();
-            // auto message = std_msgs::msg::Bool();
-            // message.data = true;
-            // // stop execution
-            // stop_execution_publisher_->publish(message);
-            // reset previous goal, first_time_
             planner_logic_instance_->reset();
           }
-          else if (msg->data == 2) {
-            // start drill motion
-            planner_state_ = 2;
+          else if (planner_state_ == 2) {
 
+            // start drill motion
             if (drill_state_ == 0) {
               drill_state_ = 1;
               ReactionResult reaction_result = planner_logic_instance_->react(HybridPlanningEvent::DRILLING_REQUEST_RECEIVED);
@@ -242,10 +232,15 @@ namespace moveit::hybrid_planning
                 RCLCPP_ERROR_STREAM(LOGGER, "Hybrid Planning Manager failed to react to " << reaction_result.event << " with error: " << reaction_result.error_message);
               }
             }
-            // auto message = std_msgs::msg::Bool();
-            // message.data = false;
-            // // start execution
-            // stop_execution_publisher_->publish(message);
+          }
+          else if (msg->data == 3) 
+          {
+            // hard reset and go back to home
+            cancelHybridManagerGoals();
+            planner_logic_instance_->reset();
+            drill_state_ = 7;
+            drillMotion();
+
           }
           else
             RCLCPP_ERROR(LOGGER, "Invalid planning flag received: %d", msg->data);
@@ -351,7 +346,6 @@ namespace moveit::hybrid_planning
     moveit_msgs::msg::MotionPlanRequest goal_motion_request;
 
     if (is_drill) {
-      
       goal_motion_request.goal_constraints.resize(drillWayPointConstraints.size());
       goal_motion_request.goal_constraints = drillWayPointConstraints;
 
@@ -513,6 +507,12 @@ namespace moveit::hybrid_planning
     // goal_motion_request.goal_constraints[0] =
     //     kinematic_constraints::constructGoalConstraints("link_tool", hybrid_planning_goal_handle_->pose);	
 
+    if (hybrid_planning_goal_handle_ == nullptr)
+    {
+      RCLCPP_ERROR(LOGGER, "hybrid_planning_goal_handle_ is nullptr");
+      return false;
+    }
+
     bool success = goal_state_->setFromIK(joint_model_group_.get(), hybrid_planning_goal_handle_->pose);
     if (!success)
     {
@@ -565,12 +565,18 @@ namespace moveit::hybrid_planning
     // cartesian planning parameters
     // const double jump_threshold = 0.0;
     // const double eef_step = 0.01;
+    if (drill_pose_goal_handle_ == nullptr)
+    {
+      RCLCPP_ERROR(LOGGER, "drill_pose_goal_handle_ is nullptr");
+      drill_state_ = 0;
+      return;
+    }
 
     geometry_msgs::msg::PoseStamped preDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.05);
     moveit_msgs::msg::Constraints predrill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
 
-    geometry_msgs::msg::PoseStamped startDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.035);
+    geometry_msgs::msg::PoseStamped startDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
     moveit_msgs::msg::Constraints start_drill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", startDrillPose);
 
@@ -578,9 +584,9 @@ namespace moveit::hybrid_planning
     moveit_msgs::msg::Constraints touch_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
 
-    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.035);
+    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.030);
 
-    geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.035);
+    geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
     moveit_msgs::msg::Constraints off_drill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", offDrillPose);
 
@@ -599,7 +605,6 @@ namespace moveit::hybrid_planning
     }
     else if (stage == 2)
     {
-      // go to start drill
       drillWayPointConstraints.push_back(start_drill_constraints);
     }
     // between stage 2 and 3, we switch on the drill
