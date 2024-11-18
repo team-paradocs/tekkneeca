@@ -238,6 +238,7 @@ namespace moveit::hybrid_planning
             // hard reset and go back to home
             cancelHybridManagerGoals();
             planner_logic_instance_->reset();
+            drillCmd(false);
             drill_state_ = 7;
             drillMotion();
 
@@ -584,7 +585,7 @@ namespace moveit::hybrid_planning
     moveit_msgs::msg::Constraints touch_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
 
-    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.030);
+    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.025);
 
     geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
     moveit_msgs::msg::Constraints off_drill_constraints =

@@ -28,8 +28,8 @@ namespace custom_panel
     button2_2_pub_ = node_->create_publisher<std_msgs::msg::Int32>("/lbr/plan_flag", 1);
     button3_2_pub_ = node_->create_publisher<std_msgs::msg::Int32>("/lbr/plan_flag", 1);
 
-    button0_3_pub_ = node_->create_publisher<std_msgs::msg::String>("/lbr/drill_commands", 1);
-    button1_3_pub_ = node_->create_publisher<std_msgs::msg::String>("/lbr/drill_commands", 1);
+    button0_3_pub_ = node_->create_publisher<std_msgs::msg::String>("/drill_commands", 1);
+    button1_3_pub_ = node_->create_publisher<std_msgs::msg::String>("/drill_commands", 1);
 
   }
 
@@ -84,6 +84,7 @@ namespace custom_panel
     RCLCPP_INFO_STREAM(node_->get_logger(), "Drill Flag");
     plan_flag_.data = 2;
     button1_2_pub_->publish(plan_flag_);
+    button0_pub_->publish(parasight_flag_);
   }
 
   void SurgeonUI::on_pushButton2_2_clicked()
