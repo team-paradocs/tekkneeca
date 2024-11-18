@@ -576,7 +576,7 @@ namespace moveit::hybrid_planning
     moveit_msgs::msg::Constraints predrill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", preDrillPose);
 
-    geometry_msgs::msg::PoseStamped startDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.035);
+    geometry_msgs::msg::PoseStamped startDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
     moveit_msgs::msg::Constraints start_drill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", startDrillPose);
 
@@ -584,9 +584,9 @@ namespace moveit::hybrid_planning
     moveit_msgs::msg::Constraints touch_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", touchPose);
 
-    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.035);
+    geometry_msgs::msg::PoseStamped endPose = computeOffsetPose(drill_pose_goal_handle_, 0.030);
 
-    geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.035);
+    geometry_msgs::msg::PoseStamped offDrillPose = computeOffsetPose(drill_pose_goal_handle_, -0.015);
     moveit_msgs::msg::Constraints off_drill_constraints =
       kinematic_constraints::constructGoalConstraints("link_tool", offDrillPose);
 

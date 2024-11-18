@@ -134,6 +134,11 @@ namespace moveit::hybrid_planning
       {
         planning_components->setGoal({goal});
         auto plan_solution = planning_components->plan(plan_params);
+        if (plan_solution.error_code != moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+        {
+          response.error_code = plan_solution.error_code;
+          return response;
+        }
         moveit::core::RobotState last_state(robot_model_);
         last_state.setVariablePositions(plan_solution.trajectory->getLastWayPoint().getVariablePositions());
         planning_components->setStartState(last_state);
