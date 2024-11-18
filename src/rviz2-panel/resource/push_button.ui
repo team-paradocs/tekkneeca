@@ -6,100 +6,218 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>317</width>
-    <height>103</height>
+    <width>596</width>
+    <height>258</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <!-- <widget class="QWidget" name="layoutWidget">
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>20</y>
-     <width>161</width>
-     <height>61</height>
+     <x>30</x>
+     <y>10</y>
+     <width>531</width>
+     <height>71</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
-     <widget class="QLabel" name="label_1">
-      <property name="text">
-       <string>This is label 1.</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>This is label 2.</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget> -->
-
-<widget class="QGroupBox" name="groupBox">
- <property name="title">
-    <string>Group Box</string>
- </property>
- <property name="geometry">
-    <rect>
-     <x>75</x>
-     <y>20</y>
-     <width>200</width>
-     <height>200</height>
-    </rect>
- </property>
- <widget class="QWidget" name="layoutWidget_2">
+   <property name="title">
+    <string>ParaSight</string>
+   </property>
+   <widget class="QWidget" name="layoutWidget_2">
     <property name="geometry">
      <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>200</width>
-        <height>200</height>
+      <x>10</x>
+      <y>20</y>
+      <width>511</width>
+      <height>51</height>
      </rect>
     </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QHBoxLayout" name="verticalLayout">
      <item>
-        <widget class="QPushButton" name="pushButton0">
-         <property name="text">
-            <string>Confirm Registration</string>
-         </property>
-        </widget>
+      <widget class="QPushButton" name="pushButton3">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(26, 95, 180);</string>
+       </property>
+       <property name="text">
+        <string>Annotate</string>
+       </property>
+      </widget>
      </item>
      <item>
-        <widget class="QPushButton" name="pushButton1">
-         <property name="text">
-            <string>Re-Register</string>
-         </property>
-        </widget>
+      <widget class="QPushButton" name="pushButton2">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(53, 132, 228);</string>
+       </property>
+       <property name="text">
+        <string>Re-Register</string>
+       </property>
+      </widget>
      </item>
      <item>
-        <widget class="QPushButton" name="pushButton2">
-         <property name="text">
-            <string>Re-Plan</string>
-         </property>
-        </widget>
+      <widget class="QPushButton" name="pushButton0">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(153, 193, 241);</string>
+       </property>
+       <property name="text">
+        <string>Reset</string>
+       </property>
+      </widget>
      </item>
      <item>
-        <widget class="QPushButton" name="pushButton3">
-         <property name="text">
-            <string>Confirm Plan</string>
-         </property>
-        </widget>
-     </item>
-     <item>
-        <widget class="QLabel" name="label_1">
-         <property name="text">
-            <string>This is label 1.</string>
-         </property>
-        </widget>
+      <widget class="QPushButton" name="pushButton1">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(38, 162, 105);</string>
+       </property>
+       <property name="text">
+        <string>Start</string>
+       </property>
+      </widget>
      </item>
     </layout>
- </widget>
-</widget>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>90</y>
+     <width>531</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Tekkneeca</string>
+   </property>
+   <widget class="QWidget" name="layoutWidget_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>511</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QPushButton" name="pushButton1_2">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(134, 94, 60);</string>
+       </property>
+       <property name="text">
+        <string>Drill</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton0_2">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(181, 131, 90);</string>
+       </property>
+       <property name="text">
+        <string>Track</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton2_2">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(205, 171, 143);</string>
+       </property>
+       <property name="text">
+        <string>Reset</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton3_2">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(224, 27, 36);</string>
+       </property>
+       <property name="text">
+        <string>Stop</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox2_2">
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>170</y>
+     <width>291</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Drill Interface</string>
+   </property>
+   <widget class="QWidget" name="layoutWidget_4">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>271</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="verticalLayout_3">
+     <item>
+      <widget class="QPushButton" name="pushButton1_3">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(38, 162, 105);</string>
+       </property>
+       <property name="text">
+        <string>On</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton0_3">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(224, 27, 36);</string>
+       </property>
+       <property name="text">
+        <string>Off</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>180</y>
+     <width>231</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Raleway</family>
+     <pointsize>29</pointsize>
+     <weight>50</weight>
+     <bold>false</bold>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: rgb(17,52,68);</string>
+   </property>
+   <property name="text">
+    <string>Surgeon I/O</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
