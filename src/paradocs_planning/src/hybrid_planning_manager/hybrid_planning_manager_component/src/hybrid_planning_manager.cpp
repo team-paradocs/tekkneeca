@@ -238,7 +238,7 @@ namespace moveit::hybrid_planning
             // hard reset and go back to home
             cancelHybridManagerGoals();
             planner_logic_instance_->reset();
-            drill_state_ = 6;
+            drill_state_ = 7;
             drillMotion();
 
           }
