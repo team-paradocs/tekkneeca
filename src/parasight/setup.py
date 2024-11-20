@@ -24,7 +24,9 @@ setup(
         'console_scripts': [
             'host = parasight.host:main',
             'cli = parasight.cli_client:main',
-            'tracker = parasight.tracker:main'
+            'tracker = parasight.tracker:main',
+            'snapshot = parasight.scripts.snapshot:main',
+            'offline_register = parasight.scripts.offline_register:main'
         ],
     },
 )
