@@ -81,7 +81,7 @@ class SegmentAnythingUI:
             self.original_image.copy()
         )  # Reload the clean image without text or circles
         cv2.putText(
-            self.image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2
+            self.image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA
         )
         self.update_image_with_points()  # Make sure to redraw the points when updating the prompt
 
@@ -220,6 +220,7 @@ class SegmentAnythingUI:
             1,
             (255, 255, 255),
             2,
+            cv2.LINE_AA
         )
         # Show Text at the top. Esc to reset | Enter to register
         self.update_prompt("Esc to reset | Enter to register")

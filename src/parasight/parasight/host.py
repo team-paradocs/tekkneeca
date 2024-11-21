@@ -27,6 +27,8 @@ from functools import partial
 from ament_index_python.packages import get_package_share_directory
 from scipy.spatial.transform import Rotation as R
 
+from visualization_msgs.msg import Marker
+
 
 class ParaSightHost(Node):
     states = ['waiting', 'ready', 'user_input', 'tracker_active', 'system_paused', 'stabilizing', 'lock_in']
@@ -122,7 +124,7 @@ class ParaSightHost(Node):
         # Publishers
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
         self.pose_array_publisher = self.create_publisher(PoseArray, '/surgical_drill_pose', 10)
-
+        self.marker_publisher = self.create_publisher(Marker, '/fitness_marker', 10)
         # Service Clients
         self.start_tracking_client = self.create_client(StartTracking, '/start_tracking')
         self.stop_tracking_client = self.create_client(StopTracking, '/stop_tracking')
@@ -258,6 +260,18 @@ class ParaSightHost(Node):
         cloud = from_msg(msg)
         self.last_cloud = cloud
 
+    def pose_direction(self, annotated_points):
+        # Dynamically compute theta
+        # If Femur is on the left, theta should be 0
+        # If Femur is on the right, theta should be -pi
+        femur_point_x = annotated_points[0][0]
+        tibia_point_x = annotated_points[1][0]
+        if femur_point_x > tibia_point_x:
+            return 0
+        else:
+            return -np.pi
+
+
     def register_and_publish(self, points):
         # self.pause_tracking() # Pause tracking while registering to improve performance
         t0 = time.time()
@@ -265,7 +279,7 @@ class ParaSightHost(Node):
         self.annotated_points = annotated_points # cache
         annotated_points = self.add_depth(annotated_points)
         mask_points = self.add_depth(mask_points)
-        transform = self.regpipe.register(mask, self.source, self.last_cloud, annotated_points, mask_points)
+        transform, fitness = self.regpipe.register(mask, self.source, self.last_cloud, annotated_points, mask_points)
         t1 = time.time()
         self.get_logger().info(f'Registration time: {t1 - t0}')
         source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
@@ -273,11 +287,35 @@ class ParaSightHost(Node):
         source_cloud.paint_uniform_color([1, 0, 0])
         self.publish_point_cloud(source_cloud)
 
-        drill_pose_array = self.compute_plan(transform,theta=0)
+        theta = self.pose_direction(annotated_points)
+        drill_pose_array = self.compute_plan(transform,theta=theta)
         drill_pose_array = self.calibration_offset(drill_pose_array,0.0035,0.00,0.0)
+        drill_pose_array.header.frame_id = self.base_frame
+        drill_pose_array.header.stamp = self.get_clock().now().to_msg()
         self.pose_array_publisher.publish(drill_pose_array)
         self.last_drill_pose = drill_pose_array.poses[0]
+        self.publish_fitness_marker(self.last_drill_pose.position, fitness)
         # self.resume_tracking()
+
+    def publish_fitness_marker(self, position, fitness):
+        marker = Marker()
+        marker.header.frame_id = self.base_frame
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = "fitness_marker"
+        marker.id = 0
+        marker.type = Marker.TEXT_VIEW_FACING
+        marker.action = Marker.ADD
+        marker.pose.position.x = position.x
+        marker.pose.position.y = position.y
+        marker.pose.position.z = position.z + 0.1  # Offset slightly above the first pose
+        marker.pose.orientation.w = 1.0
+        marker.scale.z = 0.05  # Text size
+        marker.color.r = 1.0
+        marker.color.g = 1.0
+        marker.color.b = 1.0
+        marker.color.a = 1.0
+        marker.text = f"{fitness:.2f}"  # Format the fitness value
+        self.marker_publisher.publish(marker)
 
     def reg_request_callback(self, msg):
         if msg.data == 0:
@@ -317,8 +355,6 @@ class ParaSightHost(Node):
         """Computes the surgical drill point by transforming the default point with the given transform."""
 
         drill_pose_array = PoseArray()
-        drill_pose_array.header.frame_id = self.base_frame
-        drill_pose_array.header.stamp = self.get_clock().now().to_msg()
 
         holes = load_plan_points(self.plan_path, self.plan)
         for hole_name, hole in holes.items():

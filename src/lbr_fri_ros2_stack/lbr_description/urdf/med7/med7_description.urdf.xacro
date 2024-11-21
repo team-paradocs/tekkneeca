@@ -338,11 +338,11 @@
             </collision>
         </link>
 
-        <!-- 31 mm -->
+        <!-- 37 mm for new drill machine --> 
         <joint name="joint_tool" type="fixed">
             <parent link="link_drillbit" />
             <child link="link_tool" />
-            <origin xyz="0 0 0.031" rpy="0 0 0" />
+            <origin xyz="0 0 0.037" rpy="0 0 0" />
         </joint>
 
         <link name="link_tool">

@@ -26,6 +26,8 @@ class Tracker(Node):
         self.cy = 242.1155242919922
         self.camera_frame = 'camera_color_optical_frame'
         self.base_frame = 'lbr/link_0'
+        self.point_labels = ['FEMUR', 'TIBIA']
+        self.base_color = (17,52,68) # RGB
 
 
         # CoTracker Setup
@@ -139,6 +141,8 @@ class Tracker(Node):
     def image_callback(self, msg):
         # Process images only if tracking is enabled
         if not self.tracking_enabled:
+            # Passthrough
+            self.publisher_.publish(msg)
             return
         
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
@@ -176,12 +180,22 @@ class Tracker(Node):
                     all_stable = all_stable and point_stable
 
                     # Annotate each point
-                    thickness = -1 if visibility[0][-1][i] else 2
-                    color = (0, 255, 0) if point_stable else (0, 0, 255)
-                    cv2.circle(cv_image, (x, y), 10, color, thickness)
-                    status = "Stable" if point_stable else "Moving"
-                    cv2.putText(cv_image, f"Point {i} ({status}) | ({delta:.2f})", 
-                              (x + 15, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                    thickness = -1
+                    if not visibility[0][-1][i]:
+                        color = (0, 0, 255)  # Red if not visible
+                    elif not point_stable:
+                        color = (0, 255, 255)  # Yellow if not stable
+                    else:
+                        color = (0, 255, 0)  # Green if visible and stable
+                    # Draw filled circle
+                    cv2.circle(cv_image, (x, y), 10, color, thickness, cv2.LINE_AA)
+                    # Draw black outline
+                    cv2.circle(cv_image, (x, y), 10, self.base_color, 1, cv2.LINE_AA)
+                    cv2.putText(cv_image, self.point_labels[i], (x + 15, y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, self.base_color, 2, cv2.LINE_AA)
+                    self.draw_legend(cv_image)
+                    # status = "Stable" if point_stable else "Moving"
+                    # cv2.putText(cv_image, f"Point {i} ({status}) | ({delta:.2f})", 
+                    #           (x + 15, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                     
                     # self.logger.info(f"Tracking point {i}: ({x}, {y})")
 
@@ -216,6 +230,17 @@ class Tracker(Node):
                 else:
                     self.pose_publisher.publish(self.pixel_to_3d(x, y))
                     self.stable_and_published = False
+
+    def draw_legend(self, image):
+        cv2.circle(image, (30, 20), 10, (0,255,0), -1, cv2.LINE_AA)
+        cv2.circle(image, (30, 20), 10, self.base_color, 1, cv2.LINE_AA)
+        cv2.putText(image, "Stable", (45, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, self.base_color, 2, cv2.LINE_AA)
+        cv2.circle(image, (30, 50), 10, (0,255,255), -1, cv2.LINE_AA)
+        cv2.circle(image, (30, 50), 10, self.base_color, 1, cv2.LINE_AA)
+        cv2.putText(image, "Moving", (45, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, self.base_color, 2, cv2.LINE_AA)
+        cv2.circle(image, (30, 80), 10, (0,0,255), -1, cv2.LINE_AA)
+        cv2.circle(image, (30, 80), 10, self.base_color, 1, cv2.LINE_AA)
+        cv2.putText(image, "Not Visible", (45, 90), cv2.FONT_HERSHEY_SIMPLEX, 1.0, self.base_color, 2, cv2.LINE_AA)
 
 
 

@@ -20,8 +20,8 @@ class RegistrationPipeline:
         # print(f"Number of points in target cloud: {len(target_cloud.points)}")
 
         init_transformation = self.global_registration(source_cloud, target_cloud, annotated_points, mask_points)
-        transform = self.directional_icp(source_cloud, target_cloud, init_transformation)
-        return transform
+        transform, fitness = self.directional_icp(source_cloud, target_cloud, init_transformation)
+        return transform, fitness
         
 
     def unproject_mask(self, mask, points):
@@ -184,7 +184,7 @@ class RegistrationPipeline:
         
         # Final output with best fitness result
         print(f"Best fitness achieved: {best_fitness}")
-        return best_transformation
+        return best_transformation, best_fitness
 
     def ransac_icp(self, source, target, initial_transformation, trials=300):
         '''
