@@ -186,7 +186,7 @@ class RegistrationPipeline:
         print(f"Best fitness achieved: {best_fitness}")
         return best_transformation, best_fitness
 
-    def ransac_icp(self, source, target, initial_transformation, trials=300):
+    def ransac_icp(self, source, target, initial_transformation, trials=300, until_convergence=False):
         '''
         RANSAC ICP
         '''
@@ -194,6 +194,7 @@ class RegistrationPipeline:
         max_iter = 50
         best_transformation = initial_transformation
         best_fitness = 0.0
+        min_fitness = 0.90
 
         # Compute normals for the source and target point clouds
         source.estimate_normals(
@@ -222,5 +223,25 @@ class RegistrationPipeline:
                 best_fitness = reg_result.fitness
                 best_transformation = reg_result.transformation
 
+        if until_convergence:
+            # If still less than min fitness, start a while loop to try to converge
+            extra_trials = 0
+            while best_fitness < min_fitness:
+                noise = np.random.normal(0, 0.02, (4, 4))
+                noisy_transformation = best_transformation + noise
+                reg_result = o3d.pipelines.registration.registration_icp(
+                    source, target, threshold, noisy_transformation,
+                    p2l,
+                    o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=max_iter)
+                )
+
+                if reg_result.fitness > best_fitness:
+                    best_fitness = reg_result.fitness
+                    best_transformation = reg_result.transformation
+
+                extra_trials += 1
+
         print(f"Best Fitness: {best_fitness}")
-        return best_transformation
+        if extra_trials > 0:
+            print(f"Extra trials: {extra_trials}")
+        return best_transformation, best_fitness
