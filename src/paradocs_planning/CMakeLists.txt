@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_ros_move_group REQUIRED)
 find_package(shape_msgs REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(moveit_core REQUIRED)
@@ -61,6 +62,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   tf2_geometry_msgs
   tf2_ros
   trajectory_msgs
+  moveit_ros_move_group
   shape_msgs
 )
 
@@ -127,6 +129,8 @@ add_executable(continuous_motion_demo src/test/continuous_motion_demo.cpp)
 ament_target_dependencies(continuous_motion_demo rclcpp std_msgs moveit_core moveit_ros_planning_interface moveit_msgs)
 add_executable(robot_motion_planning src/robot_motion_planning.cpp)
 ament_target_dependencies(robot_motion_planning rclcpp std_msgs control_msgs moveit_msgs moveit_core moveit_ros_planning_interface)
+add_executable(mgi_node src/mgi_node.cpp)
+ament_target_dependencies(mgi_node rclcpp moveit_visual_tools std_msgs graph_msgs control_msgs moveit_msgs moveit_core moveit_ros_move_group moveit_ros_planning_interface)
 
 # Install Cpp executables
 install(TARGETS
@@ -135,6 +139,7 @@ install(TARGETS
   hybrid_planning_demo
   continuous_motion_demo
   robot_motion_planning
+  mgi_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
