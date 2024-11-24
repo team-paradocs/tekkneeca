@@ -5,10 +5,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 
-from parasight.sam_ui import SegmentAnythingUI
+from parasight.segment_ui import SegmentAnythingUI
 from parasight.registration import RegistrationPipeline
 from parasight.utils import *
 
+BONES = ["femur", "tibia"]
 
 def load_data(idx, data_dir="/ros_ws/src/data"):
     package_dir = get_package_share_directory('parasight')
@@ -16,8 +17,10 @@ def load_data(idx, data_dir="/ros_ws/src/data"):
     with np.load(os.path.join(data_dir, f"depth_{idx:04d}.npz")) as data:
         depth = data['depth'].astype(np.float32) / 1000.0
     pcd = o3d.io.read_point_cloud(os.path.join(data_dir, f"cloud_{idx:04d}.ply"))
-    source_pcd = o3d.io.read_point_cloud(os.path.join(package_dir, "resource", "femur_shell.ply"))
-    return rgb, depth, pcd, source_pcd
+    femur_pcd = o3d.io.read_point_cloud(os.path.join(package_dir, "resource", "femur_shell.ply"))
+    tibia_pcd = o3d.io.read_point_cloud(os.path.join(package_dir, "resource", "tibia_shell.ply"))
+    source_pcds = {"femur": femur_pcd, "tibia": tibia_pcd}
+    return rgb, depth, pcd, source_pcds
 
 def add_depth(points, depth_image, kernel_size=5):
     new_points = []
@@ -35,24 +38,31 @@ def add_depth(points, depth_image, kernel_size=5):
 
 def main():
     idx = 0000
-    rgb, depth, raw_pcd, source_pcd = load_data(idx)
+    rgb, depth, raw_pcd, source_pcds = load_data(idx)
+    colors = np.array([[1, 0, 0], [0, 0, 1]])
 
     sam_ui = SegmentAnythingUI()
     reg_pipeline = RegistrationPipeline()
 
 
-    mask, annotated_points, mask_points = sam_ui.segment_using_ui(rgb)
+    masks, annotated_points, all_mask_points = sam_ui.segment_using_ui(rgb, BONES)
     annotated_points = add_depth(annotated_points, depth)
-    mask_points = add_depth(mask_points, depth)
 
-    transform, fitness = reg_pipeline.register(mask, source_pcd, raw_pcd, annotated_points, mask_points)
-    source_pcd = source_pcd.voxel_down_sample(voxel_size=0.003)
-    source_pcd.transform(transform)
-    source_pcd.paint_uniform_color([1, 0, 0])
+    registered_pcds = []
+    for i, bone in enumerate(BONES):
+        mask = masks[i]
+        mask_points = all_mask_points[i]
+        source_pcd = source_pcds[bone]
+        mask_points = add_depth(mask_points, depth)
+
+        transform, fitness = reg_pipeline.register(mask, source_pcd, raw_pcd, annotated_points, mask_points)
+        source_pcd = source_pcd.voxel_down_sample(voxel_size=0.003)
+        source_pcd.transform(transform)
+        source_pcd.paint_uniform_color(colors[i])
+        registered_pcds.append(source_pcd)
 
 
-
-    o3d.visualization.draw_geometries([raw_pcd, source_pcd])
+    o3d.visualization.draw_geometries([raw_pcd] + registered_pcds)
 
 if __name__ == "__main__":
     main()
