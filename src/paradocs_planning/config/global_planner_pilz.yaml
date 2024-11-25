@@ -418,7 +418,7 @@ robot_description_kinematics:
   arm:
     kinematics_solver: pick_ik/PickIkPlugin
     kinematics_solver_timeout: 0.05
-    kinematics_solver_attempts: 3
+    kinematics_solver_attempts: 10
     mode: local
     position_scale: 1.0
     rotation_scale: 0.5
