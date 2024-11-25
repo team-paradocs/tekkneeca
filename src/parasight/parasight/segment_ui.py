@@ -9,7 +9,7 @@ from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 class SegmentAnythingUI:
     def __init__(self, size="small"):
-        self.bones = ["femur"]
+        self.bones = ["femur", "tibia"]
         self.label_map = {"femur": np.array([1, 0]), "tibia": np.array([0, 1])}
         self.mask_colors = np.array([[30, 144, 255, 153], [255, 144, 30, 153]])
 
@@ -105,7 +105,10 @@ class SegmentAnythingUI:
         """
         self.mask_points = []  # Clear any existing points
 
-        for mask in self.masks:
+        for i, bone in enumerate(self.bones):
+            mask = self.masks[i]
+
+            contour_mask = mask.astype(np.uint8)
             contour_mask = mask.astype(np.uint8)
             contours, _ = cv2.findContours(
                 contour_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -118,8 +121,13 @@ class SegmentAnythingUI:
             # Compute the center of the mask
             center = (int(rect[0][0]), int(rect[0][1]))
 
-            # Find the side of the box closest to the tibia point
-            tibia_point = np.array(self.tibia_point)
+            # Opposite point
+            if bone == "femur":
+                opposite_point = self.tibia_point
+            else:
+                opposite_point = self.femur_point
+
+            # Find the side of the box closest to the opposite point
             closest_side_start = None
             closest_side_end = None
             min_distance = float("inf")
@@ -128,7 +136,7 @@ class SegmentAnythingUI:
                 side_start = box[i]
                 side_end = box[(i + 1) % 4]
                 side_midpoint = (side_start + side_end) / 2
-                distance = np.linalg.norm(tibia_point - side_midpoint)
+                distance = np.linalg.norm(opposite_point - side_midpoint)
 
                 if distance < min_distance:
                     min_distance = distance
@@ -210,11 +218,11 @@ class SegmentAnythingUI:
             mask = cv2.erode(mask.astype(np.uint8), kernel, iterations=1)
             mask = cv2.dilate(mask, kernel, iterations=1).astype(bool)
             self.masks.append(mask)
-            self.compute_mask_points()
+        self.compute_mask_points()
 
         if display:
             self.update_image_with_masks()
-            # self.annotate_image() # Draws arrows
+            self.annotate_image() # Draws arrows
 
     def segment_using_ui(self, image, bones=None):
         self.original_image = image.copy()
@@ -263,6 +271,7 @@ class SegmentAnythingUI:
         self.mask_generated = True
         result = (self.masks, [femur_point, tibia_point], self.mask_points)
         self.reset()
+        cv2.destroyAllWindows()
         return result
 
     def reset(self):

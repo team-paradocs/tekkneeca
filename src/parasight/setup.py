@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name + '/resource', ['resource/femur_shell.ply']),
         ('share/' + package_name + '/resource', ['resource/tibia_shell.ply']),
         ('share/' + package_name + '/resource', ['resource/plan_config.yaml']),
+        ('share/' + package_name + '/resource', ['resource/plan_config_v2.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -12,16 +12,22 @@ class RegistrationPipeline:
         self.cy = 242.1155242919922
 
 
-    def register(self, mask, source_cloud, raw_cloud, annotated_points, mask_points):
+    def register(self, mask, source_cloud, raw_cloud, annotated_points, mask_points, bone='femur'):
         mask_cloud = self.unproject_mask(mask, raw_cloud.points)
         target_cloud = mask_cloud.voxel_down_sample(voxel_size=0.003)
 
         # print(f"Number of points in source cloud: {len(self.source_cloud.points)}")
         # print(f"Number of points in target cloud: {len(target_cloud.points)}")
 
-        init_transformation = self.global_registration(source_cloud, target_cloud, annotated_points, mask_points)
+        if bone == 'femur':
+            ann_idx = 0
+        else:
+            ann_idx = 1
+
+        init_transformation = self.global_registration(source_cloud, target_cloud, annotated_points, mask_points, ann_idx)
         transform, fitness = self.directional_icp(source_cloud, target_cloud, init_transformation)
         return transform, fitness
+        # return init_transformation, 0.0
         
 
     def unproject_mask(self, mask, points):
@@ -52,7 +58,7 @@ class RegistrationPipeline:
         cl, ind = pcd.remove_radius_outlier(nb_points=nb_neighbors, radius=radius)
         return pcd.select_by_index(ind)
 
-    def global_registration(self, source, target, annotated_points, mask_points):
+    def global_registration(self, source, target, annotated_points, mask_points, ann_idx):
         '''
         Centroid-based transformation estimation
         '''
@@ -76,7 +82,7 @@ class RegistrationPipeline:
         rotation_4x4 = np.eye(4)  # Expand to 4x4 matrix
         rotation_4x4[0:3, 0:3] = rotation  # Set the top-left 3x3 to the rotation matrix
 
-        px, py, pz = annotated_points[0]
+        px, py, pz = annotated_points[ann_idx]
         X = (px - self.cx) * pz / self.fx
         Y = (py - self.cy) * pz / self.fy
         translation = np.eye(4)

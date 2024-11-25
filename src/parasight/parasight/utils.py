@@ -16,29 +16,38 @@ def average_depth(depth_image,y,x,kernel_size=5):
     return np.mean(depth_image[y_start:y_end,x_start:x_end])
 
 def load_plan_points(plan_path, plan_name):
-    holes = {}
+    parts = {}
+    
     with open(plan_path, 'r') as file:
         data = yaml.safe_load(file)  # Using safe_load to prevent arbitrary code execution
         plan_data = data.get(plan_name, {})
 
-        for hole_name, hole in plan_data.items():
-            # Initialize to None to avoid KeyError if a point is missing
-            p1 = p2 = p3 = None
-            for point_name, point_coords in hole.items():
-                # Convert and scale in one step
-                point = np.array(point_coords) / 1000.0
-                if point_name == "p1":
-                    p1 = point
-                elif point_name == "p2":
-                    p2 = point
-                elif point_name == "p3":
-                    p3 = point
+        for part_name, part_data in plan_data.items():
+            holes = {}
+            
+            for hole_name, hole in part_data.items():
+                # Initialize to None to avoid KeyError if a point is missing
+                p1 = p2 = p3 = None
+                
+                for point_name, point_coords in hole.items():
+                    # Convert and scale in one step
+                    point = np.array(point_coords) / 1000.0
+                    if point_name == "p1":
+                        p1 = point
+                    elif point_name == "p2":
+                        p2 = point
+                    elif point_name == "p3":
+                        p3 = point
 
-            # Only add to `holes` if p1, p2, and p3 are all defined
-            if p1 is not None and p2 is not None and p3 is not None:
-                holes[hole_name] = [p1, p2, p3]
+                # Only add to `holes` if p1, p2, and p3 are all defined
+                if p1 is not None and p2 is not None and p3 is not None:
+                    holes[hole_name] = [p1, p2, p3]
 
-    return holes
+            # Only add to `parts` if the part has valid holes
+            if holes:
+                parts[part_name] = holes
+
+    return parts
 
 
 
