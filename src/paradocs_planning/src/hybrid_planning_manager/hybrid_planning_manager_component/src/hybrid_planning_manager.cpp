@@ -194,13 +194,26 @@ namespace moveit::hybrid_planning
         "surgical_drill_pose", rclcpp::SystemDefaultsQoS(),
         [this](const geometry_msgs::msg::PoseArray::ConstSharedPtr& msg) {
           if (drill_state_ == 0) {
-            auto drill_pose = msg->poses[0];
+            auto drill_pose = msg->poses[getDrillPoseIndex()];
             auto drill_pose_stamped = std::make_shared<geometry_msgs::msg::PoseStamped>();
             drill_pose_stamped->pose = drill_pose;
             // fix pilz bug
             drill_pose_stamped->header.frame_id = "world";
             drill_pose_goal_handle_ = std::move(drill_pose_stamped);
           }
+        }
+    );
+
+    // set default drill pose index
+    setDrillPoseIndex(0);
+    // Initialize drill pose index subscriber
+    drill_pose_index_sub_ = create_subscription<std_msgs::msg::Int32>(
+        "/lbr/drill_pose_index", rclcpp::SystemDefaultsQoS(),
+        [this](const std_msgs::msg::Int32::ConstSharedPtr& msg) {
+          RCLCPP_INFO(LOGGER, "Drill pose index received");
+          RCLCPP_INFO(LOGGER, "Index received is: %d", msg->data);
+          // drill_pose_index_ = msg->data;
+          setDrillPoseIndex(msg->data);
         }
     );
 

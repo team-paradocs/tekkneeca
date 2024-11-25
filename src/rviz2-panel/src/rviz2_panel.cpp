@@ -31,6 +31,8 @@ namespace custom_panel
     button0_3_pub_ = node_->create_publisher<std_msgs::msg::String>("/drill_commands", 1);
     button1_3_pub_ = node_->create_publisher<std_msgs::msg::String>("/drill_commands", 1);
 
+    
+    pose_index_pub_ = node_->create_publisher<std_msgs::msg::Int32>("/lbr/drill_pose_index", 1);
   }
 
   SurgeonUI::~SurgeonUI()
@@ -113,6 +115,66 @@ namespace custom_panel
     RCLCPP_INFO_STREAM(node_->get_logger(), "Stop Drill");
     drill_flag_.data = "s";
     button1_3_pub_->publish(drill_flag_);
+  }
+
+  void SurgeonUI::on_pushButton0_4_clicked()
+  {
+    ui_->pushButton0_4->setStyleSheet("background-color: rgb(230, 97, 0);");
+    ui_->pushButton1_4->setStyleSheet("background-color: white;");
+    ui_->pushButton2_4->setStyleSheet("background-color: white;");
+    ui_->pushButton3_4->setStyleSheet("background-color: white;");
+    ui_->pushButton4_4->setStyleSheet("background-color: white;");
+    RCLCPP_INFO_STREAM(node_->get_logger(), "Drill Pose 0");
+    pose_index_.data = 0;
+    pose_index_pub_->publish(pose_index_);
+  }
+
+  void SurgeonUI::on_pushButton1_4_clicked()
+  {
+    ui_->pushButton1_4->setStyleSheet("background-color: rgb(230, 97, 0);");
+    ui_->pushButton0_4->setStyleSheet("background-color: white;");
+    ui_->pushButton2_4->setStyleSheet("background-color: white;");
+    ui_->pushButton3_4->setStyleSheet("background-color: white;");
+    ui_->pushButton4_4->setStyleSheet("background-color: white;");
+    RCLCPP_INFO_STREAM(node_->get_logger(), "Drill Pose 1");
+    pose_index_.data = 1;
+    pose_index_pub_->publish(pose_index_);
+  }
+
+  void SurgeonUI::on_pushButton2_4_clicked()
+  {
+    ui_->pushButton2_4->setStyleSheet("background-color: rgb(230, 97, 0);");
+    ui_->pushButton0_4->setStyleSheet("background-color: white;");
+    ui_->pushButton1_4->setStyleSheet("background-color: white;");
+    ui_->pushButton3_4->setStyleSheet("background-color: white;");
+    ui_->pushButton4_4->setStyleSheet("background-color: white;");
+    RCLCPP_INFO_STREAM(node_->get_logger(), "Drill Pose 2");
+    pose_index_.data = 2;
+    pose_index_pub_->publish(pose_index_);
+  } 
+
+  void SurgeonUI::on_pushButton3_4_clicked()
+  {
+    ui_->pushButton3_4->setStyleSheet("background-color: rgb(98, 160, 234);");
+    ui_->pushButton0_4->setStyleSheet("background-color: white;");
+    ui_->pushButton1_4->setStyleSheet("background-color: white;");
+    ui_->pushButton2_4->setStyleSheet("background-color: white;");
+    ui_->pushButton4_4->setStyleSheet("background-color: white;");
+    RCLCPP_INFO_STREAM(node_->get_logger(), "Drill Pose 3");
+    pose_index_.data = 3;
+    pose_index_pub_->publish(pose_index_);
+  }
+
+  void SurgeonUI::on_pushButton4_4_clicked()
+  {
+    ui_->pushButton4_4->setStyleSheet("background-color: rgb(98, 160, 234);");
+    ui_->pushButton0_4->setStyleSheet("background-color: white;");
+    ui_->pushButton1_4->setStyleSheet("background-color: white;");
+    ui_->pushButton2_4->setStyleSheet("background-color: white;");
+    ui_->pushButton3_4->setStyleSheet("background-color: white;");
+    RCLCPP_INFO_STREAM(node_->get_logger(), "Drill Pose 4");
+    pose_index_.data = 4;
+    pose_index_pub_->publish(pose_index_);
   }
 
 }

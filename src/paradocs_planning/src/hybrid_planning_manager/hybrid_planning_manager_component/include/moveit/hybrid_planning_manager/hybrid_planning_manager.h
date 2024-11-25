@@ -150,6 +150,15 @@ namespace moveit::hybrid_planning
       drill_state_.store(state);
     }
 
+    void setDrillPoseIndex(int index) {
+      drill_pose_index_.store(index);
+    }
+
+    int getDrillPoseIndex() const {
+      return drill_pose_index_.load();
+    }
+
+
     void drillCmd(bool start);
 
   private:
@@ -213,6 +222,9 @@ namespace moveit::hybrid_planning
     // 0: not drilling, 1: predrill, 2: finished drill
     std::atomic<int> drill_state_;
 
+    // Pose to drill. 0,1,2
+    std::atomic<int> drill_pose_index_;
+
     // Shared hybrid planning goal handle
     std::shared_ptr<geometry_msgs::msg::PoseStamped> hybrid_planning_goal_handle_;
     std::shared_ptr<geometry_msgs::msg::PoseStamped> drill_pose_goal_handle_;
@@ -241,6 +253,9 @@ namespace moveit::hybrid_planning
 
     // Planning state subscriber
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr planning_state_sub_;
+
+    // dRILL pose subscriber
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr drill_pose_index_sub_;
 
     // This thread is used for long-running callbacks. It's a member so they do not go out of scope.
     // std::thread long_callback_thread_;
