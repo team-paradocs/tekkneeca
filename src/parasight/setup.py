@@ -11,7 +11,9 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/resource', ['resource/femur_shell.ply']),
+        ('share/' + package_name + '/resource', ['resource/tibia_shell.ply']),
         ('share/' + package_name + '/resource', ['resource/plan_config.yaml']),
+        ('share/' + package_name + '/resource', ['resource/plan_config_v2.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,7 +26,9 @@ setup(
         'console_scripts': [
             'host = parasight.host:main',
             'cli = parasight.cli_client:main',
-            'tracker = parasight.tracker:main'
+            'tracker = parasight.tracker:main',
+            'snapshot = parasight.scripts.snapshot:main',
+            'offline_register = parasight.scripts.offline_register:main'
         ],
     },
 )

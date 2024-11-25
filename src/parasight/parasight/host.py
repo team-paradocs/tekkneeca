@@ -2,6 +2,7 @@ import cv2
 import rclpy
 from cv_bridge import CvBridge
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import PoseArray, Point, Pose, PoseStamped, PointStamped
 from std_msgs.msg import Empty
@@ -13,7 +14,7 @@ from std_msgs.msg import Int32
 from transitions import Machine
 import open3d as o3d
 
-from parasight.sam_ui import SegmentAnythingUI
+from parasight.segment_ui import SegmentAnythingUI
 from parasight.registration import RegistrationPipeline
 from parasight.utils import *
 
@@ -58,6 +59,8 @@ class ParaSightHost(Node):
         self.last_cloud = None
         self.annotated_points = None
         self.need_to_register = True
+        self.spam_counter = 0
+        self.last_drill_pose_array = None
         self.last_drill_pose = None
         
         # D405 Intrinsics
@@ -125,15 +128,24 @@ class ParaSightHost(Node):
         self.pcd_publisher = self.create_publisher(PointCloud2, '/processed_point_cloud', 10)
         self.pose_array_publisher = self.create_publisher(PoseArray, '/surgical_drill_pose', 10)
         self.marker_publisher = self.create_publisher(Marker, '/fitness_marker', 10)
+
         # Service Clients
         self.start_tracking_client = self.create_client(StartTracking, '/start_tracking')
         self.stop_tracking_client = self.create_client(StopTracking, '/stop_tracking')
 
+        # Parameters
+        self.declare_parameter('selected_bones', 'both')
+        self.update_bones(self.get_parameter('selected_bones').value)
+        self.add_on_set_parameters_callback(self.parameter_change_callback)
+
         # Load resources
         package_dir = get_package_share_directory('parasight')
-        self.source = o3d.io.read_point_cloud(package_dir + "/resource/femur_shell.ply")
-        self.plan_path = package_dir + "/resource/plan_config.yaml"
-        self.plan = "plan3"
+        femur_cloud = o3d.io.read_point_cloud(package_dir + "/resource/femur_shell.ply")
+        tibia_cloud = o3d.io.read_point_cloud(package_dir + "/resource/tibia_shell.ply")
+        self.sources = {'femur': femur_cloud, 'tibia': tibia_cloud}
+        self.colors = {'femur': [1, 0, 0], 'tibia': [0, 0, 1]}
+        self.plan_path = package_dir + "/resource/plan_config_v2.yaml"
+        self.plan = "plan1"
 
         # Interfaces
         self.regpipe = RegistrationPipeline()
@@ -173,7 +185,7 @@ class ParaSightHost(Node):
         self.get_logger().info('UI trigger received')
         if self.state == 'ready':
             self.trigger('start_parasight')
-            mask, annotated_points, mask_points = self.segmentation_ui.segment_using_ui(self.last_rgb_image) # Blocking call
+            masks, annotated_points, all_mask_points = self.segmentation_ui.segment_using_ui(self.last_rgb_image, self.bones) # Blocking call
             self.annotated_points = annotated_points
             self.trigger('input_received')
         else:
@@ -239,6 +251,25 @@ class ParaSightHost(Node):
         self.future = self.start_tracking_client.call_async(request)
         self.future.add_done_callback(partial(self.tracking_response_callback))
 
+    def update_bones(self, selected_bones):
+        """Update self.bones based on the /selected_bones parameter."""
+        if selected_bones == 'femur':
+            self.bones = ['femur']
+        elif selected_bones == 'tibia':
+            self.bones = ['tibia']
+        elif selected_bones == 'both':
+            self.bones = ['femur', 'tibia']
+        else:
+            self.get_logger().warn(f"Unknown /selected_bones value: {selected_bones}, defaulting to empty list")
+            self.bones = []
+        self.get_logger().info(f"Updated bones to: {self.bones}")
+    
+    def parameter_change_callback(self, params):
+        for param in params:
+            if param.name == 'selected_bones':
+                self.update_bones(param.value)
+        return SetParametersResult(successful=True)
+
     def rgb_image_callback(self, msg):
         rgb_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
@@ -274,27 +305,40 @@ class ParaSightHost(Node):
 
     def register_and_publish(self, points):
         # self.pause_tracking() # Pause tracking while registering to improve performance
-        t0 = time.time()
-        mask, annotated_points, mask_points = self.segmentation_ui.segment_using_points(self.last_rgb_image, points[0], points[1])
+        masks, annotated_points, all_mask_points = self.segmentation_ui.segment_using_points(self.last_rgb_image, points[0], points[1], self.bones)
         self.annotated_points = annotated_points # cache
         annotated_points = self.add_depth(annotated_points)
-        mask_points = self.add_depth(mask_points)
-        transform, fitness = self.regpipe.register(mask, self.source, self.last_cloud, annotated_points, mask_points)
-        t1 = time.time()
-        self.get_logger().info(f'Registration time: {t1 - t0}')
-        source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
-        source_cloud.transform(transform)
-        source_cloud.paint_uniform_color([1, 0, 0])
-        self.publish_point_cloud(source_cloud)
+        registered_clouds = []
+        transforms = {}
+        for i, bone in enumerate(self.bones):
+            t0 = time.time()
+            mask = masks[i]
+            mask_points = all_mask_points[i]
+            source = self.sources[bone]
+            mask_points = self.add_depth(mask_points)
+            transform, fitness = self.regpipe.register(mask, source, self.last_cloud, annotated_points, mask_points, bone=bone)
+            t1 = time.time()
+            self.get_logger().info(f'Registration time for {bone}: {t1 - t0}')
+            source_cloud = source.voxel_down_sample(voxel_size=0.003)
+            source_cloud.transform(transform)
+            source_cloud.paint_uniform_color(self.colors[bone])
+            registered_clouds.append(source_cloud)
+            transforms[bone] = transform
+
+        self.publish_point_cloud(registered_clouds)
 
         theta = self.pose_direction(annotated_points)
-        drill_pose_array = self.compute_plan(transform,theta=theta)
+        drill_pose_array = self.compute_plan(transforms,theta=theta)
         drill_pose_array = self.calibration_offset(drill_pose_array,0.0035,0.00,0.0)
         drill_pose_array.header.frame_id = self.base_frame
         drill_pose_array.header.stamp = self.get_clock().now().to_msg()
         self.pose_array_publisher.publish(drill_pose_array)
+        self.last_drill_pose_array = drill_pose_array
+        self.spam_counter = 3
+
+        # DEPRECATED
         self.last_drill_pose = drill_pose_array.poses[0]
-        self.publish_fitness_marker(self.last_drill_pose.position, fitness)
+        # self.publish_fitness_marker(self.last_drill_pose.position, fitness)
         # self.resume_tracking()
 
     def publish_fitness_marker(self, position, fitness):
@@ -326,7 +370,7 @@ class ParaSightHost(Node):
                 self.get_logger().warn('No annotated points set. Register with UI first')
         elif msg.data == 1:
             print('Re-Registering with UI...')
-            mask, annotated_points, mask_points = self.segmentation_ui.segment_using_ui(self.last_rgb_image) # Blocking call
+            masks, annotated_points, all_mask_points = self.segmentation_ui.segment_using_ui(self.last_rgb_image, self.bones) # Blocking call
             self.annotated_points = annotated_points
             self.register_and_publish(annotated_points)
 
@@ -338,6 +382,11 @@ class ParaSightHost(Node):
             self.get_logger().info('Not all points are visible')
             return
         
+        if self.spam_counter > 0 and self.last_drill_pose_array is not None:
+            self.spam_counter -= 1
+            self.pose_array_publisher.publish(self.last_drill_pose_array)
+            return
+        
         if not msg.stable:
             self.need_to_register = True
             return # Wait for tracking to stabilize
@@ -347,64 +396,78 @@ class ParaSightHost(Node):
             self.register_and_publish(annotated_points)
             self.need_to_register = False
 
-    def publish_point_cloud(self, cloud):
-        cloud_msg = to_msg(cloud,frame_id=self.camera_frame)
+    def publish_point_cloud(self, clouds):
+        # Combine all clouds into one
+        combined_cloud = o3d.geometry.PointCloud()
+        for c in clouds:
+            combined_cloud += c
+        cloud_msg = to_msg(combined_cloud,frame_id=self.camera_frame)
         self.pcd_publisher.publish(cloud_msg)
 
-    def compute_plan(self, transform,theta=-np.pi/2):
+    def compute_plan(self, transforms,theta=-np.pi/2):
         """Computes the surgical drill point by transforming the default point with the given transform."""
 
         drill_pose_array = PoseArray()
 
-        holes = load_plan_points(self.plan_path, self.plan)
-        for hole_name, hole in holes.items():
-            p1, p2, p3 = hole
+        parts = load_plan_points(self.plan_path, self.plan)
+        for bone, holes in parts.items():
+            if bone not in self.bones:
+                continue
 
-            mesh = o3d.geometry.TriangleMesh()
-            mesh.vertices = o3d.utility.Vector3dVector([p1, p2, p3])
-            mesh.triangles = o3d.utility.Vector3iVector([[0, 1, 2]])
-            mesh.compute_vertex_normals()
-            normal =  np.asarray(mesh.vertex_normals)[0]
-            actual_normal = -normal
-            z_axis = np.array([0, 0, 1])
-            rotation_axis = np.cross(z_axis, actual_normal)
-            rotation_axis /= np.linalg.norm(rotation_axis)
-            angle = np.arccos(np.dot(z_axis, actual_normal) / (np.linalg.norm(z_axis) * np.linalg.norm(actual_normal)))
-            Rot = o3d.geometry.get_rotation_matrix_from_axis_angle(rotation_axis * angle)
+            transform = transforms[bone]
+            for hole_name, hole in holes.items():
+                p1, p2, p3 = hole
 
-            T = np.eye(4)
-            T[:3, :3] = Rot
-            T[:3, 3] = p3
+                # Toggle theta between 0 and -π/2 for femur curvature hole
+                curr_theta = theta
+                if bone == 'femur' and hole_name == 'hole3':
+                    curr_theta = np.pi if theta == 0 else 0
+                elif bone == 'tibia':
+                    curr_theta = theta * -1
 
-            default_plan = T
-            default_plan_rotated = np.copy(default_plan)
-            default_plan_rotated[:3, :3] = np.matmul(default_plan_rotated[:3, :3], R.from_euler('z', theta).as_matrix())
+                mesh = o3d.geometry.TriangleMesh()
+                mesh.vertices = o3d.utility.Vector3dVector([p1, p2, p3])
+                mesh.triangles = o3d.utility.Vector3iVector([[0, 1, 2]])
+                mesh.compute_vertex_normals()
+                normal =  np.asarray(mesh.vertex_normals)[0]
+                actual_normal = -normal
+                z_axis = np.array([0, 0, 1])
+                rotation_axis = np.cross(z_axis, actual_normal)
+                rotation_axis /= np.linalg.norm(rotation_axis)
+                angle = np.arccos(np.dot(z_axis, actual_normal) / (np.linalg.norm(z_axis) * np.linalg.norm(actual_normal)))
+                Rot = o3d.geometry.get_rotation_matrix_from_axis_angle(rotation_axis * angle)
 
-            T = np.matmul(transform, default_plan_rotated)
+                T = np.eye(4)
+                T[:3, :3] = Rot
+                T[:3, 3] = p3
 
-            # Convert R to a quaternion
-            Rot = T[:3, :3]
-            r = R.from_matrix(Rot)
-            quat = r.as_quat()  # Returns (x, y, z, w)
+                default_plan = T
+                default_plan_rotated = np.copy(default_plan)
+                default_plan_rotated[:3, :3] = np.matmul(default_plan_rotated[:3, :3], R.from_euler('z', curr_theta).as_matrix())
 
-            p = T[:3, 3]
+                T = np.matmul(transform, default_plan_rotated)
 
-            pose = Pose()
-            pose.position.x = p[0]
-            pose.position.y = p[1]
-            pose.position.z = p[2]
+                # Convert R to a quaternion
+                Rot = T[:3, :3]
+                r = R.from_matrix(Rot)
+                quat = r.as_quat()  # Returns (x, y, z, w)
 
-            pose.orientation.x = quat[0]
-            pose.orientation.y = quat[1]
-            pose.orientation.z = quat[2]
-            pose.orientation.w = quat[3]
+                p = T[:3, 3]
 
-            base_transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rclpy.time.Time())
-            pose = do_transform_pose(pose, base_transform)
+                pose = Pose()
+                pose.position.x = p[0]
+                pose.position.y = p[1]
+                pose.position.z = p[2]
 
-            # self.get_logger().info(f"Drill point: {p}")
-            drill_pose_array.poses.append(pose)
-            break # Only compute one point for now
+                pose.orientation.x = quat[0]
+                pose.orientation.y = quat[1]
+                pose.orientation.z = quat[2]
+                pose.orientation.w = quat[3]
+
+                base_transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rclpy.time.Time())
+                pose = do_transform_pose(pose, base_transform)
+
+                drill_pose_array.poses.append(pose)
 
         return drill_pose_array
 

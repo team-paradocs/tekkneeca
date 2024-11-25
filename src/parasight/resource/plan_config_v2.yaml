@@ -1,0 +1,34 @@
+# Surgical Plan Configuration
+# ---------------------------
+# Each plan is defined by three points in 3D space.
+# The hole is drilled at P3. 
+# The orientation is determined by the normal vector of the plane defined by P1, P2, P3.
+# ALL DIMENSIONS ARE IN MM
+
+
+# Version 2 (Designated Bone Names)
+# ---------------------------
+
+plan1:
+  femur:
+    hole1:
+      p1: [2.89343, 4.66568, 22.83373]
+      p2: [1.10593, 7.09621, 22.13024]
+      p3: [0.23026, 3.98056, 21.95038]
+    hole2:
+      p1: [3.29040, 21.06405, 22.41792]
+      p2: [1.49632, 23.57007, 22.03367]
+      p3: [0.46016, 20.21150, 21.65537]
+    hole3: # Curvature Hole
+      p1: [9.6963, -38.32515, 14.1754] 
+      p2: [12.16621, -38.78643, 15.31912]
+      p3: [8.92156, -37.31634, 15.33167]
+  tibia:
+    hole1:
+      p1: [-12.750096,-29.86348, 22.72489]
+      p2: [-13.03138, -31.52185, 22.54779]
+      p3: [-11.85613, -31.19018, 22.55033]
+    hole2:
+      p1: [13.64891, -30.74793, 21.09059]
+      p2: [12.83759, -30.52681, 21.13295]
+      p3: [13.00457, -31.41128, 20.86857]
