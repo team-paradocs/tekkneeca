@@ -9,6 +9,7 @@
 #include "rclcpp/wait_for_message.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include <Eigen/Geometry>
+#include "planner.cpp"
 // Global pointers and variables
 std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_interface;
 std::shared_ptr<rclcpp::Node> node;
@@ -190,7 +191,9 @@ int jointSpaceMotion(const geometry_msgs::msg::Pose goalPose)
   // move_group_interface->setPlanningTime(10.0);
 
   moveit::planning_interface::MoveGroupInterface::Plan plan_intermediate;
-  bool success_intermediate = static_cast<bool>(move_group_interface->plan(plan_intermediate));
+  // bool success_intermediate = static_cast<bool>(move_group_interface->plan(plan_intermediate));
+  bool success_intermediate = true;
+  plan_intermediate = predictable_plan(move_group_interface->getCurrentJointValues(), intermediate_pose);
 
 
   RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "please confirm the plan by setting the plan_flag to 1");

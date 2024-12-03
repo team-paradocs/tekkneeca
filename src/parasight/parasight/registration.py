@@ -26,6 +26,7 @@ class RegistrationPipeline:
 
         init_transformation = self.global_registration(source_cloud, target_cloud, annotated_points, mask_points, ann_idx)
         transform, fitness = self.directional_icp(source_cloud, target_cloud, init_transformation)
+        # transform, fitness = self.ransac_icp(source_cloud, target_cloud, init_transformation)
         return transform, fitness
         # return init_transformation, 0.0
         

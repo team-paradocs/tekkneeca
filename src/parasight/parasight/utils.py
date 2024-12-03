@@ -6,6 +6,76 @@ from numpy.lib import recfunctions
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
 import yaml
+import json
+
+
+def save_calibration_log(log_entry, log_file_path="src/calibration_data.json"):
+    """
+    Save a calibration log entry to a JSON file.
+
+    Args:
+        log_entry (dict): The log entry to save, including transforms and error information.
+        log_file_path (str): Path to the JSON file for logging.
+    """
+    try:
+        # Read existing data if file exists
+        try:
+            with open(log_file_path, "r") as log_file:
+                data = json.load(log_file)
+        except FileNotFoundError:
+            data = []
+
+        # Append the new log entry
+        data.append(log_entry)
+
+        # Write back to the file
+        with open(log_file_path, "w") as log_file:
+            json.dump(data, log_file, indent=4)
+        return True, f"Logged data successfully to {log_file_path}"
+    except Exception as e:
+        return False, f"Failed to log data: {e}"
+    
+def transform_to_dict(transform_stamped):
+    """
+    Convert a TransformStamped to a dictionary.
+
+    Args:
+        transform_stamped (TransformStamped): ROS TransformStamped message.
+
+    Returns:
+        dict: Dictionary representation of the TransformStamped message.
+    """
+    return {
+        "translation": {
+            "x": transform_stamped.transform.translation.x,
+            "y": transform_stamped.transform.translation.y,
+            "z": transform_stamped.transform.translation.z,
+        },
+        "rotation": {
+            "x": transform_stamped.transform.rotation.x,
+            "y": transform_stamped.transform.rotation.y,
+            "z": transform_stamped.transform.rotation.z,
+            "w": transform_stamped.transform.rotation.w,
+        },
+    }
+
+def pose_to_dict(pose_stamped):
+    """
+    Convert a PoseStamped to a dictionary.
+    """
+    return {
+        "position": {
+            "x": pose_stamped.pose.position.x,
+            "y": pose_stamped.pose.position.y,
+            "z": pose_stamped.pose.position.z,
+        },
+        "orientation": {
+            "x": pose_stamped.pose.orientation.x,
+            "y": pose_stamped.pose.orientation.y,
+            "z": pose_stamped.pose.orientation.z,
+            "w": pose_stamped.pose.orientation.w,
+        },
+    }
 
 def average_depth(depth_image,y,x,kernel_size=5):
     y,x = int(y), int(x)

@@ -11,17 +11,30 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface)
 find_package(moveit_msgs REQUIRED)
+find_package(ompl REQUIRED)
 
 # Include Cpp "include" directory
 include_directories(include)
+
+include_directories(
+  include
+  /opt/ros/humble/include
+  /opt/ros/humble/include/ompl-1.6
+  ${EIGEN3_INCLUDE_DIRS}
+  ${colcon_INCLUDE_DIRS}
+)
 
 # Create Cpp executable
 add_executable(hello_moveit src/hello_moveit.cpp)
 ament_target_dependencies(hello_moveit rclcpp moveit_ros_planning_interface)
 add_executable(static_obstacles src/static_obstacles.cpp)
 ament_target_dependencies(static_obstacles rclcpp moveit_ros_planning_interface)
+add_executable(planner src/planner.cpp)
+ament_target_dependencies(planner rclcpp moveit_ros_planning_interface ompl geometry_msgs) 
 add_executable(talker src/publisher_member_function.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 add_executable(listener src/subscriber_member_function.cpp)
@@ -34,6 +47,7 @@ install(TARGETS
   listener
   hello_moveit
   static_obstacles
+  planner
   DESTINATION lib/${PROJECT_NAME}
 )
 

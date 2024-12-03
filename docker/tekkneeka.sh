@@ -3,8 +3,8 @@
 # Set a default image and container name
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 MODIFIED_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9_\-]/-/g')
-IMAGE_NAME="paradockerimage:${MODIFIED_BRANCH_NAME}"
-CONTAINER_NAME="tekkneeka_container"
+IMAGE_NAME="proj782"
+CONTAINER_NAME="tekkneeka_container_proj782"
 
 function build_image {
     echo "Building Docker image: $IMAGE_NAME"
