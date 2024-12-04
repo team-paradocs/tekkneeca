@@ -67,25 +67,25 @@ RUN apt-get install -y \
     vim-gtk3 \
     ament-cmake-nose
 
-# Setup and install Intel RealSense libraries
-RUN curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp | tee /etc/apt/keyrings/librealsense.pgp > /dev/null && \
-    echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/librealsense.list && \
-    apt-get update && apt-get install -y \
-    librealsense2-dkms \
-    librealsense2-utils \
-    ros-humble-librealsense2* \
-    ros-humble-realsense2-camera
+# # Setup and install Intel RealSense libraries
+# RUN curl -sSf https://librealsense.intel.com/Debian/librealsense.pgp | tee /etc/apt/keyrings/librealsense.pgp > /dev/null && \
+#     echo "deb [signed-by=/etc/apt/keyrings/librealsense.pgp] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/librealsense.list && \
+#     apt-get update && apt-get install -y \
+#     librealsense2-dkms \
+#     librealsense2-utils \
+#     ros-humble-librealsense2* \
+#     ros-humble-realsense2-camera
 
-# Install torch
-RUN pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+# # Install torch
+# RUN pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 --index-url https://download.pytorch.org/whl/cu121
 
 
 # Install x11 dependencies for GUI applications
 RUN apt-get install -y libgl1-mesa-glx libxrender1 libxext6 libxtst6
 
-# Copy the source code for Segment Anything
-COPY src/segment-anything-2/ /ros_ws/src/segment-anything-2/
-RUN cd /ros_ws/src/segment-anything-2 && pip install -e ".[demo]"
+# # Copy the source code for Segment Anything
+# COPY src/segment-anything-2/ /ros_ws/src/segment-anything-2/
+# RUN cd /ros_ws/src/segment-anything-2 && pip install -e ".[demo]"
 
 # Additonal Python Libraries (To override the SAM2 versions)
 RUN pip install open3d==0.18.0 \

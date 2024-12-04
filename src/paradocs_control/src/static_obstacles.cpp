@@ -1,6 +1,7 @@
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene/planning_scene.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <Eigen/Geometry>
 #include "std_msgs/msg/string.hpp"
@@ -8,8 +9,10 @@
 #include <string>
 #include "rclcpp/wait_for_message.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include <Eigen/Geometry>
 #include "planner.cpp"
+#include <ompl/base/Planner.h>
 // Global pointers and variables
 std::shared_ptr<moveit::planning_interface::MoveGroupInterface> move_group_interface;
 std::shared_ptr<rclcpp::Node> node;
@@ -192,8 +195,24 @@ int jointSpaceMotion(const geometry_msgs::msg::Pose goalPose)
 
   moveit::planning_interface::MoveGroupInterface::Plan plan_intermediate;
   // bool success_intermediate = static_cast<bool>(move_group_interface->plan(plan_intermediate));
+
+  RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "Before planning");
+
+
+  PredictablePlanner planner(node);
+  plan_intermediate = planner.predictable_plan(move_group_interface->getCurrentJointValues(), intermediate_pose);
+
+  auto display_publisher = node->create_publisher<moveit_msgs::msg::DisplayTrajectory>("display_planned_path", 10);
+  moveit_msgs::msg::DisplayTrajectory display_trajectory;
+  display_trajectory.trajectory_start = plan_intermediate.start_state_;
+  display_trajectory.trajectory.push_back(plan_intermediate.trajectory_);
+
+  display_publisher->publish(display_trajectory);
+  // PredictablePlanner planner();
+  // plan_intermediate = planner.predictable_plan(move_group_interface->getCurrentJointValues(), intermediate_pose);
+
   bool success_intermediate = true;
-  plan_intermediate = predictable_plan(move_group_interface->getCurrentJointValues(), intermediate_pose);
+
 
 
   RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "please confirm the plan by setting the plan_flag to 1");
@@ -216,7 +235,7 @@ int jointSpaceMotion(const geometry_msgs::msg::Pose goalPose)
     if (success_intermediate) {
       RCLCPP_INFO_STREAM(rclcpp::get_logger("static_obstacles"), "executing " << plan_flag << ",");
       // draw_trajectory_tool_path(plan.trajectory);
-      move_group_interface->execute(plan_intermediate);
+      move_group_interface->execute(plan_intermediate.trajectory_);
     }
     else {
       RCLCPP_ERROR(rclcpp::get_logger("static_obstacles"), "Planning failed!");
@@ -340,8 +359,13 @@ int main(int argc, char* argv[])
   rclcpp::init(argc, argv);
   node = std::make_shared<rclcpp::Node>(
     "static_obstacles",
-    rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
+    rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true).allow_undeclared_parameters(true)
   );
+
+  // node.g
+  //     RCLCPP_INFO(LOGGER, "Auto declare %d", Node::get_node_options().automatically_declare_parameters_from_overrides());
+  //   RCLCPP_INFO(LOGGER, "Allow undeclare %d", Node::get_node_options().allow_undeclared_parameters());
+  // RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), node.get()->get_node_options().automatically_declare_parameters_from_overrides());
 
   home_pose.position.x = -0.4;
   home_pose.position.y = 0.0;
@@ -385,75 +409,6 @@ int main(int argc, char* argv[])
   std::string planner_plugin_name = "ompl_interface/OMPLPlanner";
   move_group_interface->setPlannerId("RRTstarkConfigDefault");
 
-  // move_group_interface->setPlannerId("LazyPRMstarkConfigDefault");
-  // move_group_interface->setPlannerId("SPARStwokConfigDefault"); // works, but not the best
-  // move_group_interface->setPlannerId("TRRTkConfigDefault"); // unrealiable, but gives beautiful paths
-  // move_group_interface->setPlannerId("LBTRRTkConfigDefault"); // mostly no
-
-
-
-
-  // std::string frame_id = "world";
-  // // add obstacles to the scene
-  // moveit_msgs::msg::CollisionObject collision_object;
-  // collision_object.header.frame_id = frame_id;
-
-  // collision_object.id = "box1";
-  // shape_msgs::msg::SolidPrimitive primitive;
-  // // Define the size of the box in meters
-  // primitive.type = primitive.BOX;
-  // primitive.dimensions.resize(3);
-  // primitive.dimensions[primitive.BOX_X] = 0.2;
-  // primitive.dimensions[primitive.BOX_Y] = 0.1;
-  // primitive.dimensions[primitive.BOX_Z] = 0.7;
-  // geometry_msgs::msg::Pose box_pose;
-  // box_pose.orientation.w = 1.0;
-  // box_pose.position.x = 0;
-  // box_pose.position.y = 0.3;
-  // box_pose.position.z = 0.25;
-  // collision_object.primitives.push_back(primitive);
-  // collision_object.primitive_poses.push_back(box_pose);
-  // collision_object.operation = collision_object.ADD;
-
-  // collision_object.id = "box2";
-  // primitive.type = primitive.BOX;
-  // primitive.dimensions.resize(3);
-  // primitive.dimensions[primitive.BOX_X] = 0.05;
-  // primitive.dimensions[primitive.BOX_Y] = 1.1;
-  // primitive.dimensions[primitive.BOX_Z] = 1.5;
-  // box_pose.orientation.w = 1.0;
-  // box_pose.position.x = 0.25;
-  // box_pose.position.y = 0;
-  // box_pose.position.z = 0.75;
-  // collision_object.primitives.push_back(primitive);
-  // collision_object.primitive_poses.push_back(box_pose);
-  // collision_object.operation = collision_object.ADD;
-
-  // collision_object.id = "table";
-  // primitive.type = primitive.BOX;
-  // primitive.dimensions.resize(3);
-  // primitive.dimensions[primitive.BOX_X] = 1.1;
-  // primitive.dimensions[primitive.BOX_Y] = 1.1;
-  // primitive.dimensions[primitive.BOX_Z] = 0.02;
-  // box_pose.orientation.w = 1.0;
-  // box_pose.position.x = -0.25;
-  // box_pose.position.y = 0;
-  // box_pose.position.z = -0.02;
-  // collision_object.primitives.push_back(primitive);
-  // collision_object.primitive_poses.push_back(box_pose);
-  // collision_object.operation = collision_object.ADD;
-  // planning_scene_interface.applyCollisionObject(collision_object);
-
-
-  // Construct and initialize MoveItVisualTools
-  // auto moveit_visual_tools =
-  //     moveit_visual_tools::MoveItVisualTools{ node, "link_0", rviz_visual_tools::RVIZ_MARKER_TOPIC,
-  //                                             move_group_interface.getRobotModel() };
-  // moveit_visual_tools.deleteAllMarkers();
-  // moveit_visual_tools.loadRemoteControl();
-  // auto const draw_trajectory_tool_path =
-  //   [&moveit_visual_tools, jmg = move_group_interface.getRobotModel()->getJointModelGroup("arm")](
-  //       auto const trajectory) { moveit_visual_tools.publishTrajectoryLine(trajectory, jmg); };
 
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_ = node->create_subscription<geometry_msgs::msg::PoseArray>(
     "moveit_goal", 10, goToGoalCallback);

@@ -53,7 +53,6 @@ function run_container {
 
     # Run the container with different configurations based on the mode
     sudo docker run -it --rm \
-        --gpus all \
         --network host \
         --ipc host \
         --volume="$(pwd)/src:/ros_ws/src:rw" \
