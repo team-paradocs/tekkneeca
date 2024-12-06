@@ -11,9 +11,10 @@ int number_of_waypoints = 10;
 int intermediate_steps = 5;
 const double step_size = 0.05;
 const int max_iterations = 5000;
-const double goal_threshold = 0.01;
+const double goal_threshold = 0.02;
 double random_threshold = 0.2;
 double extend_epsilon = 5;
+double valid_cartesian_limit = 0.1;
 
 const int dimensions = 7;
 double PI = 3.14159265358979323846;
@@ -90,7 +91,7 @@ public:
                 }
             }
 
-            if (min_distance > random_threshold * 2) {
+            if (min_distance > valid_cartesian_limit) {
                 RCLCPP_ERROR(node_->get_logger(), "The point is too far from the closest waypoint");
                 return false;
             }
@@ -227,11 +228,11 @@ public:
     }
 
     bool connect(Tree& tree, const std::vector<double>& target, double step_size, double goal_threshold, std::vector<std::vector<double>> waypoints) {
-        RCLCPP_INFO(node_->get_logger(), "debug stmt 6.1");
+        // RCLCPP_INFO(node_->get_logger(), "debug stmt 6.1");
         Node* nearest = nearestNeighbor(tree, target);
-        RCLCPP_INFO(node_->get_logger(), "debug stmt 6.2");
+        // RCLCPP_INFO(node_->get_logger(), "debug stmt 6.2");
         std::vector<double> newPoint = steer(nearest->position, target, step_size);
-        RCLCPP_INFO(node_->get_logger(), "debug stmt 6.3");
+        // RCLCPP_INFO(node_->get_logger(), "debug stmt 6.3");
         int epsilon = extend_epsilon;
         while (is_valid(newPoint, waypoints) && epsilon > 0) {
             epsilon--;
@@ -277,7 +278,39 @@ public:
             // RCLCPP_INFO(node_->get_logger(), "debug stmt 3.2.25");
         }
         // RCLCPP_INFO(node_->get_logger(), "debug stmt 3.2.3");
-        return sqrt(dist);
+        // Calculate the Cartesian position with joint values a
+
+        const std::string group_name = "arm";
+
+        // Get the current robot state
+        auto planning_scene = planning_scene_monitor_->getPlanningScene();
+        moveit::core::RobotState& robot_state = planning_scene->getCurrentStateNonConst();
+
+        // Set joint group positions
+        robot_state.setJointGroupPositions(group_name, a);
+        robot_state.update();  // Update the state to reflect the new joint values
+
+        const Eigen::Isometry3d& end_effector_state = robot_state.getGlobalLinkTransform("link_tool");
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = end_effector_state.translation().x();
+        pose.position.y = end_effector_state.translation().y();
+        pose.position.z = end_effector_state.translation().z();
+        // RCLCPP_INFO(node_->get_logger(), "Pose A - x: %f, y: %f, z: %f", pose.position.x, pose.position.y, pose.position.z);
+        robot_state.setJointGroupPositions(group_name, b);
+        robot_state.update();  // Update the state to reflect the new joint values
+
+        const Eigen::Isometry3d& end_effector_state2 = robot_state.getGlobalLinkTransform("link_tool");
+        geometry_msgs::msg::Pose poseB;
+        poseB.position.x = end_effector_state2.translation().x();
+        poseB.position.y = end_effector_state2.translation().y();
+        poseB.position.z = end_effector_state2.translation().z();
+        // RCLCPP_INFO(node_->get_logger(), "Pose B - x: %f, y: %f, z: %f", poseB.position.x, poseB.position.y, poseB.position.z);
+
+        double cartesian_dist = sqrt(pow(pose.position.x - poseB.position.x, 2) + pow(pose.position.y - poseB.position.y, 2) + pow(pose.position.z - poseB.position.z, 2));
+        // RCLCPP_INFO(node_->get_logger(), "Cartesian distance: %f", cartesian_dist);
+
+        return cartesian_dist;
+        // return sqrt(dist);
         // return dist;
     }
 
@@ -335,14 +368,14 @@ public:
         Node* connectingNodeB = nullptr;
 
         std::srand(std::time(nullptr));
-        RCLCPP_INFO(node_->get_logger(), "debug stmt 1");
+        // RCLCPP_INFO(node_->get_logger(), "debug stmt 1");
         int iter;
         for (iter = 0; iter < max_iterations; ++iter) {
             RCLCPP_INFO(node_->get_logger(), "iter: %d", iter);
             Tree& primaryTree = (iter % 2 == 0) ? treeA : treeB;
             Tree& secondaryTree = (iter % 2 == 0) ? treeB : treeA;
 
-            RCLCPP_INFO(node_->get_logger(), "debug stmt 2");
+            // RCLCPP_INFO(node_->get_logger(), "debug stmt 2");
             // Sample a random point
             std::vector<double> randomPoint = sampleClosePoint(waypoints, iter);
 
@@ -447,7 +480,19 @@ public:
             //     RCLCPP_INFO(node_->get_logger(), "Joint %ld: %f", j, point.positions[j]);
             // }
             robot_trajectory.joint_trajectory.points.push_back(point);
+            // for (size_t j = 0; j < point.positions.size(); ++j) {
+            //     RCLCPP_INFO(node_->get_logger(), "Joint %ld: %f", j, point.positions[j]);
+            // }
         }
+
+        // // Print the joint space message in the trajectory
+        // for (size_t i = 0; i < robot_trajectory.joint_trajectory.points.size(); ++i) {
+        //     const auto& point = robot_trajectory.joint_trajectory.points[i];
+        //     RCLCPP_WARN(node_->get_logger(), "Trajectory point %ld:", i);
+        //     for (size_t j = 0; j < point.positions.size(); ++j) {
+        //         RCLCPP_WARN(node_->get_logger(), "Joint %ld: %f", j, point.positions[j]);
+        //     }
+        // }
 
         moveit::planning_interface::MoveGroupInterface::Plan plan;
 

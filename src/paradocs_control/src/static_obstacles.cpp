@@ -208,6 +208,7 @@ int jointSpaceMotion(const geometry_msgs::msg::Pose goalPose)
   display_trajectory.trajectory.push_back(plan_intermediate.trajectory_);
 
   display_publisher->publish(display_trajectory);
+  exit(0);
   // PredictablePlanner planner();
   // plan_intermediate = planner.predictable_plan(move_group_interface->getCurrentJointValues(), intermediate_pose);
 
@@ -235,7 +236,7 @@ int jointSpaceMotion(const geometry_msgs::msg::Pose goalPose)
     if (success_intermediate) {
       RCLCPP_INFO_STREAM(rclcpp::get_logger("static_obstacles"), "executing " << plan_flag << ",");
       // draw_trajectory_tool_path(plan.trajectory);
-      move_group_interface->execute(plan_intermediate.trajectory_);
+      move_group_interface->execute(plan_intermediate);
     }
     else {
       RCLCPP_ERROR(rclcpp::get_logger("static_obstacles"), "Planning failed!");
@@ -408,6 +409,31 @@ int main(int argc, char* argv[])
   // Set the planner
   std::string planner_plugin_name = "ompl_interface/OMPLPlanner";
   move_group_interface->setPlannerId("RRTstarkConfigDefault");
+
+
+  // std::string frame_id = "world";
+  // // add obstacles to the scene
+  // moveit_msgs::msg::CollisionObject collision_object;
+  // collision_object.header.frame_id = frame_id;
+
+  // collision_object.id = "box1";
+  // shape_msgs::msg::SolidPrimitive primitive;
+  // // Define the size of the box in meters
+  // primitive.type = primitive.BOX;
+  // primitive.dimensions.resize(3);
+  // primitive.dimensions[primitive.BOX_X] = 0.2;
+  // primitive.dimensions[primitive.BOX_Y] = 0.1;
+  // primitive.dimensions[primitive.BOX_Z] = 0.7;
+  // geometry_msgs::msg::Pose box_pose;
+  // box_pose.orientation.w = 1.0;
+  // box_pose.position.x = 0;
+  // box_pose.position.y = 0.3;
+  // box_pose.position.z = 0.25;
+  // collision_object.primitives.push_back(primitive);
+  // collision_object.primitive_poses.push_back(box_pose);
+  // collision_object.operation = collision_object.ADD;
+  // planning_scene_interface.applyCollisionObject(collision_object);
+
 
 
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr subscription_ = node->create_subscription<geometry_msgs::msg::PoseArray>(
