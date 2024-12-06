@@ -10,11 +10,11 @@
 int number_of_waypoints = 10;
 int intermediate_steps = 5;
 const double step_size = 0.05;
-const int max_iterations = 5000;
+const int max_iterations = 10000;
 const double goal_threshold = 0.02;
-double random_threshold = 0.2;
+double random_threshold = 0.3;
 double extend_epsilon = 5;
-double valid_cartesian_limit = 0.1;
+double valid_cartesian_limit = 0.5;
 
 const int dimensions = 7;
 double PI = 3.14159265358979323846;
@@ -71,17 +71,6 @@ public:
                 return false;
             }
 
-            // Check for collisions
-            bool is_collision_free = !planning_scene->isStateColliding(robot_state, group_name);
-            if (is_collision_free) {
-                // RCLCPP_INFO(node_->get_logger(), "The state is collision-free!");
-                return true;
-            }
-            else {
-                // RCLCPP_INFO(node_->get_logger(), "The state is in collision!");
-                return false;
-            }
-
             // Check if the distance of the point to the closest waypoint is greater than a threshold
             double min_distance = std::numeric_limits<double>::max();
             for (const auto& waypoint : waypoints) {
@@ -95,6 +84,19 @@ public:
                 RCLCPP_ERROR(node_->get_logger(), "The point is too far from the closest waypoint");
                 return false;
             }
+            // check if colliding with box
+            
+            // Check for collisions
+            bool is_collision_free = !planning_scene->isStateColliding(robot_state, group_name);
+            if (is_collision_free) {
+                // RCLCPP_INFO(node_->get_logger(), "The state is collision-free!");
+                return true;
+            }
+            else {
+                RCLCPP_INFO(node_->get_logger(), "The state is in collision!");
+                return false;
+            }
+
         }
         catch (const std::exception& e) {
             RCLCPP_ERROR(node_->get_logger(), "Exception in is_valid: %s", e.what());
@@ -295,7 +297,7 @@ public:
         pose.position.x = end_effector_state.translation().x();
         pose.position.y = end_effector_state.translation().y();
         pose.position.z = end_effector_state.translation().z();
-        // RCLCPP_INFO(node_->get_logger(), "Pose A - x: %f, y: %f, z: %f", pose.position.x, pose.position.y, pose.position.z);
+        RCLCPP_INFO(node_->get_logger(), "Pose A - x: %f, y: %f, z: %f", pose.position.x, pose.position.y, pose.position.z);
         robot_state.setJointGroupPositions(group_name, b);
         robot_state.update();  // Update the state to reflect the new joint values
 
@@ -304,10 +306,20 @@ public:
         poseB.position.x = end_effector_state2.translation().x();
         poseB.position.y = end_effector_state2.translation().y();
         poseB.position.z = end_effector_state2.translation().z();
-        // RCLCPP_INFO(node_->get_logger(), "Pose B - x: %f, y: %f, z: %f", poseB.position.x, poseB.position.y, poseB.position.z);
+        RCLCPP_INFO(node_->get_logger(), "Pose B - x: %f, y: %f, z: %f", poseB.position.x, poseB.position.y, poseB.position.z);
 
         double cartesian_dist = sqrt(pow(pose.position.x - poseB.position.x, 2) + pow(pose.position.y - poseB.position.y, 2) + pow(pose.position.z - poseB.position.z, 2));
         // RCLCPP_INFO(node_->get_logger(), "Cartesian distance: %f", cartesian_dist);
+
+
+        // CHECK IF THE POINTS ARE IN COLLISION WITH THE BOX    
+        // invalid ranges-> x: -0.4 to -0.6, y: -0.1 to 0.1, z:0.025 to 0.225
+        if (pose.position.x < -0.45 && pose.position.x > -0.55 && pose.position.y > -0.05 && pose.position.y < 0.05 && pose.position.z > 0.075 && pose.position.z < 0.175) {
+            RCLCPP_INFO(node_->get_logger(), "Point A is in collision with the box");
+            return 100.0;
+        }
+
+            
 
         return cartesian_dist;
         // return sqrt(dist);
@@ -377,36 +389,39 @@ public:
 
             // RCLCPP_INFO(node_->get_logger(), "debug stmt 2");
             // Sample a random point
-            std::vector<double> randomPoint = sampleClosePoint(waypoints, iter);
+            std::vector<double> randomPoint;
+            do {
+                randomPoint = sampleClosePoint(waypoints, iter);
+            }while (!is_valid(randomPoint, waypoints));
 
-            RCLCPP_INFO(node_->get_logger(), "debug stmt 3");
+            // RCLCPP_INFO(node_->get_logger(), "debug stmt 3");
 
             // Find nearest node in the primary tree and attempt to steer
             Node* nearest = nearestNeighbor(primaryTree, randomPoint);
 
-            RCLCPP_INFO(node_->get_logger(), "debug stmt 4");
+            // RCLCPP_INFO(node_->get_logger(), "debug stmt 4");
 
             std::vector<double> newPoint = steer(nearest->position, randomPoint, step_size);
 
-            RCLCPP_INFO(node_->get_logger(), "debug stmt 5");
+            // RCLCPP_INFO(node_->get_logger(), "debug stmt 5");
 
             if (is_valid(newPoint, waypoints)) {
                 Node* newNode = new Node(newPoint, nearest);
                 primaryTree.push_back(newNode);
 
-                RCLCPP_INFO(node_->get_logger(), "debug stmt 6");
+                // RCLCPP_INFO(node_->get_logger(), "debug stmt 6");
 
                 // Try to connect to the secondary tree
                 if (connect(secondaryTree, newPoint, step_size, goal_threshold, waypoints)) {
 
-                    RCLCPP_INFO(node_->get_logger(), "debug stmt 7");
+                    // RCLCPP_INFO(node_->get_logger(), "debug stmt 7");
 
                     connectingNodeA = newNode;
                     connectingNodeB = secondaryTree.back();
                     pathFound = true;
                     break;
                 }
-                RCLCPP_INFO(node_->get_logger(), "debug stmt 8");
+                // RCLCPP_INFO(node_->get_logger(), "debug stmt 8");
             }
         }
 
@@ -420,10 +435,10 @@ public:
             if (iter % 2 == 0) std::reverse(pathFromA.begin(), pathFromA.end());
             path = pathFromA;
 
-            // Print path
-            for (const auto& point : pathFromA) {
-                RCLCPP_WARN(node_->get_logger(), "(%f, %f)", point[0], point[1]);
-            }
+            // // Print path
+            // for (const auto& point : pathFromA) {
+            //     RCLCPP_WARN(node_->get_logger(), "(%f, %f)", point[0], point[1]);
+            // }
         }
         else {
             std::cout << "Path not found." << std::endl;
@@ -446,6 +461,8 @@ public:
 
         auto planning_scene = planning_scene_monitor_->getPlanningScene();
         moveit::core::RobotState& robot_state = planning_scene->getCurrentStateNonConst();
+
+
 
         // Get the Cartesian position of the link_tool
         const std::string link_name = "link_tool";
@@ -475,7 +492,7 @@ public:
             trajectory_msgs::msg::JointTrajectoryPoint point;
             point.positions = path[i];
             point.time_from_start = rclcpp::Duration::from_seconds(1 * i); // Assign time for each point
-            RCLCPP_INFO(node_->get_logger(), "path %ld:", i);
+            // RCLCPP_INFO(node_->get_logger(), "path %ld:", i);
             // for (size_t j = 0; j < point.positions.size(); ++j) {
             //     RCLCPP_INFO(node_->get_logger(), "Joint %ld: %f", j, point.positions[j]);
             // }
@@ -498,9 +515,9 @@ public:
 
         plan.trajectory_ = robot_trajectory;
 
-        RCLCPP_ERROR(node_->get_logger(), "Generated a predictable plan");
+        RCLCPP_INFO(node_->get_logger(), "Generated a predictable plan");
         double end_time = rclcpp::Clock().now().seconds();
-        RCLCPP_INFO(node_->get_logger(), "Time taken: %f", end_time - start_time);
+        RCLCPP_WARN(node_->get_logger(), "Time taken: %f", end_time - start_time);
         return plan;
 
         // Print the robot trajectory
