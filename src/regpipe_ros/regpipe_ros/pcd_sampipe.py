@@ -162,7 +162,9 @@ class PCDRegPipe(Node):
             init_transformation = self.lean_pipe.global_registration(self.source_cloud,self.target_cloud,annotated_points,mask_points)
             # init_transformation = np.eye(4)
             transform = init_transformation
-            transform = self.lean_pipe.icp(self.source_cloud,self.target_cloud,transform)
+            # transform = self.lean_pipe.icp(self.source_cloud,self.target_cloud,transform)
+            transform = self.lean_pipe.ransac_icp(self.source_cloud,self.target_cloud,transform)
+
             self.get_logger().info(f"Registration Time: {(time.time() - t0)*1000:.2f} ms")
 
             self.source_cloud.transform(transform)
@@ -170,6 +172,10 @@ class PCDRegPipe(Node):
 
             self.publish_point_cloud(self.source_cloud)
             surgical_drill_pose = self.compute_plan(transform)
+
+            # surgical_drill_pose.poses[0].position.x += 0.01
+            # surgical_drill_pose.poses[0].position.y -= 0.03
+
             self.pose_viz_publisher.publish(surgical_drill_pose)
 
             # Publish the annotated point
