@@ -30,6 +30,7 @@ setup(
             'pcd_regpipe = regpipe_ros.pcd_regpipe:main',
             'pcd_regpipe_single = regpipe_ros.pcd_regpipe_single:main',
             'pcd_sampipe = regpipe_ros.pcd_sampipe:main',
+            'rgb_tracker = regpipe_ros.rgb_tracker:main',
         ],
     },
 )

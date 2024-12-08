@@ -11,13 +11,12 @@ from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2, Image
 from visualization_msgs.msg import Marker, MarkerArray
-from geometry_msgs.msg import PoseStamped, PoseArray
+from geometry_msgs.msg import PoseStamped, PoseArray, Point
 from scipy.spatial.transform import Rotation as R
 import geometry_msgs.msg
 
 from . import open3d_conversions, proc_pipeline, lean_pipeline, registration
 from .sam_clicker import RegistrationUI
-
 
 
 class PCDRegPipe(Node):
@@ -36,10 +35,12 @@ class PCDRegPipe(Node):
         self.camera_frame = self.get_parameter("camera_frame").get_parameter_value().string_value
         self.subscriber_ = self.create_subscription(PointCloud2, self.topic, self.callback, 10)
         self.image_subscriber = self.create_subscription(Image, "/camera/color/image_rect_raw", self.image_callback, 10)
+        self.depth_subscriber = self.create_subscription(Image, "/camera/aligned_depth_to_color/image_raw", self.depth_callback, 10)
         self._publisher_ = self.create_publisher(PointCloud2, 'processed_point_cloud', 10)
         self.pose_publisher = self.create_publisher(PoseArray, 'surgical_drill_pose', 10)
         self.pose_viz_publisher = self.create_publisher(PoseArray, 'surgical_drill_pose_viz', 10)
         self.marker_array_publisher = self.create_publisher(MarkerArray, 'bounding_box_marker_array', 10)
+        self.annotated_point_publisher = self.create_publisher(Point, 'annotated_point', 10)
 
         self.x_thresh = 0.25
         self.y_thresh = 0.15
@@ -50,7 +51,6 @@ class PCDRegPipe(Node):
         self.plan_path = package_dir + "/source/plan_config.yaml"
         self.plan = "plan3"
 
-
         self.proc_pipe = proc_pipeline.PointCloudProcessingPipeline(self.x_thresh, self.y_thresh, self.z_thresh)
         self.lean_pipe = lean_pipeline.LeanPipeline()
         self.estimator = registration.Estimator('centroid')
@@ -58,6 +58,7 @@ class PCDRegPipe(Node):
 
         self.last_cloud = None
         self.last_image = None
+        self.last_depth = None
         self.pcd_center = None
         self.get_logger().info(f"Subscribing to topic {self.topic}. Press Enter to register.")
 
@@ -95,6 +96,18 @@ class PCDRegPipe(Node):
         except Exception as e:
             self.get_logger().error(f"Error converting message to image: {e}")
 
+    def depth_callback(self, msg):
+        """Callback function for the depth subscriber.
+        Args:
+            msg (sensor_msgs.msg.Image): The incoming depth Image message.
+        """
+        try:
+            # Convert ROS depth message to numpy array and scale to meters
+            depth_image = np.frombuffer(msg.data, dtype=np.uint16).reshape(msg.height, msg.width) / 1000.0
+            self.last_depth = depth_image
+        except Exception as e:
+            self.get_logger().error(f"Error converting depth message to image: {e}")
+
     def wait_for_input(self):
         """Waits for the user input to register the latest received point cloud."""
         while rclpy.ok():
@@ -121,7 +134,6 @@ class PCDRegPipe(Node):
                                             front=[0.086126891594714566, 0.27099417737370496, -0.9587201439282379],
                                             lookat=[-0.11521162012853672, -0.39411284983247913, 1.8123871758649917],
                                             up=[-0.0069065635673039305, -0.96211034045195976, -0.27257291166787834])
-            
 
     def process_point_cloud(self):
         """Processes the last received point cloud with Open3D."""
@@ -134,7 +146,6 @@ class PCDRegPipe(Node):
 
             self.source_cloud = self.source.voxel_down_sample(voxel_size=0.003)
             self.target_cloud = filtered_cloud.voxel_down_sample(voxel_size=0.003)
-
 
             init_transformation = self.lean_pipe.global_registration(self.source_cloud,self.target_cloud,annotated_points,mask_points)
             # init_transformation = np.eye(4)
@@ -149,6 +160,16 @@ class PCDRegPipe(Node):
             surgical_drill_pose = self.compute_plan(transform)
             self.pose_viz_publisher.publish(surgical_drill_pose)
 
+            # Publish the annotated point
+            annotated_point = Point()
+            depth_at_annotated_point = self.last_depth[
+                int(annotated_points[0][1]), int(annotated_points[0][0])
+            ]
+            annotated_point.x = float(annotated_points[0][0])
+            annotated_point.y = float(annotated_points[0][1])
+            annotated_point.z = float(depth_at_annotated_point)
+            self.annotated_point_publisher.publish(annotated_point)
+
             if_publish = input("Do you want to publish (y/n)?")
 
             if if_publish == "y":
@@ -159,8 +180,6 @@ class PCDRegPipe(Node):
                 return
         else:
             self.get_logger().error("No point cloud or image received.")
-
-             
 
     def compute_plan(self, transform,theta=-np.pi/2):
         """Computes the surgical drill point by transforming the default point with the given transform."""
@@ -193,9 +212,7 @@ class PCDRegPipe(Node):
             default_plan_rotated = np.copy(default_plan)
             default_plan_rotated[:3, :3] = np.matmul(default_plan_rotated[:3, :3], R.from_euler('z', theta).as_matrix())
 
-
             T = np.matmul(transform, default_plan_rotated)
-
 
             # Convert R to a quaternion
             Rot = T[:3, :3]
@@ -220,10 +237,9 @@ class PCDRegPipe(Node):
             self.get_logger().info(f"Drill point: {p}")
             drill_pose_array.poses.append(pose.pose)
 
-        
         # print(drill_pose_array)
         return drill_pose_array
-    
+
     def load_plan_points(self,plan_name):
         holes = {}
         with open(self.plan_path, 'r') as file:
@@ -245,7 +261,6 @@ class PCDRegPipe(Node):
             # p3 = np.array(plan_data.get('p3', [])) / 1000.0
             return holes
 
-            
     def publish_point_cloud(self, cloud):
         """Publishes the processed point cloud to a new ROS2 topic.
         Args:
@@ -260,19 +275,19 @@ class PCDRegPipe(Node):
             self.get_logger().error(f"Error converting point cloud to message: {e}")
 
     def publish_bounding_box(self):
-            """Publishes a marker array representing a 3D bounding box around the point cloud."""
-            if not self.last_cloud:
-                self.get_logger().info("No point cloud has been received to draw a bounding box.")
-                return
+        """Publishes a marker array representing a 3D bounding box around the point cloud."""
+        if not self.last_cloud:
+            self.get_logger().info("No point cloud has been received to draw a bounding box.")
+            return
 
-            # Define corners of the bounding box based on the threshold values
-            center = self.pcd_center
-            x_thresh = self.x_thresh
-            y_thresh = self.y_thresh
-            z_thresh = self.z_thresh
+        # Define corners of the bounding box based on the threshold values
+        center = self.pcd_center
+        x_thresh = self.x_thresh
+        y_thresh = self.y_thresh
+        z_thresh = self.z_thresh
 
-            # Calculate corners of the bounding box
-            corners = [
+        # Calculate corners of the bounding box
+        corners = [
                 center + np.array([x_thresh, y_thresh, z_thresh]),
                 center + np.array([-x_thresh, y_thresh, z_thresh]),
                 center + np.array([-x_thresh, -y_thresh, z_thresh]),
@@ -283,38 +298,38 @@ class PCDRegPipe(Node):
                 center + np.array([x_thresh, -y_thresh, -z_thresh])
             ]
 
-            # Define edges of the bounding box
-            edges = [
+        # Define edges of the bounding box
+        edges = [
                 (0, 1), (1, 2), (2, 3), (3, 0),  # Upper face
                 (4, 5), (5, 6), (6, 7), (7, 4),  # Lower face
                 (0, 4), (1, 5), (2, 6), (3, 7)   # Connecting edges
             ]
 
-            marker_array = MarkerArray()
-            marker_id = 0
+        marker_array = MarkerArray()
+        marker_id = 0
 
-            for start, end in edges:
-                marker = Marker()
-                marker.header.frame_id = self.camera_frame
-                marker.header.stamp = self.get_clock().now().to_msg()
-                marker.ns = "bounding_box"
-                marker.id = marker_id
-                marker.type = Marker.LINE_STRIP
-                marker.action = Marker.ADD
-                marker.points = [
+        for start, end in edges:
+            marker = Marker()
+            marker.header.frame_id = self.camera_frame
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = "bounding_box"
+            marker.id = marker_id
+            marker.type = Marker.LINE_STRIP
+            marker.action = Marker.ADD
+            marker.points = [
                     geometry_msgs.msg.Point(x=corners[start][0], y=corners[start][1], z=corners[start][2]),
                     geometry_msgs.msg.Point(x=corners[end][0], y=corners[end][1], z=corners[end][2])
                 ]
-                marker.scale.x = 0.01  # Width of the line
-                marker.color.a = 1.0  # Don't forget to set the alpha!
-                marker.color.r = 0.0
-                marker.color.g = 0.0
-                marker.color.b = 1.0
-                marker_array.markers.append(marker)
-                marker_id += 1
+            marker.scale.x = 0.01  # Width of the line
+            marker.color.a = 1.0  # Don't forget to set the alpha!
+            marker.color.r = 0.0
+            marker.color.g = 0.0
+            marker.color.b = 1.0
+            marker_array.markers.append(marker)
+            marker_id += 1
 
-            self.marker_array_publisher.publish(marker_array)
-            self.get_logger().info("Bounding box marker array published.")
+        self.marker_array_publisher.publish(marker_array)
+        self.get_logger().info("Bounding box marker array published.")
 
 
 def main(args=None):
