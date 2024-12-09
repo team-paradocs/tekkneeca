@@ -329,7 +329,7 @@ class ParaSightHost(Node):
 
         theta = self.pose_direction(annotated_points)
         drill_pose_array = self.compute_plan(transforms,theta=theta)
-        drill_pose_array = self.calibration_offset(drill_pose_array,0.0035,0.00,0.0)
+        drill_pose_array = self.calibration_offset(drill_pose_array,0.004,-0.0005,0.0)
         drill_pose_array.header.frame_id = self.base_frame
         drill_pose_array.header.stamp = self.get_clock().now().to_msg()
         self.pose_array_publisher.publish(drill_pose_array)

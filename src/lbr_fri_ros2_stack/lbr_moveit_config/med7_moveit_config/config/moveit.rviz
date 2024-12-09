@@ -116,7 +116,7 @@ Visualization Manager:
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
         Show Robot Collision: false
-        Show Robot Visual: true
+        Show Robot Visual: false
         Show Trail: false
         State Display Time: 0.05 s
         Trail Step Size: 1
@@ -136,7 +136,7 @@ Visualization Manager:
         Interactive Marker Size: 0
         Joint Violation Color: 255; 0; 255
         Planning Group: arm
-        Query Goal State: true
+        Query Goal State: false
         Query Start State: false
         Show Workspace: false
         Start State Alpha: 1
@@ -261,17 +261,17 @@ Visualization Manager:
       Frames:
         All Enabled: false
         camera_color_frame:
-          Value: true
+          Value: false
         camera_color_optical_frame:
-          Value: true
+          Value: false
         camera_depth_frame:
-          Value: true
+          Value: false
         camera_depth_optical_frame:
-          Value: true
+          Value: false
         camera_link:
-          Value: true
+          Value: false
         lbr/link_0:
-          Value: true
+          Value: false
         lbr/link_1:
           Value: false
         lbr/link_2:
@@ -375,8 +375,8 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Arrow Length: 0.30000001192092896
-      Axes Length: 0.05000000074505806
-      Axes Radius: 0.004999999888241291
+      Axes Length: 0.02500000037252903
+      Axes Radius: 0.0024999999441206455
       Class: rviz_default_plugins/PoseArray
       Color: 255; 25; 0
       Enabled: true
@@ -395,8 +395,8 @@ Visualization Manager:
         Value: /surgical_drill_pose
       Value: true
     - Alpha: 1
-      Axes Length: 0.05000000074505806
-      Axes Radius: 0.004999999888241291
+      Axes Length: 0.02500000037252903
+      Axes Radius: 0.0024999999441206455
       Class: rviz_default_plugins/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -432,28 +432,28 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.8359193801879883
+      Distance: 0.6040263772010803
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.4753933250904083
-        Y: -0.02660047449171543
-        Z: 0.2465239018201828
+        X: -0.46190741658210754
+        Y: -0.05560438334941864
+        Z: 0.10933788120746613
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5553984045982361
+      Pitch: 0.3503986597061157
       Target Frame: world
       Value: Orbit (rviz_default_plugins)
-      Yaw: 3.1803934574127197
+      Yaw: 2.6603927612304688
     Saved: ~
 Window Geometry:
-  Height: 637
+  Height: 643
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
@@ -462,9 +462,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000200000000000002340000024efc0200000006fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c0069006400650072000000003b0000003f0000003f00fffffffb0000000a0049006d0061006700650100000014000001470000002800fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000004e000001e30000016900fffffffb0000000800480065006c0070000000029a0000006e0000000000000000fb0000000a005600690065007700730000000339000000bd0000000000000000fb0000001200530075007200670065006f006e005500490100000161000001010000001600ffffff0000000100000156000003c9fc0200000003fb000000100044006900730070006c0061007900730000000014000003c90000000000000000fb000000100044006900730070006c0061007900730000000014000003c90000000000000000fb0000001200530075007200670065006f006e005500490000000297000001460000000000000000000002730000024e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730000000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000023800000254fc0200000004fb0000000a0049006d0061006700650100000014000001400000002800fffffffb0000001200530075007200670065006f006e00550049010000015a0000010e0000001600fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000003f00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000010a000001860000016900ffffff000002790000025400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730000000000ffffffff0000000000000000
   SurgeonUI:
     collapsed: false
-  Width: 1197
-  X: 677
-  Y: 24
+  Width: 1207
+  X: 674
+  Y: 20
