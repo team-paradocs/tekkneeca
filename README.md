@@ -23,6 +23,13 @@ Set X11 forwarding
 xhost +local:docker
 ```
 
+SAM checkpoints are not included so download them manually.
+``` 
+./docker/get_ckpts.sh
+```
+
+Note - The script only downloads the small and large models. If you want additional models, modify segment-anything-2/checkpoints/download_ckpts.sh
+
 ## Usage
 
 > **Note:** Run all scripts from the root directory of the repository.
@@ -46,7 +53,7 @@ If the entrypoint is enabled, it will build the ROS workspace and source the new
 - `./docker/tekkneeka.sh run camera` - Run camera version (only video devices)
 - `./docker/tekkneeka.sh run` - Run default version (all devices)
 
-### Enter the Docker container
+### Attach a terminal to the Docker container
 
 ```bash
 ./docker/shell.sh
@@ -77,14 +84,3 @@ In another container terminal
 ros2 run parasight host
 ros2 run parasight tracker
 ```
-
-## SAM Changelog
-Added SAM (`segment-anything-2`) to the `src` folder
-
-Checkpoints are not included so download them manually.
-``` 
-./docker/get_ckpts.sh
-```
-
-Note - Only downloads the small and large models. If you want additional models, modify segment-anything-2/checkpoints/download_ckpts.sh
-
