@@ -23,32 +23,33 @@ Set X11 forwarding
 xhost +local:docker
 ```
 
-Build the image
-
-```
-./docker/docker_build.sh
-```
-
 ## Usage
 
-Run the image with hardware
- ``` 
-./docker/docker_run.sh
+> **Note:** Run all scripts from the root directory of the repository.
+
+### Build the Docker image
+
+```bash
+./docker/tekkneeka.sh build
 ```
 
-Run the image without Arduino
-```
-./docker/docker_run_camera_only.sh
-```
+### Run the Docker container
 
-Run the image without hardware
-```  
-./docker/docker_run_sim.sh
-```  
+```bash
+./docker/tekkneeka.sh run
+```
+If the entrypoint is enabled, it will build the ROS workspace and source the new setup file on container start.
 
-Attach a new terminal to current container
-```  
-./docker/docker_terminal.sh
+#### Variants
+
+- `./docker/tekkneeka.sh run sim` - Run sim version (no devices)
+- `./docker/tekkneeka.sh run camera` - Run camera version (only video devices)
+- `./docker/tekkneeka.sh run` - Run default version (all devices)
+
+### Enter the Docker container
+
+```bash
+./docker/shell.sh
 ```
 
 ## Trouble shooting
@@ -68,12 +69,13 @@ chmod 777 /dev/ttyACM0
 
 Inside docker container
 ```
-ros2 launch paradocs_control tekkneeca.launch.py
+ros2 launch paradocs_control tek_full_pilz_hybrid.launch.py
 ```
 
 In another container terminal
 ```
-ros2 run regpipe_ros pcd_sampipe
+ros2 run parasight host
+ros2 run parasight tracker
 ```
 
 ## SAM Changelog
