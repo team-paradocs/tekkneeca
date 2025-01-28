@@ -15,6 +15,9 @@ from std_srvs.srv import Empty
 
 from parasight.utils import *
 
+from ament_index_python.packages import get_package_share_directory
+from cotracker.predictor import CoTrackerOnlinePredictor
+
 class Tracker(Node):
     def __init__(self):
         super().__init__('tracker')
@@ -32,7 +35,9 @@ class Tracker(Node):
 
         # CoTracker Setup
         self.device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-        model = torch.hub.load("facebookresearch/co-tracker", "cotracker3_online")
+        # model = torch.hub.load("facebookresearch/co-tracker", "cotracker3_online") # To get the latest model. Currently breaks
+        model_path = get_package_share_directory('parasight') + "/checkpoints/scaled_online.pth"
+        model = CoTrackerOnlinePredictor(checkpoint=model_path)
         self.model = model.to(self.device)
         self.buffer = []
         self.buffer_size = 16

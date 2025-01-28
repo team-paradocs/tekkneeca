@@ -87,6 +87,10 @@ RUN apt-get install -y libgl1-mesa-glx libxrender1 libxext6 libxtst6
 COPY src/segment-anything-2/ /ros_ws/src/segment-anything-2/
 RUN cd /ros_ws/src/segment-anything-2 && pip install -e ".[demo]"
 
+# Copy the source code for CoTracker
+COPY src/co-tracker/ /ros_ws/src/co-tracker/
+RUN cd /ros_ws/src/co-tracker && pip install -e .
+
 # Additonal Python Libraries (To override the SAM2 versions)
 RUN pip install open3d==0.18.0 \
     opencv-python==4.9.0.80 \
