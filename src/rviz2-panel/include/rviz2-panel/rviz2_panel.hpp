@@ -1,15 +1,14 @@
 #pragma once
 
-// ROS2
+
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/bool.hpp>
-// add include for srd_msgs Int32
 #include <std_msgs/msg/int32.hpp>
-// RVIZ2
+#include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/empty.hpp>
+
 #include <rviz_common/panel.hpp>
-// Qt
 #include <QtWidgets>
-// STL
 #include <memory>
 /**
  *  Include header generated from ui file
@@ -36,19 +35,42 @@ namespace custom_panel
     void on_pushButton1_clicked();
     void on_pushButton2_clicked();
     void on_pushButton3_clicked();
+    void on_pushButton0_2_clicked();
+    void on_pushButton1_2_clicked();
+    void on_pushButton2_2_clicked();
+    void on_pushButton3_2_clicked();
+    void on_pushButton0_3_clicked();
+    void on_pushButton1_3_clicked();
+    void on_pushButton0_4_clicked();
+    void on_pushButton1_4_clicked();
+    void on_pushButton2_4_clicked();
+    void on_pushButton3_4_clicked();
+    void on_pushButton4_4_clicked();
+
+  
 
   private:
     std::unique_ptr<Ui::gui> ui_;
     rclcpp::Node::SharedPtr node_;
-    // uint16_t count_button_1_, count_button_2_;
 
   protected:
-    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button0_pub_;
-    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button1_pub_;
+
+    rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr button0_pub_;
+    rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr button1_pub_;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button2_pub_;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button3_pub_;
-    // std_msgs::msg::Bool msg_;
+    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button0_2_pub_;
+    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button1_2_pub_;
+    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button2_2_pub_;
+    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr button3_2_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr button0_3_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr button1_3_pub_;
+    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr pose_index_pub_;
+
     std_msgs::msg::Int32 plan_flag_;
-    std_msgs::msg::Int32 registration_flag_;
+    std_msgs::msg::String drill_flag_;
+    std_msgs::msg::Empty parasight_flag_;
+    std_msgs::msg::Int32 reg_flag_;
+    std_msgs::msg::Int32 pose_index_;
   };
 } // custom_panel

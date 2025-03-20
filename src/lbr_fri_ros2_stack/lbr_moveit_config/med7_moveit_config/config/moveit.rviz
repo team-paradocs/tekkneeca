@@ -1,19 +1,7 @@
 Panels:
-  - Class: rviz_common/Displays
-    Help Height: 0
-    Name: Displays
-    Property Tree Widget:
-      Expanded:
-        - /PoseArray1
-      Splitter Ratio: 0.5
-    Tree Height: 170
-  - Class: rviz_common/Help
-    Name: Help
-  - Class: rviz_common/Views
-    Expanded:
-      - /Current View1
-    Name: Views
-    Splitter Ratio: 0.5
+  - Class: custom_panel/SurgeonUI
+    Name: SurgeonUI
+    PushButton: ~
 Visualization Manager:
   Class: ""
   Displays:
@@ -128,7 +116,7 @@ Visualization Manager:
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
         Show Robot Collision: false
-        Show Robot Visual: true
+        Show Robot Visual: false
         Show Trail: false
         State Display Time: 0.05 s
         Trail Step Size: 1
@@ -148,7 +136,7 @@ Visualization Manager:
         Interactive Marker Size: 0
         Joint Violation Color: 255; 0; 255
         Planning Group: arm
-        Query Goal State: true
+        Query Goal State: false
         Query Start State: false
         Show Workspace: false
         Start State Alpha: 1
@@ -281,9 +269,9 @@ Visualization Manager:
         camera_depth_optical_frame:
           Value: false
         camera_link:
-          Value: true
+          Value: false
         lbr/link_0:
-          Value: true
+          Value: false
         lbr/link_1:
           Value: false
         lbr/link_2:
@@ -383,12 +371,12 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera/color/image_rect_raw
+        Value: /camera/color/image_track
       Value: true
     - Alpha: 1
       Arrow Length: 0.30000001192092896
-      Axes Length: 0.05000000074505806
-      Axes Radius: 0.004999999888241291
+      Axes Length: 0.02500000037252903
+      Axes Radius: 0.0024999999441206455
       Class: rviz_default_plugins/PoseArray
       Color: 255; 25; 0
       Enabled: true
@@ -404,7 +392,27 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /surgical_drill_pose_viz
+        Value: /surgical_drill_pose
+      Value: true
+    - Alpha: 1
+      Axes Length: 0.02500000037252903
+      Axes Radius: 0.0024999999441206455
+      Class: rviz_default_plugins/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Pose
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /tracked_pose
       Value: true
   Enabled: true
   Global Options:
@@ -424,32 +432,28 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.3904556334018707
+      Distance: 0.6040263772010803
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.36104315519332886
-        Y: -0.1465654820203781
-        Z: 0.043319277465343475
-      Focal Shape Fixed Size: true
+        X: -0.46190741658210754
+        Y: -0.05560438334941864
+        Z: 0.10933788120746613
+      Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8349999785423279
+      Pitch: 0.3503986597061157
       Target Frame: world
       Value: Orbit (rviz_default_plugins)
-      Yaw: 3.109989881515503
+      Yaw: 2.6603927612304688
     Saved: ~
 Window Geometry:
-  Displays:
-    collapsed: false
-  Height: 939
-  Help:
-    collapsed: false
+  Height: 643
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
@@ -458,9 +462,9 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000036700000349fc0200000006fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004700fffffffb0000000a0049006d0061006700650100000044000001a10000002c00fffffffb000000100044006900730070006c00610079007300000000fa000000eb000000eb00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001ec000001a1000001a100fffffffb0000000800480065006c0070000000029a0000006e0000008100fffffffb0000000a005600690065007700730000000339000000bd000000b900ffffff000004120000034900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
-  Views:
+  QMainWindow State: 000000ff00000000fd00000001000000000000023800000254fc0200000004fb0000000a0049006d0061006700650100000014000001400000002800fffffffb0000001200530075007200670065006f006e00550049010000015a0000010e0000001600fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000003f00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000010a000001860000016900ffffff000002790000025400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730000000000ffffffff0000000000000000
+  SurgeonUI:
     collapsed: false
-  Width: 1920
-  X: 0
-  Y: 34
+  Width: 1207
+  X: 674
+  Y: 20

@@ -1,0 +1,5 @@
+# Request
+bool reset
+---
+# Response
+bool success

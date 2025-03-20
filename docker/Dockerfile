@@ -51,7 +51,8 @@ RUN apt-get install -y \
     ros-humble-control-toolbox \
     ros-humble-joint-state-publisher \
     ros-humble-rviz2 \
-    ros-humble-tf-transformations
+    ros-humble-tf-transformations \
+    ros-humble-graph-msgs
 
 # Install MoveIt and Gazebo ROS 2 control
 RUN apt-get install -y \
@@ -59,6 +60,7 @@ RUN apt-get install -y \
     ros-humble-moveit-ros-planning \
     ros-humble-moveit-ros-visualization \
     ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-visual-tools \
     ros-humble-gazebo-ros2-control \
     ros-humble-gazebo-ros-pkgs \
     ros-humble-pick-ik \
@@ -85,12 +87,19 @@ RUN apt-get install -y libgl1-mesa-glx libxrender1 libxext6 libxtst6
 COPY src/segment-anything-2/ /ros_ws/src/segment-anything-2/
 RUN cd /ros_ws/src/segment-anything-2 && pip install -e ".[demo]"
 
+# Copy the source code for CoTracker
+COPY src/co-tracker/ /ros_ws/src/co-tracker/
+RUN cd /ros_ws/src/co-tracker && pip install -e .
+
 # Additonal Python Libraries (To override the SAM2 versions)
 RUN pip install open3d==0.18.0 \
     opencv-python==4.9.0.80 \
     transforms3d==0.4.2 \
     numpy==1.24.2 \
-    pyserial
+    pyserial \
+    imageio \
+    transitions \
+    questionary
 
 # Initialize rosdep
 RUN rosdep update

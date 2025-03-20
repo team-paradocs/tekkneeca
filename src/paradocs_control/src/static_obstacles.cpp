@@ -265,7 +265,7 @@ void goToGoalCallback(const geometry_msgs::msg::PoseArray msg_array)
   // if (!is_failure) {
     // if (false) {
       // go to an intermediate position 1.5cm away
-  for (int i = 0; i < msg_array.poses.size(); i++) {
+  for (size_t i = 0; i < msg_array.poses.size(); i++) {
     geometry_msgs::msg::Pose msg = msg_array.poses[i];
     rclcpp::sleep_for(std::chrono::seconds(1));
     move_group_interface->setStartStateToCurrentState();
@@ -282,7 +282,7 @@ void goToGoalCallback(const geometry_msgs::msg::PoseArray msg_array)
 
       // switch on the drill
       rclcpp::sleep_for(std::chrono::seconds(1));
-      RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "starting drill motiuon");
+      RCLCPP_INFO(rclcpp::get_logger("static_obstacles"), "starting drill motion");
       auto message = std_msgs::msg::String();
       message.data = "d";
       publisher_->publish(message);

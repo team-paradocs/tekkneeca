@@ -61,6 +61,14 @@ class LBRMoveGroupMixin:
                 robot_name=robot_name,
                 package_name=package_name,
             )
+            .trajectory_execution(file_path=os.path.join(
+                get_package_share_directory(package_name),
+                "config/moveit_controllers.yaml"
+            ))
+            .joint_limits(file_path=os.path.join(
+                get_package_share_directory(package_name),
+                "config/joint_limits.yaml"
+            ))
             .robot_description(
                 os.path.join(
                     get_package_share_directory("lbr_description"),
@@ -136,5 +144,6 @@ class LBRMoveGroupMixin:
             package="moveit_ros_move_group",
             executable="move_group",
             output="screen",
+            arguments=['--ros-args', '--log-level', 'warn'],
             **kwargs,
         )

@@ -1,14 +1,10 @@
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler, DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 
-from launch.conditions import IfCondition, UnlessCondition
-from launch.event_handlers import OnIncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, TextSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
-
-from lbr_description import LBRDescriptionMixin, RVizMixin
 
 def generate_launch_description() -> LaunchDescription:
     ld = LaunchDescription()
@@ -27,7 +23,6 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
-    # dummy cam tf
     arg_name = DeclareLaunchArgument('name',             
                 default_value=PathJoinSubstitution([
                 FindPackageShare('paradocs_control'),  # Finds the install/share directory for your package
@@ -41,6 +36,19 @@ def generate_launch_description() -> LaunchDescription:
     ld.add_action(arg_name)
     ld.add_action(handeye_publisher) 
 
+    arg_name_d435 = DeclareLaunchArgument('nameD435',             
+                default_value=PathJoinSubstitution([
+                FindPackageShare('paradocs_control'),  # Finds the install/share directory for your package
+                TextSubstitution(text='config/eih_cam2')  # Appends the relative path to your file
+            ]),)
+
+    handeye_publisher_d435 = Node(package='easy_handeye2', executable='handeye_publisher', name='handeye_publisher_d435', parameters=[{
+        'name': LaunchConfiguration('nameD435'),
+    }])
+
+    ld.add_action(arg_name_d435)
+    ld.add_action(handeye_publisher_d435) 
+
     depth_optical_tf_publisher = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -48,25 +56,14 @@ def generate_launch_description() -> LaunchDescription:
     )
     ld.add_action(depth_optical_tf_publisher) 
 
-
-    ld.add_action(
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution(
-                    [
-                        FindPackageShare("paradocs_control"),
-                        "launch",
-                        "static_obstacles.launch.py",
-                    ]
-                )
-            ),
-        )
+    depth_optical_tf_publisher_d435 = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['0', '0', '0', '-1.5708', '0', '-1.5708', 'D435_link', 'D435_depth_optical_frame'],
     )
+    ld.add_action(depth_optical_tf_publisher_d435) 
 
-    drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')
-    ld.add_action(drill_pose_transformer)
-
-    serial_writer = Node(package='serialcomm', executable='serialwriter_exec', name='serial_writer')
-    ld.add_action(serial_writer)  
+    # drill_pose_transformer = Node(package='paradocs_control', executable='drill_pose_transformer.py', name='pose_transformer')
+    # ld.add_action(drill_pose_transformer)
 
     return ld

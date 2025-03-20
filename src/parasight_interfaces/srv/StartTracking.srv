@@ -1,0 +1,6 @@
+# Request
+geometry_msgs/Point[] points
+bool resume
+---
+# Response
+bool success
