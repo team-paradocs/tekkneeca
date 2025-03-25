@@ -1,17 +1,20 @@
-# tekkneeca
+# [Tekkneeca](https://mrsdprojects.ri.cmu.edu/2024teame/)
 Assistive Robot for Total Knee Arthroplasty
+
+## Prerequisite
+
+The host machine should be a Ubuntu distribution supported by [librealsense](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md).
 
 ## Installation
 
 Clone the package
-
 ```
 mkdir ~/<ros2_ws>
 cd ~/<ros2_ws>/src
 git clone git@github.com:team-paradocs/tekkneeca.git
 ```
 
-Grant docker permission
+Grant host machine run docker without sudo
 ```
 sudo groupadd docker
 sudo gpasswd -a $USER docker
@@ -23,7 +26,7 @@ Set X11 forwarding
 xhost +local:docker
 ```
 
-SAM checkpoints are not included so download them manually.
+SAM checkpoints are not included, so download them manually.
 ``` 
 ./docker/get_ckpts.sh
 ```
@@ -59,9 +62,9 @@ If the entrypoint is enabled, it will build the ROS workspace and source the new
 ./docker/shell.sh
 ```
 
-## Trouble shooting
+## Troubleshooting
 
-If you encounter "Authorization required, but no authorization protocol specified" failure, run X11 forwarding again
+If you encounter "Authorization required, but no authorization protocol specified" failure, run X11 forwarding again.
 
 ```
 xhost +local:docker
